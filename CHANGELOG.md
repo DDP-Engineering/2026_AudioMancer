@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- AudioMancer now targets the simplified VoiceWeaver 1.0.0 REST API
+  exclusively: runtime probing uses `/models` and `/status`, generation uses
+  the current voice-design, clone, clone-prompt and sound endpoints, every
+  model load uses automatic device selection, and generated voice or sound is
+  downloaded from the single `/audio` endpoint.
+- Cancelling a cancellable VoiceWeaver operation now also asks the runtime to
+  stop it, rather than only stopping AudioMancer's local wait.
 - Scene Ambience no longer suppresses rhythmic sounds by default. Every ambience
   block was being generated with the same fixed list of things to avoid, and six
   entries on it - continuous beep, pure sine wave, single tone, alarm, loud bass

@@ -755,7 +755,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
                 {
                     "model_id": "custom_model",
                     "status": "healthy",
-                    "supported_generation_modes": ["definition"],
+                    "supported_generation_modes": ["voice_design"],
                 }
             ],
             "active_model_id": None,
@@ -871,7 +871,7 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
 def test_character_voices_activation_refreshes_before_prerequisite_warning(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:
-    """Verify first Character Voices visit checks freshly projected targets."""
+    """@brief Verify first Character Voices visit checks freshly projected targets."""
     project_root, manifest = project_workspace_service.create_project("CharacterVoiceActivation", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -896,7 +896,7 @@ def test_character_voices_activation_refreshes_before_prerequisite_warning(
 
 
 def test_main_window_uses_correct_narrator_navigation_label() -> None:
-    """Verify the stable internal page id maps to correctly spelled user text."""
+    """@brief Verify the stable internal page id maps to correctly spelled user text."""
     assert dict(MainWindow.PAGE_ORDER)["narator_voice"] == "Narrator Voice"
 
 

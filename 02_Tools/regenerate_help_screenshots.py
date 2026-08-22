@@ -136,6 +136,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Write only the English screenshot folder instead of mirroring to Romanian.",
     )
+    parser.add_argument(
+        "--dialog",
+        choices=[dialog_id for dialog_id, _file_name in DIALOG_SCREENSHOTS],
+        help="Capture only one settings dialog without requiring the sample project.",
+    )
     return parser.parse_args()
 
 
@@ -150,7 +155,7 @@ def main() -> int:
     """
     args = parse_args()
     project_root = Path(args.project_root).resolve()
-    if not (project_root / "project.json").is_file():
+    if args.dialog is None and not (project_root / "project.json").is_file():
         raise FileNotFoundError(f"AudioMancer sample project manifest was not found: {project_root}")
 
     os.environ.setdefault("QT_QUICK_BACKEND", "software")
@@ -171,25 +176,31 @@ def main() -> int:
     startup_theme = ui_theme_service.theme_by_id(settings_payload["ui_theme_id"], settings_payload["ui_themes"])
     ui_state_service.apply_theme(application, startup_theme, None)
 
-    manifest = project_workspace_service.load_manifest(project_root)
+    manifest = project_workspace_service.load_manifest(project_root) if args.dialog is None else None
     window = MainWindow(settings_payload=settings_payload)
     window.resize(CAPTURE_WIDTH, CAPTURE_HEIGHT)
     window.show()
     application.processEvents()
 
     ENGLISH_SCREENSHOT_ROOT.mkdir(parents=True, exist_ok=True)
-    for page_id, file_name in PAGE_SCREENSHOTS:
-        window.set_current_page(page_id)
-        window.show_project_state(project_root, manifest)
-        application.processEvents()
-        save_widget_screenshot(window, ENGLISH_SCREENSHOT_ROOT / file_name)
+    if manifest is not None:
+        for page_id, file_name in PAGE_SCREENSHOTS:
+            window.set_current_page(page_id)
+            window.show_project_state(project_root, manifest)
+            application.processEvents()
+            save_widget_screenshot(window, ENGLISH_SCREENSHOT_ROOT / file_name)
 
     dialog_by_id = {
         "settings": window._settings_dialog,
         "ai_settings": window._ai_settings_dialog,
         "tts_settings": window._tts_settings_dialog,
     }
-    for dialog_id, file_name in DIALOG_SCREENSHOTS:
+    selected_dialogs = (
+        DIALOG_SCREENSHOTS
+        if args.dialog is None
+        else tuple(entry for entry in DIALOG_SCREENSHOTS if entry[0] == args.dialog)
+    )
+    for dialog_id, file_name in selected_dialogs:
         dialog = dialog_by_id[dialog_id]
         dialog.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         dialog.show()
@@ -198,7 +209,12 @@ def main() -> int:
         dialog.hide()
 
     if not args.english_only:
-        mirror_screenshots_to_romanian()
+        if args.dialog is None:
+            mirror_screenshots_to_romanian()
+        else:
+            ROMANIAN_SCREENSHOT_ROOT.mkdir(parents=True, exist_ok=True)
+            for _dialog_id, file_name in selected_dialogs:
+                shutil.copy2(ENGLISH_SCREENSHOT_ROOT / file_name, ROMANIAN_SCREENSHOT_ROOT / file_name)
 
     window.close()
     application.processEvents()
@@ -231,22 +247,41 @@ def build_screenshot_settings(settings_service, config) -> dict[str, object]:
             "default_character_extraction_profile_id": "profile_lmstudio_local",
             "default_speech_blocks_profile_id": "profile_lmstudio_local",
             "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,
-            "tts_runtime_api_key": "",
             "tts_runtime_probe_succeeded": True,
             "tts_runtime_probe_message": "Documentation sample runtime profile.",
             "tts_runtime_discovered_models": [
                 {
-                    "model_id": "voiceweaver-qwen-tts",
-                    "backend_name": "VoiceWeaver",
+                    "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+                    "backend_name": "qwen",
                     "status": "healthy",
-                    "supported_generation_modes": ["tts", "voice_clone", "sound_prompt"],
-                    "supported_languages": ["en", "ro", "de", "fr", "es", "it", "pt", "ja", "ko", "zh"],
+                    "supported_generation_modes": ["clone"],
+                    "supported_languages": ["de", "en", "es", "fr", "it", "pt", "ru"],
+                    "default_model_parameters": None,
+                    "device_mode": "cuda",
+                    "issues": None,
+                },
+                {
+                    "model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+                    "backend_name": "qwen",
+                    "status": "healthy",
+                    "supported_generation_modes": ["voice_design"],
+                    "supported_languages": ["de", "en", "es", "fr", "it", "pt", "ru"],
+                    "default_model_parameters": None,
+                    "device_mode": "cuda",
+                    "issues": None,
+                },
+                {
+                    "model_id": "stable-audio-open-1.0",
+                    "backend_name": "stable_audio",
+                    "status": "healthy",
+                    "supported_generation_modes": ["sound_prompt"],
+                    "supported_languages": [],
                     "default_model_parameters": None,
                     "device_mode": "cuda",
                     "issues": None,
                 }
             ],
-            "tts_runtime_active_model_id": "voiceweaver-qwen-tts",
+            "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-Base",
             "tts_runtime_device_diagnostics": {},
             "scene_ambience_placement": "openers_closers_and_scene_changes",
         }

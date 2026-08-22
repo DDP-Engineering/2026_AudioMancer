@@ -1,20 +1,19 @@
 schema = 1
 id = "REQ-FUNC-b3c6df2a"
-title = "VoiceWeaver endpoint URLs shall cover the extended REST surface without"
+title = "Use the simplified VoiceWeaver status and model routes"
 status = "active"
 
 requirement = """
-VoiceWeaver endpoint URLs shall cover the extended REST surface without duplicating the version suffix.
+When AudioMancer reads runtime status, loads a model, unloads a model, or cancels an operation, it shall use `/status`, `/models/load`, `/models/unload`, or `/cancel` respectively, and every model-load request shall send `device_mode = auto`.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "A focused runtime-service contract test exercises status, model-load, model-unload, and cancellation helpers and compares each captured route and model-load payload with the simplified REST contract."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surface",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_endpoint_url_avoids_duplicate_v1_suffix",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_uses_simplified_status_and_model_routes",
 ]
 
 priority = "high"
@@ -22,4 +21,4 @@ rationale = """
 Endpoint construction must be correct across the REST surface.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-22

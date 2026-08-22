@@ -52,7 +52,6 @@ def probe_runtime_and_persist_cache_from_settings(settings_payload: dict[str, ob
     """
     probe_result = voiceweaver_runtime_service.probe_runtime(
         str(settings_payload.get("tts_runtime_base_url", "")).strip(),
-        str(settings_payload.get("tts_runtime_api_key", "")),
     )
     updated_settings = dict(settings_service.load_settings())
     if not updated_settings:
@@ -171,12 +170,10 @@ def run_voice_design_generation(
         raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
 
     base_url = str(settings_payload.get("tts_runtime_base_url", "")).strip()
-    runtime_api_key = str(settings_payload.get("tts_runtime_api_key", ""))
     timeout_seconds = preview_timeout_seconds_from_settings(settings_payload)
     model_id = str(generation_request.get("model_id", "")).strip()
     initial_status = voiceweaver_runtime_service.read_status(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     persist_runtime_status_from_settings(settings_payload, initial_status)
@@ -187,13 +184,11 @@ def run_voice_design_generation(
         _emit_voice_design_progress(progress_callback, 25, progress_messages["load_model"])
         voiceweaver_runtime_service.load_model(
             base_url,
-            runtime_api_key,
             model_id,
             timeout_seconds=timeout_seconds,
         )
         load_status = voiceweaver_runtime_service.wait_for_terminal_operation(
             base_url,
-            runtime_api_key,
             progress_callback=lambda status_payload: _update_voice_design_load_progress(
                 progress_callback,
                 status_payload,
@@ -220,15 +215,8 @@ def run_voice_design_generation(
         ),
         "timeout_seconds": timeout_seconds,
     }
-    if "supported_languages" in generation_request:
-        generation_options["supported_languages"] = (
-            list(generation_request.get("supported_languages", []))
-            if isinstance(generation_request.get("supported_languages"), list)
-            else None
-        )
     voiceweaver_runtime_service.generate_voice_design(
         base_url,
-        runtime_api_key,
         str(generation_request.get("language", default_language)),
         preview_text,
         prompt_text,
@@ -236,7 +224,6 @@ def run_voice_design_generation(
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
-        runtime_api_key,
         progress_callback=lambda status_payload: _update_voice_design_generation_progress(
             progress_callback,
             status_payload,
@@ -258,9 +245,8 @@ def run_voice_design_generation(
 
     operation_runtime_service.raise_if_cancelled(cancel_requested)
     _emit_voice_design_progress(progress_callback, 95, progress_messages["download"])
-    audio_bytes = voiceweaver_runtime_service.download_generated_voice(
+    audio_bytes = voiceweaver_runtime_service.download_generated_audio(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     return {

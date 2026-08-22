@@ -128,7 +128,7 @@ artifact per platform instead of one new filename per application version. The
 application version is still read from `04_Software/AudioMancer/pyproject.toml`
 and written inside the packaged release notes and application metadata.
 Both packaging scripts write a cleaned staging copy of `settings.json`:
-operator API keys, local LM Studio host addresses, VoiceWeaver API key, runtime
+operator AI-provider keys, local LM Studio host addresses, runtime
 probe status, discovered-model cache, active-model cache, and device
 diagnostics are removed from the archive without modifying the source app-root
 settings file.

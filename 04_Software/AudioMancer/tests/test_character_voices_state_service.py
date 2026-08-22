@@ -418,13 +418,13 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "model_id": "qwen-base",
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
-            "supported_generation_modes": ["base", "clone"],
+            "supported_generation_modes": ["clone"],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
-            "supported_generation_modes": ["definition", "voice_designer"],
+            "supported_generation_modes": ["voice_design"],
         },
     ]
 

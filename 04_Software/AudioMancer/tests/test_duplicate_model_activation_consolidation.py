@@ -23,14 +23,14 @@ from audiomancer.services import audio_blocks_service
 
 
 def test_ensure_model_active_loads_waits_and_returns_terminal_status(monkeypatch) -> None:
-    """Verify the shared tail preserves runtime arguments, cancellation, and final status."""
+    """@brief Verify the shared tail preserves runtime arguments, cancellation, and final status."""
     calls: list[tuple[object, ...]] = []
     final_status = {
         "active_model": {"model_id": "model-a"},
         "operation": {"status": "completed"},
     }
     def cancel_requested() -> bool:
-        """Keep the shared wait path active."""
+        """@brief Keep the shared wait path active."""
         return False
 
     monkeypatch.setattr(
@@ -45,7 +45,7 @@ def test_ensure_model_active_loads_waits_and_returns_terminal_status(monkeypatch
     )
 
     result = audio_blocks_service._ensure_model_active(
-        {"base_url": "http://runtime", "runtime_api_key": "secret", "timeout_seconds": 17},
+        {"base_url": "http://runtime", "timeout_seconds": 17},
         "model-a",
         "model",
         cancel_requested=cancel_requested,
@@ -55,19 +55,19 @@ def test_ensure_model_active_loads_waits_and_returns_terminal_status(monkeypatch
     assert calls == [
         (
             "load",
-            ("http://runtime", "secret", "model-a"),
+            ("http://runtime", "model-a"),
             {"timeout_seconds": 17},
         ),
         (
             "wait",
-            ("http://runtime", "secret"),
+            ("http://runtime",),
             {"timeout_seconds": 17, "cancel_requested": cancel_requested},
         ),
     ]
 
 
 def test_ensure_model_active_preserves_failure_and_wrong_model_errors(monkeypatch) -> None:
-    """Verify terminal failure mapping and active-model verification remain distinct."""
+    """@brief Verify terminal failure mapping and active-model verification remain distinct."""
     monkeypatch.setattr(audio_blocks_service.voiceweaver_runtime_service, "load_model", lambda *_a, **_k: None)
     statuses = iter(
         (

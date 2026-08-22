@@ -329,17 +329,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ol>
                     <li>Instaleaza si porneste VoiceWeaver pe acest calculator sau pe altul din aceeasi retea.</li>
                     <li>Introdu <strong>URL Baza</strong>. Valoarea implicita este <code>http://127.0.0.1:8059</code>.</li>
-                    <li>Introdu o <strong>Cheie API</strong> daca runtimeul tau cere una. Campul este mascat.</li>
                     <li>Apasa <strong>Testeaza Conexiunea</strong>. AudioMancer raporteaza reusita si numarul de modele gasite sau arata motivul esecului. Linia de stare de langa buton afiseaza <strong>Neconectat</strong>, <strong>Conectat</strong> sau <strong>Conectare esuata</strong> si porneste de la <em>Neconectat</em> de fiecare data cand deschizi fereastra.</li>
                 </ol>
+                <p>
+                    AudioMancer necesita interfata REST simplificata VoiceWeaver 1.0.0, furnizata ca serviciu local
+                    fara autentificare. Fisierele modelelor VoiceWeaver se administreaza in afara AudioMancer; dupa
+                    ce le modifici, testeaza din nou conexiunea pentru a reimprospata descoperirea.
+                </p>
                 <p>
                     <strong>Modele Descoperite</strong> arata ce ofera runtimeul, un rand pe model, sub forma
                     <em>model | stare | moduri de generare</em>, cu <em>activ</em> adaugat celui in uz. Pana cand o
                     testare reuseste, afiseaza o singura linie care spune ca nu s-au descoperit modele.
                 </p>
                 <p>
-                    <strong>Limite Audio Runtime</strong> iti spune daca sunt disponibile capabilitatile Qwen3 base si
-                    Voice Designer necesare. Inainte de o testare reusita, iti cere sa testezi intai conexiunea; dupa
+                    <strong>Limite Audio Runtime</strong> iti spune daca sunt disponibile capabilitatile Qwen3 de
+                    clonare si proiectare a vocii necesare. Inainte de o testare reusita, iti cere sa testezi intai conexiunea; dupa
                     aceea fie confirma capabilitatile, fie le numeste pe cele care lipsesc.
                 </p>
                 <h3>Timpi de asteptare si lungimea blocurilor</h3>

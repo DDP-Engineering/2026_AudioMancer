@@ -292,6 +292,7 @@ def test_load_settings_read_oserror_returns_defaults_without_modifying_file(
     original_read_bytes = type(settings_path).read_bytes
 
     def _raise_for_active_settings(path) -> bytes:
+        """@brief Raise for the active settings path while preserving other reads."""
         if path == settings_path:
             raise PermissionError("simulated settings read failure")
         return original_read_bytes(path)
@@ -327,6 +328,7 @@ def test_load_settings_backup_oserror_returns_defaults_without_modifying_file(
     settings_path.write_bytes(original_bytes)
 
     def _raise_backup_error(*_args) -> None:
+        """@brief Simulate failure while writing the corrupt-settings backup."""
         raise PermissionError("simulated settings backup failure")
 
     monkeypatch.setattr(settings_service, "_write_corrupt_settings_backup", _raise_backup_error)
@@ -359,6 +361,7 @@ def test_load_settings_default_write_oserror_preserves_backup_and_returns_defaul
     settings_path.write_bytes(original_bytes)
 
     def _raise_write_error(_settings_payload) -> None:
+        """@brief Simulate failure while writing replacement default settings."""
         raise PermissionError("simulated settings defaults write failure")
 
     monkeypatch.setattr(settings_service, "_write_settings_file", _raise_write_error)
@@ -859,7 +862,7 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
         {
             "model_id": "definition_model",
             "status": "healthy",
-            "supported_generation_modes": ["definition"],
+            "supported_generation_modes": ["voice_design"],
         },
         "invalid",
     ]
@@ -883,7 +886,7 @@ def test_validate_settings_uses_canonical_voiceweaver_model_normalization_withou
         "model_id": "  qwen-base  ",
         "backend_name": "  qwen  ",
         "status": "  HeAlThY  ",
-        "supported_generation_modes": ["base", "voice_designer", "base", ""],
+        "supported_generation_modes": ["clone", "voice_design", "clone", ""],
         "supported_languages": [" en ", "ro", ""],
         "default_model_parameters": {
             "temperature": 0.8,
@@ -917,7 +920,7 @@ def test_validate_settings_uses_canonical_voiceweaver_model_normalization_withou
         "model_id": "qwen-base",
         "backend_name": "qwen",
         "status": "healthy",
-        "supported_generation_modes": ["clone", "definition"],
+        "supported_generation_modes": ["clone", "voice_design"],
         "supported_languages": ["en", "ro"],
         "default_model_parameters": {"temperature": 0.8, "seed": None},
         "generation_parameter_ranges": {
@@ -1199,7 +1202,7 @@ def test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_
 
 
 def test_ensure_settings_file_accepts_bom_bundled_default(tmp_path, monkeypatch) -> None:
-    """Verify a Windows-authored BOM seed does not fall back to factory defaults."""
+    """@brief Verify a Windows-authored BOM seed does not fall back to factory defaults."""
     bundled_settings_path = tmp_path / "install" / "settings.json"
     bundled_settings_path.parent.mkdir(parents=True)
     bundled_payload = settings_service.build_default_settings()
@@ -1215,7 +1218,7 @@ def test_ensure_settings_file_accepts_bom_bundled_default(tmp_path, monkeypatch)
 
 
 def test_validate_settings_repairs_boolean_positive_integers() -> None:
-    """Verify JSON booleans cannot masquerade as integer runtime limits."""
+    """@brief Verify JSON booleans cannot masquerade as integer runtime limits."""
     profile = {
         "id": "profile-1",
         "label": "Profile",

@@ -19,8 +19,9 @@ splats the payload into the method, so a field added or removed on one side
 must move on the other in the same change.
 `character_voices_ui_controller.py` coordinates Qt actions, threaded generation,
 manifest synchronization, downstream audio invalidation, and status presentation.
-`tts_runtime_ui_support.py` owns the common VoiceWeaver probe, model-load,
-voice-design, terminal validation, progress, cancellation, and WAV-download flow.
+`tts_runtime_ui_support.py` owns the common unauthenticated simplified-VoiceWeaver
+probe, model-load, `voice_design` generation, terminal validation, remote-aware
+cancellation, and `/audio` WAV-download flow.
 `CharacterVoicesPage` exposes target selection and import, edit/save, generation,
 batch generation, and preview signals.
 

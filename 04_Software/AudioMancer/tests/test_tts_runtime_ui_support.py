@@ -68,7 +68,7 @@ def test_probe_runtime_cache_save_preserves_discovered_model_ranges(monkeypatch)
     )
 
     result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(
-        {"tts_runtime_base_url": "http://runtime", "tts_runtime_api_key": "secret"}
+        {"tts_runtime_base_url": "http://runtime"}
     )
 
     assert result == original_probe_result
@@ -142,14 +142,13 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         tts_runtime_ui_support.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: b"RIFF-shared",
     )
 
     result = tts_runtime_ui_support.run_voice_design_generation(
         {
             "tts_runtime_base_url": "http://runtime",
-            "tts_runtime_api_key": "key",
             "tts_audio_preview_timeout_seconds": 45,
         },
         {
@@ -187,10 +186,9 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
     }
     assert generated_arguments == [
         (
-            ("http://runtime", "key", "en", _IN_RANGE_PREVIEW_TEXT, "Warm, grounded voice."),
+            ("http://runtime", "en", _IN_RANGE_PREVIEW_TEXT, "Warm, grounded voice."),
             {
                 "model_parameters": {"temperature": 0.4},
-                "supported_languages": ["en", "ro"],
                 "timeout_seconds": 45,
             },
         )
@@ -270,11 +268,11 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
             "discovered_models": [],
             "capability_matrix": {
                 "minimum_qwen_ready": False,
-                "missing_qwen_capabilities": ["base", "voice_designer"],
+                "missing_qwen_capabilities": ["clone", "voice_design"],
             },
         },
     )
-    with pytest.raises(RuntimeError, match=r"^Missing runtime capabilities: base, voice_designer$"):
+    with pytest.raises(RuntimeError, match=r"^Missing runtime capabilities: clone, voice_design$"):
         tts_runtime_ui_support.run_voice_design_generation(
             {}, progress_messages, lambda _models: {}, "Prompt", _IN_RANGE_PREVIEW_TEXT, None, lambda: False
         )

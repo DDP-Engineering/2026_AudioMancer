@@ -558,6 +558,11 @@ def append_ai_generated_profiles(
     if persist:
         document["profiles"] = profiles
         write_narrator_voice_document(project_root, document)
+    _NARRATOR_DEFINITION_LOGGER.info(
+        "Prepared AI-generated narrator profiles count=%s persisted=%s",
+        len(created_profiles),
+        persist,
+    )
     return created_profiles
 
 
@@ -596,6 +601,7 @@ def update_custom_profile(
         raise ValueError("missing_profile")
     document["profiles"] = normalized_profiles
     write_narrator_voice_document(project_root, document)
+    _NARRATOR_DEFINITION_LOGGER.info("Updated narrator profile profile_id=%s", profile_id)
     return updated_profile
 
 
@@ -644,6 +650,7 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
     if document["selected_profile_id"] == str(profile_id).strip():
         document["selected_profile_id"] = None
     write_narrator_voice_document(project_root, document)
+    _NARRATOR_DEFINITION_LOGGER.info("Deleted narrator profile profile_id=%s", str(profile_id).strip())
     return [dict(profile) for profile in remaining_profiles]
 
 
@@ -708,7 +715,7 @@ def profile_generation_request(
         )
         return _build_generation_request(False, False, unavailable_reason, language, prompt_text)
 
-    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_designer_models", []))
+    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_design_models", []))
     if voice_designer_model is None:
         return _build_generation_request(
             False,
@@ -932,8 +939,8 @@ def sample_runtime_available(
         return False
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     healthy_models = [
-        *capability_matrix.get("voice_designer_models", []),
-        *capability_matrix.get("base_models", []),
+        *capability_matrix.get("voice_design_models", []),
+        *capability_matrix.get("clone_models", []),
     ]
     referenced_model = _model_by_id(healthy_models, source_model_id)
     if referenced_model is None:

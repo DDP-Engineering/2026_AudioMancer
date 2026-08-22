@@ -59,8 +59,6 @@ _SENSITIVE_LOG_FIELD_NAMES = frozenset(
         "token",
         "access_token",
         "refresh_token",
-        "tts_runtime_api_key",
-        "runtime_api_key",
     }
 )
 
@@ -83,7 +81,10 @@ class _UnsupportedMaxTokensError(RuntimeError):
 
 
 class _TransientProviderError(RuntimeError):
-    """Mark provider and transport failures that are safe to retry."""
+    """
+    @brief      Mark provider and transport failures that are safe to retry.
+    @exception  None
+    """
 
 
 # PUBLIC API

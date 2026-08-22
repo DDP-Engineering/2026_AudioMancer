@@ -40,7 +40,8 @@ required before speech generation.
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
 - Run narrator and character voice-design samples through one shared
-  VoiceWeaver probe, model-load, generation, validation, and download sequence
+  unauthenticated simplified-VoiceWeaver probe, model-load, `voice_design`
+  generation, validation, cancellation, and `/audio` download sequence
   while keeping each controller's request, budget, persistence, and refresh
   behavior explicit (`REQ-FUNC-47809158`, `REQ-FUNC-7a68a78e`).
 - Keep Narrator Voice selection application controller-owned through the full

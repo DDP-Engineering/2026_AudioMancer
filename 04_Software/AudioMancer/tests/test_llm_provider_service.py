@@ -167,6 +167,13 @@ def test_chat_json_uses_bounded_exponential_retry_delays(monkeypatch) -> None:
     retry_delays: list[float] = []
 
     def _transient_failure(*_args, **_kwargs):
+        """
+        @brief      Raise one controlled transient provider failure.
+        @param[in]  _args Ignored positional request arguments.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  _TransientProviderError Always raised for this retry test.
+        """
         call_counter["count"] += 1
         raise llm_provider_service._TransientProviderError(  # noqa: SLF001
             "Transient AI provider failure: controlled test failure"
@@ -205,10 +212,22 @@ def test_chat_json_uses_bounded_exponential_retry_delays(monkeypatch) -> None:
 
 
 def test_chat_json_cancels_before_retry_backoff_without_another_request(monkeypatch) -> None:
-    """Verify cancellation observed before waiting prevents the next provider dispatch."""
+    """
+    @brief      Verify cancellation before waiting prevents the next provider dispatch.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     call_counter = {"count": 0}
 
     def _transient_failure(*_args, **_kwargs):
+        """
+        @brief      Raise one controlled transient provider failure.
+        @param[in]  _args Ignored positional request arguments.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  _TransientProviderError Always raised for this cancellation test.
+        """
         call_counter["count"] += 1
         raise llm_provider_service._TransientProviderError(  # noqa: SLF001
             "Transient AI provider failure: controlled test failure"
@@ -250,23 +269,46 @@ def test_chat_json_cancels_before_retry_backoff_without_another_request(monkeypa
 
 
 def test_chat_json_cancels_during_sliced_retry_backoff(monkeypatch) -> None:
-    """Verify short polling slices stop a backoff before another provider request."""
+    """
+    @brief      Verify short polling slices stop a backoff before another provider request.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     call_counter = {"count": 0}
     clock = {"now": 0.0}
     cancellation_checks = {"count": 0}
     sleep_slices: list[float] = []
 
     def _transient_failure(*_args, **_kwargs):
+        """
+        @brief      Raise one controlled transient provider failure.
+        @param[in]  _args Ignored positional request arguments.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  _TransientProviderError Always raised for this backoff test.
+        """
         call_counter["count"] += 1
         raise llm_provider_service._TransientProviderError(  # noqa: SLF001
             "Transient AI provider failure: controlled test failure"
         )
 
     def _cancel_requested() -> bool:
+        """
+        @brief      Request cancellation after three polling checks.
+        @return     True after the configured check count is reached.
+        @exception  None
+        """
         cancellation_checks["count"] += 1
         return cancellation_checks["count"] >= 3
 
     def _sleep(seconds: float) -> None:
+        """
+        @brief      Advance the controlled retry clock by one sleep slice.
+        @param[in]  seconds Requested sleep duration.
+        @return     None.
+        @exception  None
+        """
         sleep_slices.append(seconds)
         clock["now"] += seconds
 
@@ -600,6 +642,13 @@ def test_chat_json_retains_response_format_fallback_across_outer_retries(
     retry_delays: list[float] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate one response-format rejection followed by success.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  HTTPError Raised for the first incompatible request.
+        """
         request_payload = json.loads(http_request.data.decode("utf-8"))
         request_bodies.append(request_payload)
         if len(request_bodies) == 1:
@@ -666,10 +715,22 @@ def test_chat_json_retains_response_format_fallback_across_outer_retries(
 
 
 def test_chat_json_resets_response_format_compatibility_for_separate_calls(monkeypatch) -> None:
-    """Verify one invocation's compatibility state never changes a later invocation."""
+    """
+    @brief      Verify one invocation's compatibility state never changes a later invocation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     request_bodies: list[dict[str, object]] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate one compatibility rejection among separate provider calls.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  HTTPError Raised for the first incompatible request.
+        """
         request_payload = json.loads(http_request.data.decode("utf-8"))
         request_bodies.append(request_payload)
         if len(request_bodies) == 1:
@@ -703,10 +764,22 @@ def test_chat_json_resets_response_format_compatibility_for_separate_calls(monke
 
 
 def test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled(monkeypatch) -> None:
-    """Verify policy-disabled response-format fallback stops after the rejection."""
+    """
+    @brief      Verify policy-disabled response-format fallback stops after rejection.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     request_bodies: list[dict[str, object]] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Reject a structured-output request without a successful fallback.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  HTTPError Always raised for this policy test.
+        """
         request_bodies.append(json.loads(http_request.data.decode("utf-8")))
         raise error.HTTPError(
             http_request.full_url,
@@ -871,6 +944,13 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
     retry_delays: list[float] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate one token-field rejection followed by success.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  HTTPError Raised for the first incompatible request.
+        """
         request_payload = json.loads(http_request.data.decode("utf-8"))
         request_bodies.append(request_payload)
         if len(request_bodies) == 1:
@@ -931,10 +1011,22 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
 
 
 def test_chat_json_retains_max_completion_tokens_for_json_repair(monkeypatch) -> None:
-    """Verify a JSON repair request retains the learned provider token field."""
+    """
+    @brief      Verify a JSON repair request retains the learned provider token field.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
     request_bodies: list[dict[str, object]] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate token-field negotiation followed by JSON repair.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake provider response for negotiation or repair.
+        @exception  HTTPError Raised while the incompatible token field is present.
+        """
         request_payload = json.loads(http_request.data.decode("utf-8"))
         request_bodies.append(request_payload)
         if "max_tokens" in request_payload:
@@ -1550,7 +1642,7 @@ def test_chat_json_redacts_sensitive_values_from_transaction_log(monkeypatch, tm
         log_context={
             "api_key": secret_value,
             "headers": {"Authorization": authorization_value},
-            "nested": [{"runtime_api_key": secret_value}],
+            "nested": [{"access_token": secret_value}],
         },
     )
 
@@ -1561,7 +1653,7 @@ def test_chat_json_redacts_sensitive_values_from_transaction_log(monkeypatch, tm
     assert authorization_value not in log_text
     assert all(entry["api_key"] == "[REDACTED]" for entry in log_entries)
     assert all(entry["headers"]["Authorization"] == "[REDACTED]" for entry in log_entries)
-    assert all(entry["nested"][0]["runtime_api_key"] == "[REDACTED]" for entry in log_entries)
+    assert all(entry["nested"][0]["access_token"] == "[REDACTED]" for entry in log_entries)
 
 
 def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
@@ -1704,7 +1796,11 @@ def test_chat_json_requests_the_shared_versioned_endpoint(monkeypatch) -> None:
 
 
 def test_retry_classification_uses_exception_type_not_message_text() -> None:
-    """Verify permanent errors cannot opt into retries through provider wording."""
+    """
+    @brief      Verify permanent errors cannot opt into retries through provider wording.
+    @return     None.
+    @exception  None
+    """
     assert llm_provider_service._is_retryable_error(  # noqa: SLF001
         RuntimeError("Permanent HTTP 400: service temporarily unavailable")
     ) is False
@@ -1712,7 +1808,11 @@ def test_retry_classification_uses_exception_type_not_message_text() -> None:
 
 
 def test_strip_code_fence_preserves_single_line_json() -> None:
-    """Verify compact fenced provider responses retain their JSON payload."""
+    """
+    @brief      Verify compact fenced provider responses retain their JSON payload.
+    @return     None.
+    @exception  None
+    """
     assert llm_provider_service._strip_code_fence('```json {"value": 1} ```') == '{"value": 1}'  # noqa: SLF001
 
 
@@ -1816,7 +1916,12 @@ def _length_limited_profile() -> dict[str, object]:
 
 
 def _one_failure_record(log_path) -> dict[str, object]:
-    """Return the single failure record written to one transaction log."""
+    """
+    @brief      Return the single failure record written to one transaction log.
+    @param[in]  log_path Transaction log path.
+    @return     Single parsed failure record.
+    @exception  AssertionError Raised when the expected single failure is absent.
+    """
     records = [
         json.loads(line)
         for line in log_path.read_text(encoding="utf-8").splitlines()

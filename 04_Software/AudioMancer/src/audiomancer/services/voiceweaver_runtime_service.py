@@ -21,35 +21,30 @@ from functools import partial
 import json
 import time
 from typing import Any
-from urllib import error, parse, request
+from urllib import error, request
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
-from audiomancer.services.operation_runtime_service import raise_if_cancelled
+from audiomancer.services.operation_runtime_service import OperationCancelledError, raise_if_cancelled
 from audiomancer.services.url_service import join_endpoint_url
 
 # CONSTANTS
 
 _VOICEWEAVER_RUNTIME_LOGGER = get_component_logger("voiceweaver_runtime")
-_endpoint_url = partial(join_endpoint_url, collapse_duplicate_version=True)
+_endpoint_url = partial(join_endpoint_url, collapse_duplicate_version=False)
 
 VoiceWeaverModelPayload = dict[str, object]
 VoiceWeaverCapabilityMatrix = dict[str, object]
 VoiceWeaverProbeResult = dict[str, object]
 
 
-def _build_request_headers(runtime_api_key: str) -> dict[str, str]:
+def _build_request_headers() -> dict[str, str]:
     """
     @brief      Build one VoiceWeaver request-header mapping.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @return     HTTP header map.
     @exception  None
     """
-    headers = {"Accept": "application/json"}
-    normalized_api_key = str(runtime_api_key or "").strip()
-    if normalized_api_key:
-        headers["Authorization"] = f"Bearer {normalized_api_key}"
-    return headers
+    return {"Accept": "application/json"}
 
 
 def _read_json(url: str, headers: dict[str, str], timeout_seconds: int) -> dict[str, Any]:
@@ -102,7 +97,6 @@ def _send_json_request(
 def _add_tts_language_field(
     payload: dict[str, object],
     language: str,
-    supported_languages: list[str] | None = None,
 ) -> None:
     """
     @brief      Add the VoiceWeaver TTS language field when the selected language should be explicit.
@@ -112,15 +106,6 @@ def _add_tts_language_field(
     @exception  None
     """
     normalized_language = str(language).strip()
-    normalized_supported_languages = (
-        {str(item).strip() for item in supported_languages if str(item).strip()}
-        if supported_languages is not None
-        else None
-    )
-    if normalized_language == "ro":
-        return
-    if normalized_supported_languages is not None and normalized_language not in normalized_supported_languages:
-        return
     if normalized_language:
         payload["language"] = normalized_language
 
@@ -216,20 +201,15 @@ def _normalize_string_list(value: object) -> list[str]:
 
 def _normalize_generation_modes(value: object) -> list[str]:
     """
-    @brief      Normalize one model generation-mode list and fold legacy aliases into the current REST contract.
+    @brief      Normalize one model generation-mode list without accepting legacy aliases.
     @param[in]  value Candidate generation-mode list payload.
     @return     Normalized generation-mode list using current REST mode identifiers.
     @exception  None
     """
-    mode_aliases = {
-        "base": "clone",
-        "voice_designer": "definition",
-    }
     normalized_modes: list[str] = []
     for mode in _normalize_string_list(value):
-        normalized_mode = mode_aliases.get(mode, mode)
-        if normalized_mode not in normalized_modes:
-            normalized_modes.append(normalized_mode)
+        if mode not in normalized_modes:
+            normalized_modes.append(mode)
     return normalized_modes
 
 
@@ -284,7 +264,7 @@ def _normalize_generation_parameter_ranges(value: object) -> dict[str, dict[str,
 def _normalize_active_model_payload(value: object) -> object:
     """
     @brief      Normalize active-model status data while preserving runtime-reported effective parameters.
-    @param[in]  value Candidate `/v1/status.active_model` payload.
+    @param[in]  value Candidate `/status.active_model` payload.
     @return     Normalized active-model identifier string, object, or `None`.
     @exception  None
     """
@@ -310,7 +290,7 @@ def _normalize_active_model_payload(value: object) -> object:
 
 def _normalize_status_payload(payload: dict[str, object]) -> dict[str, object]:
     """
-    @brief      Normalize expanded `/v1/status` data needed by AudioMancer.
+    @brief      Normalize expanded `/status` data needed by AudioMancer.
     @param[in]  payload Raw VoiceWeaver status payload.
     @return     Status payload with normalized active/effective model parameter fields.
     @exception  None
@@ -369,10 +349,10 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         for model in normalized_models
         if model is not None and str(model.get("status", "")).strip().lower() in {"healthy", "ready"}
     ]
-    definition_models = [
+    voice_design_models = [
         model
         for model in healthy_models
-        if "definition" in _normalize_generation_modes(model.get("supported_generation_modes"))
+        if "voice_design" in _normalize_generation_modes(model.get("supported_generation_modes"))
     ]
     clone_models = [
         model
@@ -384,39 +364,34 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         for model in healthy_models
         if "sound_prompt" in _normalize_generation_modes(model.get("supported_generation_modes"))
     ]
-    voice_designer_models = list(definition_models)
-    base_models = list(clone_models)
-    qwen_voice_designer_models = [model for model in voice_designer_models if _is_qwen_model(model)]
-    qwen_base_models = [model for model in base_models if _is_qwen_model(model)]
+    qwen_voice_design_models = [model for model in voice_design_models if _is_qwen_model(model)]
+    qwen_clone_models = [model for model in clone_models if _is_qwen_model(model)]
     missing_qwen_capabilities: list[str] = []
-    if not qwen_base_models:
-        missing_qwen_capabilities.append("base")
-    if not qwen_voice_designer_models:
-        missing_qwen_capabilities.append("voice_designer")
+    if not qwen_clone_models:
+        missing_qwen_capabilities.append("clone")
+    if not qwen_voice_design_models:
+        missing_qwen_capabilities.append("voice_design")
     return {
-        "voice_designer_models": voice_designer_models,
-        "base_models": base_models,
-        "qwen_voice_designer_models": qwen_voice_designer_models,
-        "qwen_base_models": qwen_base_models,
+        "voice_design_models": voice_design_models,
+        "clone_models": clone_models,
+        "qwen_voice_design_models": qwen_voice_design_models,
+        "qwen_clone_models": qwen_clone_models,
         "sound_prompt_models": sound_prompt_models,
         "sound_prompt_available": bool(sound_prompt_models),
         "minimum_qwen_ready": not missing_qwen_capabilities,
         "missing_qwen_capabilities": missing_qwen_capabilities,
-        "preset_voice_available": False,
-        "generate_and_clone_available": bool(definition_models and clone_models),
+        "generate_and_clone_available": bool(voice_design_models and clone_models),
     }
 
 
 @trace_function(_VOICEWEAVER_RUNTIME_LOGGER)
 def probe_runtime(
     base_url: str,
-    runtime_api_key: str = "",
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> VoiceWeaverProbeResult:
     """
     @brief      Probe the VoiceWeaver runtime and normalize discovered capability data.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Normalized runtime probe payload with models and capability matrix.
     @exception  None
@@ -430,23 +405,14 @@ def probe_runtime(
             active_model_id=None,
         )
 
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
 
     try:
-        health_payload = _read_json(_endpoint_url(normalized_base_url, "/v1/health"), headers, timeout_seconds)
-        _validate_health_payload(health_payload)
-        models_payload = _read_json(_endpoint_url(normalized_base_url, "/v1/models"), headers, timeout_seconds)
+        models_payload = _read_json(_endpoint_url(normalized_base_url, "/models"), headers, timeout_seconds)
         discovered_models = _normalize_models_payload(models_payload)
-        status_payload = _read_json(_endpoint_url(normalized_base_url, "/v1/status"), headers, timeout_seconds)
+        status_payload = _read_json(_endpoint_url(normalized_base_url, "/status"), headers, timeout_seconds)
         active_model_id = _resolve_active_model_id(status_payload.get("active_model"))
     except error.HTTPError as exception:
-        if exception.code == 401:
-            return _build_probe_result(
-                success=False,
-                message="Connection failed: invalid or missing runtime credentials.",
-                discovered_models=[],
-                active_model_id=None,
-            )
         return _build_probe_result(
             success=False,
             message=f"Connection failed: HTTP {exception.code}.",
@@ -486,62 +452,26 @@ def probe_runtime(
 
 def read_status(
     base_url: str,
-    runtime_api_key: str = "",
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
     @brief      Read the current normalized VoiceWeaver runtime status payload.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime status payload returned by `/v1/status`.
+    @return     Runtime status payload returned by `/status`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    return _normalize_status_payload(_request_json_endpoint(base_url, runtime_api_key, "/v1/status", timeout_seconds))
-
-
-def read_server_info(
-    base_url: str,
-    runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    """
-    @brief      Read the VoiceWeaver `/v1/server` identity payload.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime server payload returned by `/v1/server`.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    return _request_json_endpoint(base_url, runtime_api_key, "/v1/server", timeout_seconds)
-
-
-def read_model_catalog(
-    base_url: str,
-    runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    """
-    @brief      Read the static VoiceWeaver `/v1/model-catalog` payload.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime catalog payload returned by `/v1/model-catalog`.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    return _request_json_endpoint(base_url, runtime_api_key, "/v1/model-catalog", timeout_seconds)
+    return _normalize_status_payload(_request_json_endpoint(base_url, "/status", timeout_seconds))
 
 
 def load_model(
     base_url: str,
-    runtime_api_key: str,
     model_id: str,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
-    @brief      Load one runtime model through `POST /v1/models/load`.
+    @brief      Load one runtime model through `POST /models/load`.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  model_id Target runtime model identifier.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by the load endpoint.
@@ -549,9 +479,8 @@ def load_model(
     """
     response_payload = _post_json_endpoint(
         base_url,
-        runtime_api_key,
-        "/v1/models/load",
-        {"model_id": str(model_id).strip()},
+        "/models/load",
+        {"model_id": str(model_id).strip(), "device_mode": "auto"},
         timeout_seconds,
     )
     if not isinstance(response_payload, dict):
@@ -561,18 +490,16 @@ def load_model(
 
 def unload_model(
     base_url: str,
-    runtime_api_key: str = "",
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object] | None:
     """
-    @brief      Unload the active VoiceWeaver model through `POST /v1/models/unload`.
+    @brief      Unload the active VoiceWeaver model through `POST /models/unload`.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload or `None` when the runtime reports a no-op unload.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    response_payload = _post_json_endpoint(base_url, runtime_api_key, "/v1/models/unload", None, timeout_seconds)
+    response_payload = _post_json_endpoint(base_url, "/models/unload", None, timeout_seconds)
     if response_payload is None:
         return None
     if not isinstance(response_payload, dict):
@@ -580,143 +507,53 @@ def unload_model(
     return response_payload
 
 
-def rescan_models(
+def cancel_operation(
     base_url: str,
-    runtime_api_key: str = "",
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
-    @brief      Force one VoiceWeaver model rescan through `POST /v1/models/rescan`.
+    @brief      Request cancellation of the current VoiceWeaver operation through `POST /cancel`.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime payload returned by the rescan endpoint.
+    @return     Current runtime operation payload returned by the cancel endpoint.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    response_payload = _post_json_endpoint(base_url, runtime_api_key, "/v1/models/rescan", None, timeout_seconds)
+    response_payload = _post_json_endpoint(base_url, "/cancel", None, timeout_seconds)
     if not isinstance(response_payload, dict):
-        raise RuntimeError("VoiceWeaver returned an invalid model-rescan response payload.")
+        raise RuntimeError("VoiceWeaver returned an invalid cancel response payload.")
     return response_payload
-
-
-def delete_model(
-    base_url: str,
-    runtime_api_key: str,
-    model_id: str,
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> None:
-    """
-    @brief      Delete one installed VoiceWeaver model through `DELETE /v1/models/{model_id}`.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  model_id Target runtime model identifier.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     None.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    encoded_model_id = parse.quote(str(model_id).strip(), safe="")
-    _request_without_json_response(
-        base_url,
-        runtime_api_key,
-        f"/v1/models/{encoded_model_id}",
-        "DELETE",
-        timeout_seconds,
-    )
-
-
-def start_model_download(
-    base_url: str,
-    runtime_api_key: str,
-    model_id: str,
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    """
-    @brief      Start one VoiceWeaver background model download through `POST /v1/models/download`.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  model_id Target catalog model identifier.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Download-status payload returned by the runtime.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    response_payload = _post_json_endpoint(
-        base_url,
-        runtime_api_key,
-        "/v1/models/download",
-        {"model_id": str(model_id).strip()},
-        timeout_seconds,
-    )
-    if not isinstance(response_payload, dict):
-        raise RuntimeError("VoiceWeaver returned an invalid model-download response payload.")
-    return response_payload
-
-
-def read_model_download_status(
-    base_url: str,
-    runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    """
-    @brief      Read the current VoiceWeaver model-download status payload.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Download-status payload returned by `/v1/models/download/status`.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    return _request_json_endpoint(base_url, runtime_api_key, "/v1/models/download/status", timeout_seconds)
-
-
-def cancel_model_download(
-    base_url: str,
-    runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> None:
-    """
-    @brief      Cancel the active VoiceWeaver model download through `POST /v1/models/download/cancel`.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     None.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    _request_without_json_response(base_url, runtime_api_key, "/v1/models/download/cancel", "POST", timeout_seconds)
 
 
 def generate_voice_design(
     base_url: str,
-    runtime_api_key: str,
     language: str,
     text: str,
     voice_description: str,
     model_parameters: dict[str, object] | None = None,
-    supported_languages: list[str] | None = None,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
     @brief      Start one Voice Designer generation request.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  language Synthesis language code.
     @param[in]  text Preview text to synthesize.
     @param[in]  voice_description Voice Designer prompt text.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/voice/design`.
+    @return     Runtime operation payload returned by `/voice/design`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
     payload = {
         "text": str(text).strip(),
         "voice_description": str(voice_description).strip(),
     }
-    _add_tts_language_field(payload, language, supported_languages)
+    _add_tts_language_field(payload, language)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters
     response_payload = _post_json_endpoint(
         base_url,
-        runtime_api_key,
-        "/v1/voice/design",
+        "/voice/design",
         payload,
         timeout_seconds,
     )
@@ -727,7 +564,6 @@ def generate_voice_design(
 
 def generate_voice_clone(
     base_url: str,
-    runtime_api_key: str,
     sample_audio_bytes: bytes,
     sample_text: str,
     language: str,
@@ -738,17 +574,16 @@ def generate_voice_clone(
     """
     @brief      Start one direct Qwen3 voice-clone request from a WAV sample.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  sample_audio_bytes WAV reference audio bytes uploaded for cloning.
     @param[in]  sample_text Transcript matching the reference audio sample.
     @param[in]  language Synthesis language code associated with the sample.
     @param[in]  text Speech-block text to synthesize in the cloned voice.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/voice/clone`.
+    @return     Runtime operation payload returned by `/voice/clone`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
     form_fields: dict[str, object] = {
         "sample_text": str(sample_text).strip(),
         "text": str(text).strip(),
@@ -760,7 +595,7 @@ def generate_voice_clone(
     try:
         response_payload = _send_multipart_request(
             "POST",
-            _endpoint_url(base_url, "/v1/voice/clone"),
+            _endpoint_url(base_url, "/voice/clone"),
             headers,
             timeout_seconds,
             form_fields,
@@ -783,7 +618,6 @@ def generate_voice_clone(
 
 def create_voice_clone_prompt(
     base_url: str,
-    runtime_api_key: str,
     sample_audio_bytes: bytes,
     sample_text: str,
     language: str,
@@ -793,16 +627,15 @@ def create_voice_clone_prompt(
     """
     @brief      Start one reusable Qwen3 voice clone-prompt creation request from a WAV sample.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  sample_audio_bytes WAV reference audio bytes uploaded for clone-prompt creation.
     @param[in]  sample_text Transcript matching the reference audio sample.
     @param[in]  language Synthesis language code associated with the sample.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/voice/clone-prompt`.
+    @return     Runtime operation payload returned by `/voice/clone-prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
     form_fields: dict[str, object] = {
         "sample_text": str(sample_text).strip(),
     }
@@ -813,7 +646,7 @@ def create_voice_clone_prompt(
     try:
         response_payload = _send_multipart_request(
             "POST",
-            _endpoint_url(base_url, "/v1/voice/clone-prompt"),
+            _endpoint_url(base_url, "/voice/clone-prompt"),
             headers,
             timeout_seconds,
             form_fields,
@@ -836,7 +669,6 @@ def create_voice_clone_prompt(
 
 def generate_voice_clone_from_prompt(
     base_url: str,
-    runtime_api_key: str,
     voice_clone_prompt: dict[str, object] | str,
     language: str,
     text: str,
@@ -846,13 +678,12 @@ def generate_voice_clone_from_prompt(
     """
     @brief      Start one reusable Qwen3 voice-clone generation request from one stored clone prompt.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  voice_clone_prompt Client-owned VoiceWeaver clone-prompt payload or serialized JSON string.
     @param[in]  language Synthesis language code associated with the target text.
     @param[in]  text Speech-block text to synthesize in the cloned voice.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/voice/clone-from-prompt`.
+    @return     Runtime operation payload returned by `/voice/clone-from-prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
     payload: dict[str, object] = {
@@ -865,8 +696,7 @@ def generate_voice_clone_from_prompt(
         payload["model_parameters"] = normalized_model_parameters
     response_payload = _post_json_endpoint(
         base_url,
-        runtime_api_key,
-        "/v1/voice/clone-from-prompt",
+        "/voice/clone-from-prompt",
         payload,
         timeout_seconds,
     )
@@ -877,7 +707,6 @@ def generate_voice_clone_from_prompt(
 
 def generate_sound_prompt(
     base_url: str,
-    runtime_api_key: str,
     prompt: str,
     negative_prompt: str = "",
     duration_seconds: float | int | None = None,
@@ -889,7 +718,6 @@ def generate_sound_prompt(
     """
     @brief      Start one VoiceWeaver prompt-based sound generation request.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  prompt Sound generation prompt.
     @param[in]  negative_prompt Optional sound generation negative prompt.
     @param[in]  duration_seconds Optional requested output duration in seconds.
@@ -897,7 +725,7 @@ def generate_sound_prompt(
     @param[in]  num_inference_steps Optional model step count.
     @param[in]  seed Optional deterministic model seed.
     @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/sound/prompt`.
+    @return     Runtime operation payload returned by `/sound/prompt`.
     @exception  RuntimeError Raised when the runtime request fails.
     """
     normalized_prompt = str(prompt).strip()
@@ -924,8 +752,7 @@ def generate_sound_prompt(
     )
     response_payload = _post_json_endpoint(
         base_url,
-        runtime_api_key,
-        "/v1/sound/prompt",
+        "/sound/prompt",
         payload,
         timeout_seconds,
     )
@@ -937,16 +764,14 @@ def generate_sound_prompt(
 
 def wait_for_terminal_operation(
     base_url: str,
-    runtime_api_key: str = "",
     poll_interval_seconds: float = 0.5,
     timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
     progress_callback=None,
     cancel_requested=None,
 ) -> dict[str, object]:
     """
-    @brief      Poll `/v1/status` until the current runtime operation completes or fails.
+    @brief      Poll `/status` until the current runtime operation reaches a terminal state.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  poll_interval_seconds Delay between status polls.
     @param[in]  timeout_seconds Maximum total polling duration.
     @param[in]  progress_callback Optional callback receiving each status payload.
@@ -959,31 +784,53 @@ def wait_for_terminal_operation(
     last_status_payload: dict[str, object] | None = None
     observed_active_operation = False
     while time.monotonic() <= deadline:
-        raise_if_cancelled(cancel_requested)
-        last_status_payload = read_status(
-            base_url, runtime_api_key, timeout_seconds=config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS
-        )
-        raise_if_cancelled(cancel_requested)
-        if callable(progress_callback):
-            progress_callback(last_status_payload)
-        operation_payload = last_status_payload.get("operation", {})
-        operation_status = (
-            str(
-                operation_payload.get("status", operation_payload.get("kind", "idle"))
-                if isinstance(operation_payload, dict)
-                else ""
+        try:
+            raise_if_cancelled(cancel_requested)
+            last_status_payload = read_status(base_url, timeout_seconds=config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS)
+            raise_if_cancelled(cancel_requested)
+            if callable(progress_callback):
+                progress_callback(last_status_payload)
+            operation_payload = last_status_payload.get("operation", {})
+            operation_status = (
+                str(
+                    operation_payload.get("status", operation_payload.get("kind", "idle"))
+                    if isinstance(operation_payload, dict)
+                    else ""
+                )
+                .strip()
+                .lower()
             )
-            .strip()
-            .lower()
-        )
-        if operation_status in {"completed", "failed"}:
-            return last_status_payload
-        if operation_status == "idle" and observed_active_operation:
-            return last_status_payload
-        if operation_status != "idle":
-            observed_active_operation = True
-        _sleep_with_cancel(max(poll_interval_seconds, 0.05), cancel_requested)
+            if operation_status in {"completed", "cancelled", "failed"}:
+                return last_status_payload
+            if operation_status == "idle" and observed_active_operation:
+                return last_status_payload
+            if operation_status != "idle":
+                observed_active_operation = True
+            _sleep_with_cancel(max(poll_interval_seconds, 0.05), cancel_requested)
+        except OperationCancelledError:
+            _cancel_last_observed_operation(base_url, last_status_payload)
+            raise
     raise RuntimeError("Timed out while waiting for VoiceWeaver to finish the current operation.")
+
+
+def _cancel_last_observed_operation(base_url: str, status_payload: dict[str, object] | None) -> None:
+    """
+    @brief      Ask VoiceWeaver to stop the last observed operation when it advertised cancellation support.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  status_payload Last normalized runtime status payload, if one was observed.
+    @return     None.
+    @exception  None
+    """
+    operation_payload = status_payload.get("operation", {}) if isinstance(status_payload, dict) else {}
+    if not isinstance(operation_payload, dict) or not bool(operation_payload.get("cancellable", False)):
+        return
+    try:
+        cancel_operation(base_url, config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS)
+    except RuntimeError as exception:
+        _VOICEWEAVER_RUNTIME_LOGGER.warning(
+            "VoiceWeaver remote cancellation failed after local cancellation: %s",
+            exception,
+        )
 
 
 def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:
@@ -1001,46 +848,20 @@ def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:
     raise_if_cancelled(cancel_requested)
 
 
-def download_generated_voice(
-    base_url: str,
-    runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
-) -> bytes:
-    """
-    @brief      Download the latest generated WAV bytes from VoiceWeaver.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Downloaded WAV bytes.
-    @exception  RuntimeError Raised when the runtime request fails.
-    """
-    headers = _build_request_headers(runtime_api_key)
-    try:
-        return _read_bytes(_endpoint_url(base_url, "/v1/voice"), headers, timeout_seconds)
-    except error.HTTPError as exception:
-        raise RuntimeError(_runtime_error_message(exception)) from exception
-    except error.URLError as exception:
-        raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
-    except TimeoutError as exception:
-        raise RuntimeError("Connection failed: request timed out.") from exception
-
-
 def download_generated_audio(
     base_url: str,
-    runtime_api_key: str = "",
     timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
 ) -> bytes:
     """
-    @brief      Download the latest generated sound WAV bytes from VoiceWeaver.
+    @brief      Download the latest generated voice or sound WAV bytes from VoiceWeaver.
     @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Downloaded WAV bytes.
     @exception  RuntimeError Raised when the runtime request fails.
     """
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
     try:
-        return _read_bytes(_endpoint_url(base_url, "/v1/audio"), headers, timeout_seconds)
+        return _read_bytes(_endpoint_url(base_url, "/audio"), headers, timeout_seconds)
     except error.HTTPError as exception:
         raise RuntimeError(_runtime_error_message(exception)) from exception
     except error.URLError as exception:
@@ -1071,22 +892,9 @@ def operation_failed_message(status_payload: dict[str, object]) -> str:
     return "VoiceWeaver reported a failed operation."
 
 
-def _validate_health_payload(health_payload: object) -> None:
-    """
-    @brief      Validate the minimal VoiceWeaver health payload shape.
-    @param[in]  health_payload Candidate health payload.
-    @return     None.
-    @exception  ValueError Raised when the payload is invalid.
-    """
-    if not isinstance(health_payload, dict):
-        raise ValueError("runtime returned an invalid health payload")
-    if str(health_payload.get("status", "")).strip().lower() != "ok":
-        raise ValueError("runtime health check did not return status = ok")
-
-
 def _normalize_models_payload(models_payload: object) -> list[VoiceWeaverModelPayload]:
     """
-    @brief      Normalize the `/v1/models` payload into one discovered-model list.
+    @brief      Normalize the `/models` payload into one discovered-model list.
     @param[in]  models_payload Candidate models payload.
     @return     Normalized discovered-model list.
     @exception  ValueError Raised when the payload is invalid.
@@ -1106,7 +914,7 @@ def _normalize_models_payload(models_payload: object) -> list[VoiceWeaverModelPa
 
 def _resolve_active_model_id(active_model_payload: object) -> str | None:
     """
-    @brief      Resolve one active-model identifier from the `/v1/status` payload.
+    @brief      Resolve one active-model identifier from the `/status` payload.
     @param[in]  active_model_payload Candidate active-model payload.
     @return     Active model identifier or None.
     @exception  None
@@ -1150,19 +958,17 @@ def _build_probe_result(
 
 def _request_json_endpoint(
     base_url: str,
-    runtime_api_key: str,
     endpoint: str,
     timeout_seconds: int,
 ) -> dict[str, object]:
     """
     @brief      Execute the request json endpoint helper.
     @param[in]  base_url Value for `base_url`.
-    @param[in]  runtime_api_key Value for `runtime_api_key`.
     @param[in]  endpoint Value for `endpoint`.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Helper result.
     """
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
     try:
         payload = _read_json(_endpoint_url(base_url, endpoint), headers, timeout_seconds)
     except error.HTTPError as exception:
@@ -1178,7 +984,6 @@ def _request_json_endpoint(
 
 def _post_json_endpoint(
     base_url: str,
-    runtime_api_key: str,
     endpoint: str,
     payload: dict[str, object] | None,
     timeout_seconds: int,
@@ -1186,13 +991,12 @@ def _post_json_endpoint(
     """
     @brief      Execute the post json endpoint helper.
     @param[in]  base_url Value for `base_url`.
-    @param[in]  runtime_api_key Value for `runtime_api_key`.
     @param[in]  endpoint Value for `endpoint`.
     @param[in]  payload Optional payload processed by the helper.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Helper result.
     """
-    headers = _build_request_headers(runtime_api_key)
+    headers = _build_request_headers()
     try:
         response_payload = _send_json_request(
             "POST",
@@ -1212,43 +1016,12 @@ def _post_json_endpoint(
     return response_payload
 
 
-def _request_without_json_response(
-    base_url: str,
-    runtime_api_key: str,
-    endpoint: str,
-    method: str,
-    timeout_seconds: int,
-) -> None:
-    """
-    @brief      Execute the request without json response helper.
-    @param[in]  base_url Value for `base_url`.
-    @param[in]  runtime_api_key Value for `runtime_api_key`.
-    @param[in]  endpoint Value for `endpoint`.
-    @param[in]  method HTTP method token.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     None.
-    """
-    headers = _build_request_headers(runtime_api_key)
-    http_request = request.Request(url=_endpoint_url(base_url, endpoint), headers=headers, method=method)
-    try:
-        with request.urlopen(http_request, timeout=timeout_seconds):
-            return None
-    except error.HTTPError as exception:
-        raise RuntimeError(_runtime_error_message(exception)) from exception
-    except error.URLError as exception:
-        raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
-    except TimeoutError as exception:
-        raise RuntimeError("Connection failed: request timed out.") from exception
-
-
 def _runtime_error_message(http_exception: error.HTTPError) -> str:
     """
     @brief      Execute the runtime error message helper.
     @param[in]  http_exception Value for `http_exception`.
     @return     Helper result.
     """
-    if http_exception.code == 401:
-        return "Connection failed: invalid or missing runtime credentials."
     error_body = ""
     if http_exception.fp is not None:
         try:

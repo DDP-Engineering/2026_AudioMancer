@@ -1,22 +1,26 @@
 schema = 1
 id = "REQ-FUNC-1562fca1"
-title = "VoiceWeaver generation, clone, and sound payloads shall use the current"
+title = "Send generation requests using the simplified VoiceWeaver contract"
 status = "active"
 
 requirement = """
-VoiceWeaver generation, clone, and sound payloads shall use the current documented contract.
+When AudioMancer requests voice design, direct clone, clone-prompt creation, clone-from-prompt generation, or sound generation, it shall use the documented unversioned route and exact required fields, including the selected language for every voice request.
 """
 
-verification = "Automated: 4 linked pytest selector(s)."
+verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract."
 
 affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 linked_tests = [
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_romanian_language",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_sends_selected_language",
 ]
 
 priority = "high"
@@ -24,4 +28,4 @@ rationale = """
 TTS invocation must match the runtime's current request contract.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-08-22

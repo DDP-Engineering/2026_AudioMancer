@@ -1,0 +1,552 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-22T11:12:59.453744Z",
+      "anchor_head": "f668be5f0002c50396f96b62cf283afafa21e229",
+      "anchor_id": "44da977e76f6470d",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b34dff0b3068f6abe4830331ddcea009c2440871f43c13e8bf2eaf5165a683f7"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "128783af86b7054293f1856dbd343eae6932ffc36bdd22757b59cf678aec2918"
+          },
+          "path": "02_Tools/README.md",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "190785f5765591799c233a359896479293005fb1b7cb6d63fae57e25398e849d"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "14415135c4f0aa6f4fb4455d196eb612c988a4746f8a3f01fe2c57d4786c3574"
+          },
+          "path": "02_Tools/package_linux_release.sh",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6e55f5cf33c5afc8bf5bde3fcf764363b03580feb2f1e1d2c9acaa1dd767eb0f"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "c1588bcac92a26dfe24f08453ec34337b8b69cb09aa75d14ee1284c8d1be399e"
+          },
+          "path": "02_Tools/package_windows_release.ps1",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "9a4db5525fa7cb8ac5ca16156cb8c121b5696f364c092beeda711cd781c67874"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "aecc6c58ec182e84f507a37ae5e1d53e669289cd06419fd63f886fc7f6fb31e1"
+          },
+          "path": "02_Tools/regenerate_help_screenshots.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b9433ed678683e53d4c3c5f1a3e46515853c1ad2c3cdc0dae6af92d6a135b864"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "f9caf6d986a5e1037f6e4a3c3291ad6f0be2b100e2f0837a51e69eef8dfb88e1"
+          },
+          "path": "04_Software/AudioMancer/settings.example.json",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a77bc114a5954d0cb7adb05957fed651a7458f5021b6ece3bed7509453f0c321"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "0246f418e63a631411134369516b9cb608a98841b2ec337252fec89451a26472"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5806b6ac0cab43bce55a5861f4c38532fa3c02bc20ca2e710c636364c28357b6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "619252c91af99fc196d4a3c63ae8d2d09ef8fc32f73ad82c6effead82e0cf020"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7de0886424b41d3cd6ee1a687a3b043a2b1c2227ac8ecd74012deb997e06aac0"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "36efc2854116018d9edd25ee1a7e1c4a1343f599d2258dd922719fde25c79d3a"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4ae54e0f23b6d798028c1a008fc33bb6189f71ced43924dfe7d80fdce5a4297f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "d25f48cc282dda1dcf870bb9b5ef2af19d5c360aa57e05f999d084cee75b21b9"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "006104d59937b5708ae96825f0464391f9b38a0c0be34b9982e54131947ab5a5"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "5711f3fe81aadc17f59749828963865fb8321e9cf75870b59fa8c4902d0ae5e2"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3e27bfae557e05c119e9f560f7a250f8c76ba3637e52bfce4ab90e92dd34fbff"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8de71092ce736984bee929b408c96c7004477d394a68260f48183a310ebc2cdc"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4692938790b6a188e93752f152c8e0e8344f5da8928369ef87b41106376e8a65"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "2a1273edb0eda5c7f0c4b15fe09c686235ca03f1236b90b814bb4be2064207dd"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "9b4791b1c1a764882cf14692854d2522e08c53fad11ec8d2e5a55364b46d8321"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "5eae60773c475ca11409dd015ac4484e73e76ded8d2943396e80b6c9f6de5dff"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "122ed1654c4257f49aeb0d53cb65acc133d199cdeaa4c40be7e0a98969507ff6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "b7b6a2f3d325db683f95c6b03f83122f1afd01f76f974a987e8b8f115773ce08"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "201d3ffd756cba74d35d19860d8212d2bc6327ecd3cb4d89131e70fd1802fc51"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8eb5bff1e0d22b58dd87d4bfc6fe7b344089bc893f20533d8b01e74f10b91b99"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b2babf454972f839d39e2e27e2afb12592f0cf0933acc3560440b89086d29a6c"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "05b5e3d6223fe34bc72fe8a5fb5968a39a2a2c2b0fe59c8646c2a5c3c45dbdc8"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cf071734509cf4efd5f0499be69a9a10adb07ba375c38a85344c537b84ee966a"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "e204cbab4c9a4c17a43090983ec4c8d2493d64734b2128973440265e327f3074"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "14c06266ef286e351ea880713e35aa9027cff35e28d92995f0fc78fe4ddc1631"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "59db29ad0d0a2315b6a8c14f255dce63129b1e9aa3334afa0c80b5ad4e61282a"
+          },
+          "path": "04_Software/AudioMancer/tests/conftest.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0c872e09885e055883843bc495eff97ebe9b5bbdc18bc47e641c674241eedf11"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "f6ee9e78b8bcce120f101e19a6196492a37bc3c082c2dfc3fd5eb23112d974e3"
+          },
+          "path": "04_Software/AudioMancer/tests/test_audio_blocks_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b3db80712a9a719a539677694b1796cd949b728e8b8dc62dd2d3633b40d8c7d5"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "addef601213c42ad4e86936246467c378a3992f6238f2051f1015cd025338b65"
+          },
+          "path": "04_Software/AudioMancer/tests/test_character_voices_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "aff387d7edd95cc8dcc1c69a23162a7a9b2369ced3b2e6ece4c285581df13dd6"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "e2db32a5486c5d1298c9d9c79b5f762695f61b4bb8427bd071f369c528987839"
+          },
+          "path": "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a55524025bd866b942e06f5e176e1fa84ff25046c369ef58eb7933fa618727a8"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "8f6bae8b4bca9a8d91c1a2b7730ff67df9599ee75469e16adc4d95b436eccea5"
+          },
+          "path": "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5391314bc1ba1d58794810a42769cb82ea31401ed7e52b66046cb725cec74a01"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "d9b846608c5cacaca1eb7cedb46594d8ba6fc157e6471a933ed340d9f4ce584c"
+          },
+          "path": "04_Software/AudioMancer/tests/test_llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2c08b34602c9322ea3ecd74ec39064477adebd917a417614216cb94b15495094"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "31c636e32fc5875e29e01789f2e5e0d607d509624d9c3930cbf2edcd038b2f96"
+          },
+          "path": "04_Software/AudioMancer/tests/test_main_window_lifecycle.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d92d6483a8b1a474d758a7d13b980521536d4fdf0e2536bca2babfbc6d551eda"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "722b4dee1e42af8a7c36734cd630f8f5dd19a38b9a249c9a06a5cad37dc15268"
+          },
+          "path": "04_Software/AudioMancer/tests/test_main_window_project_flow.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a0dfd06230a963c7a176e83a71912c484c719aee00c42a16298e9a2ff4faf51b"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "0ca72c3e8abf8584730c509ce46685a9874f244bfee0357ceedbe3e77cd0bb64"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d5030b0e25fab2c122753fa31f625dc8fbc330799e6f6b6fb1e9dc68b439b146"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "d8ff25764c0fc821bc1768ffd53c368c6c062be7544ed1f42a6fa12c6596474a"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narrator_definition_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "205eff30a4f2b13246f9cd51672f94d5077de11bce539617eb016d2e5e11900a"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "499f69c1e11ffcaf3fbb6c548403ee31c747ae2922c3169b2779eb99710fa35a"
+          },
+          "path": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "25fe0b44471e8b9eafcbebe845ae717248ed9c4cb415e35fe0fac3de7a4664a9"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "dbec6f7c15d29c5685362f24482cc0df8d2e7e796bf423a30bca96679379da82"
+          },
+          "path": "04_Software/AudioMancer/tests/test_settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1900d13704360649521f3d9d7601f801654ecfc4178ce2e79ef037e18d6d8096"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "af01decae6a48845620d030c8a571a9e22101f722f1ff9d0a3217e21230d851a"
+          },
+          "path": "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a12f94b7ab0ec552efdf392167d8d866f49ac101674d68d79ed345e5c3992d0e"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "1b542d366fc9387caf9f021f3a6d57e4ddd4ac06500e52d294d07ed52344c50e"
+          },
+          "path": "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7c470bd7404cd40fbc4ea38fd17448761334dafb72c221fcdc234e666e39318f"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "52ddf887cda646a182dcae26eb0a071b2c618709dc3e247599ebc0dac8ddb3c6"
+          },
+          "path": "04_Software/AudioMancer/tests/test_tts_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5672853d9981cf117d29f5666d1aadec488b393585f346a775fc53e51a80a814"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "7aab0a05261e8a687e2e31b53e35153a7660b7baac42dc17290fcbb0aef4998d"
+          },
+          "path": "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "dbb09dd8bb405f919cf3759f49ca1cfb616cd3cd05bdcdf23f754dfb7492bd39"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "ff03c4442eaa40872d8f7a6cfa772bf2905f2bff3b2027f0db1cfd38aca64fae"
+          },
+          "path": "05_SoftwareDocu/UserGuide/assets/screenshots/tts-settings-dialog.png",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2b3f4b3f240a38f99ab83e34b399d32dbaa256f74515435dd72205539387edd4"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "ebd70db5600c3ee29282383cd9930ed8dbd8b3cc8f15cccca819772ae62f92ed"
+          },
+          "path": "05_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "dbb09dd8bb405f919cf3759f49ca1cfb616cd3cd05bdcdf23f754dfb7492bd39"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "ff03c4442eaa40872d8f7a6cfa772bf2905f2bff3b2027f0db1cfd38aca64fae"
+          },
+          "path": "05_SoftwareDocu/UserGuide_ro/assets/screenshots/tts-settings-dialog.png",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6337265951fd9c5a645fc2664db7fc98656722cad437192864d9a118262ea0f4"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "13462fc0a00b22a32f16286658a32f736cb7d70f844da7f8c7d3ee69eab844ec"
+          },
+          "path": "05_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "112431ed1a2e0acb001add1f595aa509033896571c3004b62902a6b4ec570ffd"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "1ffabbb389c36c4bc5df557f4be270ee34c5a42a39edbf29f78a3cce62595a82"
+          },
+          "path": "07_Delivery/Public_GitHub_Page/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "393e7b920fa43b70ea5b0b54660ec327d23540784a4aa85541d7a2cc9af8390b"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "4c21330698bad3c8781256e46348a3bf7ddde14fe0eed59b1031e22a48ab99d9"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 11,
+            "removed": 0,
+            "unchanged": 89
+          },
+          "source": {
+            "added": 0,
+            "modified": 12,
+            "removed": 0,
+            "unchanged": 91
+          },
+          "tests": {
+            "added": 0,
+            "modified": 16,
+            "removed": 0,
+            "unchanged": 105
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 39,
+          "removed": 0,
+          "unchanged": 285
+        }
+      },
+      "current_head": "f668be5f0002c50396f96b62cf283afafa21e229",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-22T13:51:06.475718Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-be95a1a6"
+}

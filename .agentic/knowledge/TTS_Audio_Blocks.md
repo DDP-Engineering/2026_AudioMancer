@@ -66,6 +66,15 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   to the same split fingerprint and planned total, starts at the first missing
   or corrupt part, and removes temporary part WAVs after the ordered final WAV
   is stitched (`REQ-FUNC-9e6c2465`).
+- The shared VoiceWeaver client is the only simplified REST-contract boundary.
+  It probes `GET /models` and `GET /status`, loads with `POST /models/load` and
+  `device_mode=auto`, unloads with `POST /models/unload`, and accepts only the
+  current `voice_design`, `clone`, and `sound_prompt` capability names. Voice,
+  clone-prompt, clone-from-prompt, and sound requests use their root endpoints;
+  every completed audio operation downloads from `GET /audio`. The client sends
+  no authentication and exposes none of the removed versioned, rescan, delete,
+  or download-management routes (`REQ-FUNC-636da15e`, `REQ-FUNC-1562fca1`,
+  `REQ-FUNC-b3c6df2a`, `REQ-FUNC-6606ebfa`).
 - Audio Block identity is its `speech_block_id`; each persisted entry carries
   only that id, `voice_target_id`, boolean `generated` and `approved` flags,
   cached `audio_can_play`, measured `audio_duration_seconds`, and a
@@ -73,9 +82,10 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   `split_plan_fingerprint` when the block was actually split. Source text,
   speaker, prompts and per-run budgets are not duplicated here; they are read
   from the Speech Blocks document or recomputed from settings. Approval changes
-  preserve WAVs but reset Audio Assembly; cancellation is cooperative around
-  polling/checkpoints, so an already submitted runtime request can still finish
-  remotely.
+  preserve WAVs but reset Audio Assembly. Cancellation is cooperative around
+  polling/checkpoints and calls `POST /cancel` when VoiceWeaver reports the
+  current operation as cancellable; a non-cancellable request can still finish
+  remotely (`REQ-FUNC-a24e14cb`).
 - Loading rebuilds every non-persisted field the same way generation first
   derived it, so a reloaded block equals a freshly initialized one. In
   particular `content_kind`, `text`, prompts, `special_block_status` and
@@ -115,7 +125,7 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - The TTS Settings middle action persists changes without closing and is
   therefore labeled Apply in both supported interface languages; OK retains
   the save-and-close path (`REQ-UX-aa109e16`).
-- Generated voice and sound WAV download helpers translate a direct
+- The single generated-audio WAV download helper translates a direct
   `TimeoutError` to `Connection failed: request timed out.` with the original
   exception chained, while retaining existing HTTPError and URLError handling
   (`REQ-FUNC-6606ebfa`).

@@ -1147,7 +1147,6 @@ def _settings_payload() -> dict[str, object]:
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": None,
         "tts_runtime_base_url": "http://127.0.0.1:8059",
-        "tts_runtime_api_key": "",
         "tts_runtime_probe_succeeded": False,
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],

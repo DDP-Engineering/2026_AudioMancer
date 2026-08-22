@@ -1313,7 +1313,7 @@ def _resolve_generation_context(
         raise ValueError("Configure TTS Settings and test the VoiceWeaver connection before generating Audio Blocks.")
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     clone_model = _first_model(
-        capability_matrix.get("qwen_base_models", []),
+        capability_matrix.get("qwen_clone_models", []),
         preferred_model_id=_PREFERRED_QWEN_CLONE_MODEL_ID,
     )
     if clone_model is None:
@@ -1422,7 +1422,6 @@ def _resolve_generation_context(
         "original_language": str(manifest.get("original_language", "")).strip(),
         **model_budget,
         "base_url": base_url,
-        "runtime_api_key": str(runtime_settings.get("runtime_api_key", "")),
         "timeout_seconds": timeout_seconds,
         "input_fingerprint": input_fingerprint,
     }
@@ -1672,17 +1671,14 @@ def _ensure_model_active(
     @exception  OperationCancelledError Raised when cancellation is requested while waiting.
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     voiceweaver_runtime_service.load_model(
         base_url,
-        runtime_api_key,
         model_id,
         timeout_seconds=timeout_seconds,
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
         cancel_requested=cancel_requested,
     )
@@ -1717,13 +1713,11 @@ def _ensure_clone_model_loaded(
     @exception  OperationCancelledError Raised when cancellation is requested.
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     _emit_progress(progress_callback, progress_current, progress_total, "Loading audio generation model...")
     raise_if_cancelled(cancel_requested)
     initial_status = voiceweaver_runtime_service.read_status(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     raise_if_cancelled(cancel_requested)
@@ -1748,7 +1742,6 @@ def _ensure_clone_model_loaded(
     )
     loaded_status = voiceweaver_runtime_service.read_status(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     return _resolve_model_budget(loaded_status, clone_model_payload, operator_token_maximum)
@@ -1780,13 +1773,11 @@ def _ensure_sound_model_loaded(
             "Scene Ambience Audio was requested, but no healthy VoiceWeaver sound_prompt model is available."
         )
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     _emit_progress(progress_callback, progress_current, progress_total, "Loading scene ambience sound model...")
     raise_if_cancelled(cancel_requested)
     initial_status = voiceweaver_runtime_service.read_status(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     raise_if_cancelled(cancel_requested)
@@ -1848,12 +1839,10 @@ def _prepare_clone_profile(
     sample_language = _voice_target_sample_language(voice_target)
 
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     raise_if_cancelled(cancel_requested)
     voiceweaver_runtime_service.create_voice_clone_prompt(
         base_url,
-        runtime_api_key,
         sample_audio_path.read_bytes(),
         sample_text,
         sample_language,
@@ -1861,7 +1850,6 @@ def _prepare_clone_profile(
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
         cancel_requested=cancel_requested,
     )
@@ -1916,7 +1904,6 @@ def _generate_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     voice_clone_prompt = clone_profile.get("voice_clone_prompt")
     if voice_clone_prompt in (None, ""):
@@ -1956,7 +1943,6 @@ def _generate_audio_block(
         )
         voiceweaver_runtime_service.generate_voice_clone_from_prompt(
             base_url,
-            runtime_api_key,
             voice_clone_prompt,
             str(generation_context.get("voice_language", "")),
             part_text,
@@ -1965,7 +1951,6 @@ def _generate_audio_block(
         )
         final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
             base_url,
-            runtime_api_key,
             timeout_seconds=timeout_seconds,
             cancel_requested=cancel_requested,
         )
@@ -1978,9 +1963,8 @@ def _generate_audio_block(
         final_result = final_status.get("result", {})
         if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
             raise RuntimeError("VoiceWeaver finished the request but did not report downloadable audio.")
-        audio_bytes = voiceweaver_runtime_service.download_generated_voice(
+        audio_bytes = voiceweaver_runtime_service.download_generated_audio(
             base_url,
-            runtime_api_key,
             timeout_seconds=timeout_seconds,
         )
         _validate_wav_bytes(audio_bytes)
@@ -2061,7 +2045,6 @@ def _generate_scene_ambience_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
-    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     sound_prompt = str(audio_block.get("sound_prompt", audio_block.get("text", ""))).strip()
     if not sound_prompt:
@@ -2091,7 +2074,6 @@ def _generate_scene_ambience_audio_block(
     )
     voiceweaver_runtime_service.generate_sound_prompt(
         base_url,
-        runtime_api_key,
         sound_prompt,
         negative_prompt=str(audio_block.get("negative_prompt", "")).strip(),
         duration_seconds=duration_seconds,
@@ -2105,7 +2087,6 @@ def _generate_scene_ambience_audio_block(
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
         cancel_requested=cancel_requested,
     )
@@ -2117,7 +2098,6 @@ def _generate_scene_ambience_audio_block(
         raise RuntimeError("VoiceWeaver finished the sound request but did not report downloadable audio.")
     audio_bytes = voiceweaver_runtime_service.download_generated_audio(
         base_url,
-        runtime_api_key,
         timeout_seconds=timeout_seconds,
     )
     _validate_wav_bytes(audio_bytes)

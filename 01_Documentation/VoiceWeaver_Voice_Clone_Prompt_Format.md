@@ -27,7 +27,7 @@ The public artifact shape is:
 {
   "format": "qwen_voice_clone_prompt_v1",
   "backend_name": "qwen",
-  "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
+  "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
   "tokenizer_type": "qwen3_tts_tokenizer_12hz",
   "tts_model_type": "base",
   "prompt": {
@@ -54,7 +54,8 @@ Notes:
 
 - `ref_text` stores the transcript associated with the reusable prompt and is
   used to rebuild the Qwen reference token ids during replay
-- `ref_code` may be `null`
+- `ref_code` and `ref_spk_embedding` are each `null` when the backend did not
+  produce that component
 - `encoding` is always `base64`
 - `shape` is the tensor shape needed to rebuild the tensor
 - `dtype` is the serialized tensor dtype used by VoiceWeaver for storage
@@ -73,7 +74,7 @@ This format is stable for client storage and safe to return in REST payloads.
 ## Decode Path
 
 When the client later submits `voice_clone_prompt` back to
-`POST /v1/voice/clone-from-prompt`, VoiceWeaver:
+`POST /voice/clone-from-prompt`, VoiceWeaver:
 
 1. validates the outer artifact shape
 2. base64-decodes each tensor payload
@@ -86,15 +87,26 @@ audio during this path.
 
 ## Compatibility Validation
 
-VoiceWeaver rejects reusable prompts when any of these checks fail:
+VoiceWeaver runs these checks in order and stops at the first failure. The two
+error codes split by what the caller has to change to succeed: a `400` means
+fix the payload, a `409` means load a different model.
 
-- `format` must equal `qwen_voice_clone_prompt_v1`
-- `backend_name` must match the active backend
-- `tts_model_type` must equal `base`
-- `model_id` must match the loaded model exactly
-- `tokenizer_type` must match the loaded model exactly
+| Check | Code | Status |
+|---|---|---|
+| payload parses as JSON and validates against the schema | `invalid_voice_clone_prompt` | 400 |
+| `format` equals `qwen_voice_clone_prompt_v1` | `invalid_voice_clone_prompt` | 400 |
+| `backend_name` matches the active backend | `incompatible_voice_clone_prompt` | 409 |
+| `tts_model_type` matches the loaded model | `incompatible_voice_clone_prompt` | 409 |
+| `model_id` matches the loaded model exactly | `incompatible_voice_clone_prompt` | 409 |
+| `tokenizer_type` matches the loaded model exactly | `incompatible_voice_clone_prompt` | 409 |
 
-Error codes:
+An unrecognized `format` is deliberately a `400` rather than a `409`: no model
+the runtime can load would accept it, so retrying against a different model
+cannot help.
 
-- malformed payload: `invalid_voice_clone_prompt`
-- well-formed but incompatible payload: `incompatible_voice_clone_prompt`
+Each `409` carries both sides of the mismatch in `details`, for example
+`active_model_id` and `prompt_model_id`.
+
+The prompt is only usable while a Qwen Base model is loaded. Submitting one
+with no model loaded fails with `model_not_loaded`, and with a non-clone model
+loaded it fails with `unsupported_mode`.

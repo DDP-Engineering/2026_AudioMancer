@@ -80,7 +80,6 @@ for profile in settings_payload.get("llm_profiles", []):
     profile["discovery_message"] = ""
 
 settings_payload["tts_runtime_base_url"] = "http://127.0.0.1:8059"
-settings_payload["tts_runtime_api_key"] = ""
 settings_payload["tts_runtime_probe_succeeded"] = False
 settings_payload["tts_runtime_probe_message"] = ""
 settings_payload["tts_runtime_discovered_models"] = []

@@ -759,7 +759,7 @@ def test_main_window_loads_narrator_definition_state_into_narator_voice_page(
         {
             "model_id": "definition_model",
             "status": "healthy",
-            "supported_generation_modes": ["definition"],
+            "supported_generation_modes": ["voice_design"],
         },
         {
             "model_id": "clone_model",

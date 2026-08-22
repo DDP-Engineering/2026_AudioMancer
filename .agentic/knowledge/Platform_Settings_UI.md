@@ -171,6 +171,9 @@ instructions from the Chunking document.
   runtime service's public canonical normalizer, retaining scalar generation
   ranges/defaults and deep-copy isolation while dropping unknown model fields
   (`REQ-FUNC-9757d967`, `REQ-FUNC-1fef6b33`).
+- TTS Settings configures VoiceWeaver by base URL and persists runtime-derived
+  probe state, model inventory, active model, and device diagnostics
+  (`REQ-FUNC-636da15e`).
 - Valid provider base URLs retain their proxy path, query, and fragment data
   through profile normalization so chat and Test Connection can apply the same
   shared endpoint policy (`REQ-FUNC-9273a9ed`).
@@ -288,11 +291,11 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 
 ## 10. Limitations And Future Work
 
-- Settings are stored as a plaintext UTF-8 JSON object, including any AI or TTS
+- Settings are stored as a plaintext UTF-8 JSON object, including AI provider
   API keys; secret hygiene remains the operator's responsibility and is not
   scrubbed by validation.
 - Corruption backups preserve the original plaintext bytes and can therefore
-  contain the same API keys as the active settings file; operators should keep
+  contain the same AI provider keys as the active settings file; operators should keep
   those backups private and delete them only after recovering any needed values.
 - Settings and themes are dictionary-based and not yet modeled with typed
   classes.

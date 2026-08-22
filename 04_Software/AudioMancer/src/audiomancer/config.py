@@ -641,9 +641,6 @@ DEFAULT_LLM_TEMPERATURE = 0.2
 # @brief Default base URL used for the local VoiceWeaver runtime.
 DEFAULT_TTS_RUNTIME_BASE_URL = "http://127.0.0.1:8059"
 
-# @brief Default bearer token used when the runtime requires authentication.
-DEFAULT_TTS_RUNTIME_API_KEY = ""
-
 # @brief Default connection timeout in seconds for VoiceWeaver probe requests.
 DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS = 5
 

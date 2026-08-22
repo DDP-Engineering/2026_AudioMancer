@@ -57,7 +57,6 @@
   "ui_font_size_step": "normal",
   "text_font_size_step": "normal",
   "tts_runtime_base_url": "http://YOUR_TTS_RUNTIME_HOST:8059",
-  "tts_runtime_api_key": "",
   "tts_runtime_probe_succeeded": false,
   "tts_runtime_probe_message": "",
   "tts_runtime_discovered_models": [],

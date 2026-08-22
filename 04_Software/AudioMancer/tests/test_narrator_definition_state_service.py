@@ -294,7 +294,7 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
-            "supported_generation_modes": ["definition"],
+            "supported_generation_modes": ["voice_design"],
         },
     ]
 

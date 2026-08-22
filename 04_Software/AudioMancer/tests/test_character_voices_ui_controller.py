@@ -641,13 +641,13 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
             "model_id": "qwen-base",
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
-            "supported_generation_modes": ["base", "clone"],
+            "supported_generation_modes": ["clone"],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
-            "supported_generation_modes": ["definition", "voice_designer"],
+            "supported_generation_modes": ["voice_design"],
         },
     ]
     window._refresh_character_voices_page_state(
@@ -1322,7 +1322,6 @@ def _default_settings_payload() -> dict[str, object]:
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": None,
         "tts_runtime_base_url": "http://127.0.0.1:8059",
-        "tts_runtime_api_key": "",
         "tts_runtime_probe_succeeded": False,
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],

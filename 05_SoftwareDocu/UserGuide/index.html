@@ -321,16 +321,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ol>
                     <li>Install and start VoiceWeaver on this computer or on another computer in the same network.</li>
                     <li>Enter the <strong>Base URL</strong>. The default is <code>http://127.0.0.1:8059</code>.</li>
-                    <li>Enter an <strong>API Key</strong> if your runtime requires one. The field is masked.</li>
                     <li>Press <strong>Test Connection</strong>. AudioMancer reports success with the number of models found, or shows the failure reason. The status line beside the button reads <strong>Not connected</strong>, <strong>Connected</strong> or <strong>Connection failed</strong>, and starts at <em>Not connected</em> every time the dialog opens.</li>
                 </ol>
+                <p>
+                    AudioMancer requires the simplified VoiceWeaver 1.0.0 REST API, provided as an unauthenticated
+                    local service. VoiceWeaver model files are managed outside AudioMancer; after changing them,
+                    test the connection again to refresh discovery.
+                </p>
                 <p>
                     <strong>Discovered Models</strong> lists what the runtime offers, one row per model as
                     <em>model | status | generation modes</em>, with <em>active</em> appended to the one in use. Until
                     a probe succeeds it shows a single line saying no models were discovered.
                 </p>
                 <p>
-                    <strong>Runtime Audio Limits</strong> tells you whether the required Qwen3 base and Voice Designer
+                    <strong>Runtime Audio Limits</strong> tells you whether the required Qwen3 clone and voice-design
                     capabilities are available. Before a successful probe it asks you to test the connection first;
                     afterwards it either confirms the capabilities or names the ones that are missing.
                 </p>

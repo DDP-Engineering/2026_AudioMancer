@@ -84,7 +84,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "create_voice_clone_prompt",
-        lambda _base_url, _api_key, sample_audio_bytes, sample_text, language, **_kwargs: (
+        lambda _base_url, sample_audio_bytes, sample_text, language, **_kwargs: (
             observed_prompt_requests.append((sample_audio_bytes.decode("utf-8"), sample_text, language)),
             {"status": "running"},
         )[1],
@@ -92,7 +92,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(
                 (
                     str(dict(voice_clone_prompt).get("format", "")),
@@ -110,7 +110,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -218,7 +218,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "create_voice_clone_prompt",
-        lambda _base_url, _api_key, sample_audio_bytes, sample_text, language, **_kwargs: (
+        lambda _base_url, sample_audio_bytes, sample_text, language, **_kwargs: (
             observed_prompt_requests.append((sample_audio_bytes.decode("utf-8"), sample_text, language)),
             {"status": "running"},
         )[1],
@@ -226,7 +226,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(
                 (
                     str(dict(voice_clone_prompt).get("format", "")),
@@ -244,7 +244,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -300,6 +300,7 @@ def test_audio_blocks_service_same_narrator_cancellation_preserves_voice_targets
     wait_count = {"value": 0}
 
     def _cancel_during_speech_generation(*_args, **_kwargs):
+        """@brief Cancel after the first speech-generation terminal wait."""
         wait_count["value"] += 1
         if wait_count["value"] == 1:
             return {
@@ -320,7 +321,7 @@ def test_audio_blocks_service_same_narrator_cancellation_preserves_voice_targets
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, voice_clone_prompt, *_args, **_kwargs: (
+        lambda _base_url, voice_clone_prompt, *_args, **_kwargs: (
             observed_generation_targets.append(str(dict(voice_clone_prompt).get("speaker", ""))),
             {"status": "running"},
         )[1],
@@ -434,7 +435,7 @@ def test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_langua
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "create_voice_clone_prompt",
-        lambda _base_url, _api_key, _sample_audio_bytes, _sample_text, language, **_kwargs: (
+        lambda _base_url, _sample_audio_bytes, _sample_text, language, **_kwargs: (
             observed_prompt_languages.append(language),
             {"status": "running"},
         )[1],
@@ -508,7 +509,7 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "create_voice_clone_prompt",
-        lambda _base_url, _api_key, sample_audio_bytes, sample_text, language, **_kwargs: (
+        lambda _base_url, sample_audio_bytes, sample_text, language, **_kwargs: (
             observed_prompt_requests.append((sample_audio_bytes.decode("utf-8"), sample_text, language)),
             {"status": "running"},
         )[1],
@@ -516,7 +517,7 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, _voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(text),
             {"status": "running"},
         )[1],
@@ -528,7 +529,7 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -633,7 +634,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, _voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(text),
             {"status": "running"},
         )[1],
@@ -645,7 +646,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -791,7 +792,7 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: _wav_bytes("part"),
     )
 
@@ -841,6 +842,7 @@ def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_
     wait_count = {"value": 0}
 
     def _wait_for_terminal_operation(*_args, **_kwargs):
+        """@brief Return clone-prompt completion once, then generated-audio completion."""
         wait_count["value"] += 1
         if wait_count["value"] == 1:
             return {
@@ -862,7 +864,6 @@ def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_
 
     def _generate_voice_clone_from_prompt(
         _base_url,
-        _api_key,
         _voice_clone_prompt,
         _language,
         text,
@@ -879,13 +880,14 @@ def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: generated_payloads[-1],
     )
     planned_parts: list[str] = []
     original_split_planner = audio_blocks_service._plan_audio_block_splits  # noqa: SLF001
 
     def _capture_split_plan(text, generation_context):
+        """@brief Capture the generated split plan while delegating to the real planner."""
         split_plan = original_split_planner(text, generation_context)
         planned_parts[:] = [str(part) for part in split_plan["parts"]]
         return split_plan
@@ -1301,7 +1303,7 @@ def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stal
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, _voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(text),
             {"status": "running"},
         )[1],
@@ -1313,7 +1315,7 @@ def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stal
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: _wav_bytes("alice-regenerated"),
     )
 
@@ -1450,7 +1452,7 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: generated_audio.pop(0),
     )
 
@@ -1710,7 +1712,7 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(
                 (
                     str(dict(voice_clone_prompt).get("format", "")),
@@ -1728,7 +1730,7 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -1844,7 +1846,7 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "generate_voice_clone_from_prompt",
-        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+        lambda _base_url, _voice_clone_prompt, _language, text, **_kwargs: (
             observed_generate_requests.append(text),
             {"status": "running"},
         )[1],
@@ -1856,7 +1858,7 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: _wav_bytes("inserted"),
     )
 
@@ -1935,7 +1937,7 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: _wav_bytes("fresh"),
     )
 
@@ -1992,7 +1994,7 @@ def test_audio_blocks_service_prefers_qwen_1_7b_base_model(monkeypatch, tmp_path
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "load_model",
-        lambda _base_url, _api_key, model_id, **_kwargs: (
+        lambda _base_url, model_id, **_kwargs: (
             observed_loaded_models.append(model_id),
             {"status": "running"},
         )[1],
@@ -2014,7 +2016,7 @@ def test_audio_blocks_service_prefers_qwen_1_7b_base_model(monkeypatch, tmp_path
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
@@ -2303,7 +2305,7 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "load_model",
-        lambda _base_url, _api_key, model_id, **_kwargs: (
+        lambda _base_url, model_id, **_kwargs: (
             generation_order.append(f"load:{model_id}") or {"status": "running"}
         ),
     )
@@ -2329,7 +2331,7 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
     monkeypatch.setattr(
@@ -2575,7 +2577,7 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     ambience_block = regenerated_blocks[-1]
     assert report["generated_block_count"] == 1
     assert sound_requests
-    assert sound_requests[0][0][2] == "distant rain on metal trench covers"
+    assert sound_requests[0][0][1] == "distant rain on metal trench covers"
     assert sound_requests[0][1]["negative_prompt"] == "voice, speech"
     assert sound_requests[0][1]["duration_seconds"] == 11.0
     assert sound_requests[0][1]["guidance_scale"] == 8.5
@@ -2659,7 +2661,7 @@ def test_audio_blocks_service_rejects_metadata_only_regeneration_before_runtime_
     guarded_calls: list[str] = []
 
     def _unexpected_call(call_name: str):
-        """Record and fail one runtime or generation call that the guard must prevent."""
+        """@brief Record and fail one runtime or generation call that the guard must prevent."""
         guarded_calls.append(call_name)
         raise AssertionError(f"Unexpected guarded call: {call_name}")
 
@@ -2949,7 +2951,6 @@ def _runtime_settings() -> dict[str, object]:
     """
     return {
         "base_url": "http://127.0.0.1:8059",
-        "runtime_api_key": "",
         "timeout_seconds": 60,
         "discovered_models": [
             {
@@ -2972,7 +2973,7 @@ def _runtime_settings() -> dict[str, object]:
 
 
 def _update_audio_blocks_document(project_root, **fields):
-    """Rewrite selected root fields of the persisted Audio Blocks document."""
+    """@brief Rewrite selected root fields of the persisted Audio Blocks document."""
     document = audio_blocks_service.load_audio_blocks_document(project_root)
     assert document is not None
     audio_blocks_service.write_audio_blocks_document(project_root, {**document, **fields})
@@ -3040,7 +3041,7 @@ def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
-        "download_generated_voice",
+        "download_generated_audio",
         lambda *_args, **_kwargs: _wav_bytes("part"),
     )
     runtime_settings = _runtime_settings()
@@ -3052,7 +3053,7 @@ def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text
 
 
 def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str = "completed"):
-    """Persist a valid single Speech Blocks document wrapping fixture blocks."""
+    """@brief Persist a valid single Speech Blocks document wrapping fixture blocks."""
     speech_blocks_service.write_speech_blocks_document(
         project_root,
         {
@@ -3081,7 +3082,7 @@ def _write_speech_blocks_fixture_document(project_root, blocks, *, status: str =
 
 
 def _read_speech_blocks_fixture_blocks(project_root):
-    """Return the persisted Speech Blocks document blocks for fixture mutation."""
+    """@brief Return the persisted Speech Blocks document blocks for fixture mutation."""
     document = speech_blocks_service.load_speech_blocks_document(project_root)
     return document["blocks"] if document else []
 
@@ -3119,11 +3120,11 @@ def test_audio_blocks_skips_reloading_an_already_active_clone_model(monkeypatch)
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "load_model",
-        lambda _base_url, _api_key, model_id, **_kwargs: load_model_calls.append(model_id),
+        lambda _base_url, model_id, **_kwargs: load_model_calls.append(model_id),
     )
 
     model_budget = audio_blocks_service._ensure_clone_model_loaded(
-        {"base_url": "http://127.0.0.1:8059", "runtime_api_key": "", "timeout_seconds": 5},
+        {"base_url": "http://127.0.0.1:8059", "timeout_seconds": 5},
         clone_model_id,
         clone_model_payload,
         None,

@@ -843,7 +843,6 @@ def _runtime_settings(
     scene_ambience_seed = window._settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
     return {
         "base_url": str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
-        "runtime_api_key": str(window._settings_payload.get("tts_runtime_api_key", "")),
         "timeout_seconds": timeout_seconds,
         "discovered_models": list(probe_result.get("discovered_models", [])),
         "speech_block_max_generation_tokens": tts_budget_service.resolve_generation_token_limit(

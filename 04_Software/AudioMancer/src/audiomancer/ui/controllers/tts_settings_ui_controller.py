@@ -132,7 +132,6 @@ def test_runtime_connection_from_dialog(window) -> None:
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     probe_result = voiceweaver_runtime_service.probe_runtime(
         window._tts_settings_page._base_url_edit.text().strip(),
-        window._tts_settings_page._api_key_edit.text(),
     )
     window._tts_settings_page.apply_probe_result(probe_result)
     if bool(probe_result.get("success", False)):

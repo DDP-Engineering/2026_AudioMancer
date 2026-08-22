@@ -520,7 +520,6 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
 
     for field_name in (
         "tts_runtime_base_url",
-        "tts_runtime_api_key",
         "tts_runtime_probe_message",
     ):
         if not isinstance(normalized_settings[field_name], str):
@@ -711,7 +710,6 @@ def build_default_settings() -> dict[str, Any]:
         "ui_theme_id": config.DEFAULT_UI_THEME_ID,
         "ui_themes": [],
         "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,
-        "tts_runtime_api_key": config.DEFAULT_TTS_RUNTIME_API_KEY,
         "tts_runtime_probe_succeeded": False,
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],

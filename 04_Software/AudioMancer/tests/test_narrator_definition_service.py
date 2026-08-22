@@ -133,6 +133,7 @@ def test_narrator_service_delete_sample_clears_metadata_when_wav_unlink_fails(mo
     original_unlink = Path.unlink
 
     def _raise_for_locked_sample(path, *args, **kwargs) -> None:
+        """@brief Simulate a media backend retaining the target WAV handle."""
         if path == audio_path:
             raise PermissionError("sample is still held by the media backend")
         original_unlink(path, *args, **kwargs)
@@ -532,7 +533,7 @@ def test_narrator_service_profile_generation_request_requires_minimum_qwen_capab
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
-            "supported_generation_modes": ["definition"],
+            "supported_generation_modes": ["voice_design"],
         },
     ]
     custom_request = narrator_definition_service.profile_generation_request(
@@ -542,7 +543,7 @@ def test_narrator_service_profile_generation_request_requires_minimum_qwen_capab
     )
 
     assert missing_request["can_generate"] is False
-    assert "base" in missing_request["unavailable_reason"]
+    assert "clone" in missing_request["unavailable_reason"]
     assert custom_request["generation_mode"] == "definition"
     assert custom_request["model_id"] == "qwen-designer"
 
@@ -600,7 +601,7 @@ def test_narrator_language_migration_preserves_operator_authored_preview(tmp_pat
 
 
 def test_append_ai_generated_profiles_does_not_require_discarded_generation_metadata(tmp_path) -> None:
-    """Verify current callers may omit legacy generation metadata while old calls remain compatible."""
+    """@brief Verify callers may omit generation metadata while old calls remain compatible."""
     project_root, _manifest = project_workspace_service.create_project("NarratorNoGenerationMetadata", tmp_path)
 
     generated = narrator_definition_service.append_ai_generated_profiles(

@@ -38,16 +38,18 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When either generated VoiceWeaver WAV download raises a direct timeout, the runtime service shall raise `RuntimeError("Connection failed: request timed out.")` with the original `TimeoutError` as its cause.
+When the generated VoiceWeaver WAV download from `GET /audio` raises a direct timeout, the runtime service shall raise `RuntimeError("Connection failed: request timed out.")` with the original `TimeoutError` as its cause.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Focused runtime tests inject a direct TimeoutError into both generated-WAV download helpers and assert the exact RuntimeError text and identity of its cause, while companion cases verify timeout forwarding, returned bytes, and unchanged HTTPError and URLError translations."
+verification = "Focused runtime tests inject a direct TimeoutError into the generated-audio helper and assert the exact RuntimeError text and identity of its cause, while companion cases verify timeout forwarding, returned bytes, and unchanged HTTPError and URLError translations."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
+  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
   "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
@@ -66,4 +68,4 @@ priority = "normal"   # low | normal | high
 rationale = "A socket timeout may arise during response reading, and generated WAV downloads should expose the same stable operator-facing contract as other VoiceWeaver requests."
 
 created = 2026-08-09
-updated = 2026-08-09
+updated = 2026-08-22

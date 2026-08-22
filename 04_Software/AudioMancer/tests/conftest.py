@@ -131,7 +131,6 @@ def default_settings_payload():
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": "profile_1",
         "tts_runtime_base_url": "http://127.0.0.1:8059",
-        "tts_runtime_api_key": "",
         "tts_runtime_probe_succeeded": False,
         "tts_runtime_probe_message": "",
         "tts_runtime_discovered_models": [],

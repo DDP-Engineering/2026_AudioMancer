@@ -90,14 +90,8 @@ class TtsSettingsPage(QWidget):
         self._base_url_label = QLabel("Base URL", self)
         self._base_url_edit = QLineEdit(self)
         self._base_url_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._api_key_label = QLabel("API Key", self)
-        self._api_key_edit = QLineEdit(self)
-        self._api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self._api_key_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         left_layout.addWidget(self._base_url_label)
         left_layout.addWidget(self._base_url_edit)
-        left_layout.addWidget(self._api_key_label)
-        left_layout.addWidget(self._api_key_edit)
         self._test_connection_button = QPushButton("Test Connection", self)
         left_layout.addWidget(self._test_connection_button)
         self._runtime_status_label = QLabel("", self)
@@ -259,7 +253,6 @@ class TtsSettingsPage(QWidget):
         self._base_url_edit.setText(
             str(settings_payload.get("tts_runtime_base_url", config.DEFAULT_TTS_RUNTIME_BASE_URL))
         )
-        self._api_key_edit.setText(str(settings_payload.get("tts_runtime_api_key", "")))
         # Dialog always opens with a fresh "Not connected" state — the operator must
         # re-run Test Connection in each session so the displayed status reflects the
         # live runtime and not a stale flag persisted from a previous session.
@@ -382,7 +375,6 @@ class TtsSettingsPage(QWidget):
         """
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
-        merged_settings["tts_runtime_api_key"] = self._api_key_edit.text()
         if self._probe_ran:
             merged_settings["tts_runtime_probe_succeeded"] = self._probe_succeeded
             merged_settings["tts_runtime_probe_message"] = self._probe_message
@@ -425,7 +417,6 @@ class TtsSettingsPage(QWidget):
         self._current_language = language
         self._runtime_group.setTitle(ui_state_service.translate("tts_settings.runtime_group", language))
         self._base_url_label.setText(ui_state_service.translate("tts_settings.base_url", language))
-        self._api_key_label.setText(ui_state_service.translate("tts_settings.api_key", language))
         self._test_connection_button.setText(ui_state_service.translate("tts_settings.test_connection", language))
         self._models_group.setTitle(ui_state_service.translate("tts_settings.models_group", language))
         self._planning_group.setTitle(ui_state_service.translate("tts_settings.plan_group", language))

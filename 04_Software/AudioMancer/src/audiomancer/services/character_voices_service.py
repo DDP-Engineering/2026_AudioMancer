@@ -371,6 +371,7 @@ def save_target_prompt(
         raise ValueError("missing_target")
     save_voice_targets(project_root, normalized_targets)
     delete_target_sample(project_root, target_id)
+    _CHARACTER_VOICES_LOGGER.info("Saved character voice target prompt target_id=%s", str(target_id).strip())
     return updated_target
 
 
@@ -428,7 +429,7 @@ def voice_target_generation_request(
             normalized_language,
             prompt_text,
         )
-    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_designer_models", []))
+    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_design_models", []))
     if voice_designer_model is None:
         return _build_generation_request(
             False,
@@ -634,6 +635,7 @@ def store_target_sample(
         relative_path=str(audio_path.relative_to(Path(project_root))),
         metadata_payload=metadata_payload,
     )
+    _CHARACTER_VOICES_LOGGER.info("Persisted generated character voice sample target_id=%s", target_id)
     return metadata_payload
 
 
@@ -687,6 +689,7 @@ def import_target_sample(
         relative_path=str(audio_path.relative_to(Path(project_root))),
         metadata_payload=metadata_payload,
     )
+    _CHARACTER_VOICES_LOGGER.info("Imported character voice sample target_id=%s", target_id)
     return metadata_payload
 
 

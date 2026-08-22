@@ -99,9 +99,6 @@ function Copy-CleanSettingsFile {
     if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_base_url') {
         $settingsPayload.tts_runtime_base_url = 'http://127.0.0.1:8059'
     }
-    if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_api_key') {
-        $settingsPayload.tts_runtime_api_key = ''
-    }
     if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_probe_succeeded') {
         $settingsPayload.tts_runtime_probe_succeeded = $false
     }
