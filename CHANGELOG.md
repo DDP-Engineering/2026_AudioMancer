@@ -12,6 +12,25 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Scene Ambience no longer stops the whole Audio Blocks run when the configured
+  duration is too long. The sound model can produce at most 47.55 seconds in one
+  go and VoiceWeaver rejects anything longer outright, but the setting still
+  offered up to 120 seconds - so choosing 60 made every Scene Ambience request
+  fail and aborted the run. The setting now stops at 47 seconds, an out-of-range
+  value already saved is reset to the default, and any longer duration still
+  reaching a request is shortened to what the model can actually produce.
+- Test Connection now shows what VoiceWeaver actually said. When the runtime
+  refused a connection it explained why, but AudioMancer replaced that
+  explanation with a bare "Connection failed: HTTP 500." - in the one dialog
+  meant for diagnosing the connection. The runtime's own message is now shown,
+  and the runtime version it reports is written to the log for bug reports.
+- After upgrading to the new VoiceWeaver interface, AudioMancer no longer claims
+  a healthy runtime is missing capabilities. The model list saved by an older
+  version used names the new runtime no longer uses, and AudioMancer kept
+  believing it - reporting "Qwen3 TTS minimum capabilities are missing" and
+  listing obsolete models until the operator happened to press Test Connection.
+  Such a saved list is now discarded on startup and the connection simply shows
+  as untested, which Test Connection resolves.
 - Cancelling an audio run no longer blocks every later run. Until now, the
   first Cancel left VoiceWeaver looking permanently occupied to AudioMancer:
   Audio Blocks refused to start again with "VoiceWeaver is still busy with a

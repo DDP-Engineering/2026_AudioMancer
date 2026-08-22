@@ -94,6 +94,25 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   and when `/status` reports the operation as terminal `cancelled`, so the
   callers that test only for `completed` never report a deliberate cancel as a
   generation failure (`REQ-FUNC-1a06b572`).
+- `generate_sound_prompt()` bounds `duration_seconds` at
+  `config.MAX_SOUND_PROMPT_DURATION_SECONDS`, the Stable Audio output ceiling of
+  47.55 s that `/sound/prompt` refuses rather than clamps. The bound sits at the
+  request, not only at the settings form, because the duration can also come
+  from a persisted Scene Ambience block; a refusal here would abort the whole
+  Audio Blocks run (`REQ-FUNC-1562fca1`). The TTS Settings spinbox and settings
+  validation apply the same ceiling so an unachievable duration is never offered.
+- `probe_runtime()` reports a refusal through `_runtime_error_message()`, the same
+  helper every other runtime call uses, so the runtime's own
+  `{error_code, message, details}` explanation reaches the one dialog built for
+  diagnosing the connection instead of a bare status code. A successful probe
+  records the reported `runtime_version` from `/status` or `/models`
+  (`REQ-FUNC-636da15e`).
+- A persisted discovered-model inventory declaring a generation mode outside
+  `voiceweaver_runtime_service.SUPPORTED_GENERATION_MODES` is discarded whole at
+  settings validation, and the connection reverts to untested. The VoiceWeaver
+  interface was a hard cut, so no legacy mode name is folded onto a current one;
+  trusting such a cache would report Qwen3 capabilities as missing against a
+  healthy runtime until the operator re-ran Test Connection (`REQ-FUNC-9757d967`).
 - The busy gate before model loading treats every terminal operation status as
   free. `/status` reports the most recent operation and latches its terminal
   status until the next one starts, so counting `cancelled` as busy left the

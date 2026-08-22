@@ -551,6 +551,14 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             )
             normalized_settings[field_name] = defaults[field_name]
 
+    if normalized_settings["scene_ambience_duration_seconds"] > config.MAX_SOUND_PROMPT_DURATION_SECONDS:
+        _log_settings_repair(
+            "Repaired invalid 'scene_ambience_duration_seconds' using the default value.",
+            "scene_ambience_duration_seconds",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["scene_ambience_duration_seconds"] = defaults["scene_ambience_duration_seconds"]
+
     if (
         isinstance(normalized_settings["scene_ambience_guidance_scale"], bool)
         or not isinstance(normalized_settings["scene_ambience_guidance_scale"], int | float)
@@ -586,6 +594,18 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         normalized_settings["scene_ambience_negative_prompt"] = defaults["scene_ambience_negative_prompt"]
     else:
         normalized_settings["scene_ambience_negative_prompt"] = scene_ambience_negative_prompt.strip()
+
+    if voiceweaver_runtime_service.declares_unknown_generation_modes(
+        normalized_settings.get("tts_runtime_discovered_models")
+    ):
+        _log_settings_repair(
+            "Discarded the cached VoiceWeaver model inventory because it predates the current runtime contract.",
+            "tts_runtime_discovered_models",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["tts_runtime_discovered_models"] = []
+        normalized_settings["tts_runtime_probe_succeeded"] = defaults["tts_runtime_probe_succeeded"]
+        normalized_settings["tts_runtime_probe_message"] = defaults["tts_runtime_probe_message"]
 
     normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
         normalized_settings.get("tts_runtime_discovered_models")

@@ -106,6 +106,27 @@ def test_tts_settings_page_round_trips_the_max_block_tokens_setting(qtbot, defau
     assert page._max_generation_tokens_spin.value() == config.SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM
 
 
+def test_tts_settings_page_caps_scene_ambience_duration_at_the_model_ceiling(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the Scene Ambience duration spinbox never offers an unachievable duration.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    settings_payload = dict(default_settings_payload)
+    settings_payload["scene_ambience_duration_seconds"] = 60
+
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
+
+    assert page._scene_ambience_duration_spin.maximum() == int(config.MAX_SOUND_PROMPT_DURATION_SECONDS)
+    assert page.build_settings(default_settings_payload)["scene_ambience_duration_seconds"] == int(
+        config.MAX_SOUND_PROMPT_DURATION_SECONDS
+    )
+
+
 def test_tts_settings_page_round_trips_the_scene_ambience_exclusions(qtbot, default_settings_payload) -> None:
     """
     @brief      Verify REQ-UX-c52f02c1 the universal exclusions load and save from the page.

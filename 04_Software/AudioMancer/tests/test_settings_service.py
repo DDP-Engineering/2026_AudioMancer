@@ -1256,4 +1256,45 @@ def test_validate_settings_repairs_boolean_positive_integers() -> None:
     assert repaired["llm_profiles"][0]["request_timeout_seconds"] is not True
 
 
+def test_validate_settings_repairs_scene_ambience_duration_above_the_model_ceiling() -> None:
+    """
+    @brief      Verify a Scene Ambience duration above the sound-model ceiling is repaired.
+    @return     None.
+    @exception  None
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["scene_ambience_duration_seconds"] = 60
+
+    repaired = settings_service.validate_settings(candidate_settings)
+
+    assert repaired["scene_ambience_duration_seconds"] == config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS
+
+
+def test_validate_settings_discards_a_model_cache_carrying_unknown_generation_modes() -> None:
+    """
+    @brief      Verify a cached model list from an earlier runtime contract is discarded, not trusted.
+    @return     None.
+    @exception  None
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_runtime_discovered_models"] = [
+        {
+            "model_id": "qwen-base",
+            "backend_name": "qwen",
+            "status": "healthy",
+            "supported_generation_modes": ["clone", "definition"],
+        }
+    ]
+    candidate_settings["tts_runtime_active_model_id"] = "qwen-base"
+    candidate_settings["tts_runtime_probe_succeeded"] = True
+    candidate_settings["tts_runtime_probe_message"] = "Connection successful. Discovered 1 models."
+
+    repaired = settings_service.validate_settings(candidate_settings)
+
+    assert repaired["tts_runtime_discovered_models"] == []
+    assert repaired["tts_runtime_active_model_id"] is None
+    assert repaired["tts_runtime_probe_succeeded"] is False
+    assert repaired["tts_runtime_probe_message"] == ""
+
+
 # END OF FILE

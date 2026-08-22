@@ -17,7 +17,6 @@
 # IMPORTS
 
 import copy
-from functools import partial
 import json
 import time
 from typing import Any
@@ -31,7 +30,10 @@ from audiomancer.services.url_service import join_endpoint_url
 # CONSTANTS
 
 _VOICEWEAVER_RUNTIME_LOGGER = get_component_logger("voiceweaver_runtime")
-_endpoint_url = partial(join_endpoint_url, collapse_duplicate_version=False)
+_endpoint_url = join_endpoint_url
+
+# @brief Generation modes the current VoiceWeaver REST contract defines.
+SUPPORTED_GENERATION_MODES = ("voice_design", "clone", "sound_prompt")
 
 # @brief Voice language AudioMancer offers that no VoiceWeaver backend can synthesize.
 _LANGUAGE_NEVER_OFFERED_BY_RUNTIME = "ro"
@@ -225,6 +227,24 @@ def _normalize_generation_modes(value: object) -> list[str]:
         if mode not in normalized_modes:
             normalized_modes.append(mode)
     return normalized_modes
+
+
+def declares_unknown_generation_modes(candidate_models: object) -> bool:
+    """
+    @brief      Report whether any candidate model declares a generation mode outside the REST contract.
+    @param[in]  candidate_models Candidate discovered-model list payload.
+    @return     True when at least one declared mode is not a current REST generation mode.
+    @exception  None
+    """
+    if not isinstance(candidate_models, list):
+        return False
+    for candidate_model in candidate_models:
+        if not isinstance(candidate_model, dict):
+            continue
+        declared_modes = _normalize_generation_modes(candidate_model.get("supported_generation_modes"))
+        if any(mode not in SUPPORTED_GENERATION_MODES for mode in declared_modes):
+            return True
+    return False
 
 
 def _normalize_model_parameters(value: object) -> dict[str, object] | None:
@@ -426,10 +446,11 @@ def probe_runtime(
         discovered_models = _normalize_models_payload(models_payload)
         status_payload = _read_json(_endpoint_url(normalized_base_url, "/status"), headers, timeout_seconds)
         active_model_id = _resolve_active_model_id(status_payload.get("active_model"))
+        runtime_version = _resolve_runtime_version(status_payload, models_payload)
     except error.HTTPError as exception:
         return _build_probe_result(
             success=False,
-            message=f"Connection failed: HTTP {exception.code}.",
+            message=_runtime_error_message(exception),
             discovered_models=[],
             active_model_id=None,
         )
@@ -456,11 +477,17 @@ def probe_runtime(
             active_model_id=None,
         )
 
+    _VOICEWEAVER_RUNTIME_LOGGER.info(
+        "Probed VoiceWeaver runtime_version=%s discovered_models=%s",
+        runtime_version or "unreported",
+        len(discovered_models),
+    )
     return _build_probe_result(
         success=True,
         message=f"Connection successful. Discovered {len(discovered_models)} models.",
         discovered_models=discovered_models,
         active_model_id=active_model_id,
+        runtime_version=runtime_version,
     )
 
 
@@ -752,7 +779,7 @@ def generate_sound_prompt(
     if normalized_negative_prompt:
         payload["negative_prompt"] = normalized_negative_prompt
     if duration_seconds is not None:
-        payload["duration_seconds"] = float(duration_seconds)
+        payload["duration_seconds"] = min(float(duration_seconds), config.MAX_SOUND_PROMPT_DURATION_SECONDS)
     if guidance_scale is not None:
         payload["guidance_scale"] = float(guidance_scale)
     if num_inference_steps is not None:
@@ -981,6 +1008,7 @@ def _build_probe_result(
     message: str,
     discovered_models: list[VoiceWeaverModelPayload],
     active_model_id: str | None,
+    runtime_version: str | None = None,
 ) -> VoiceWeaverProbeResult:
     """
     @brief      Build one normalized VoiceWeaver probe result payload.
@@ -988,6 +1016,7 @@ def _build_probe_result(
     @param[in]  message Operator-facing probe message.
     @param[in]  discovered_models Normalized discovered-model list.
     @param[in]  active_model_id Active model identifier or None.
+    @param[in]  runtime_version Runtime version reported by the probed runtime, or None.
     @return     Normalized runtime probe result dictionary.
     @exception  None
     """
@@ -998,8 +1027,25 @@ def _build_probe_result(
         "discovered_models": list(discovered_models),
         "discovered_model_count": len(discovered_models),
         "active_model_id": active_model_id,
+        "runtime_version": runtime_version,
         "capability_matrix": capability_matrix,
     }
+
+
+def _resolve_runtime_version(*payloads: object) -> str | None:
+    """
+    @brief      Resolve the runtime version reported by the first payload that carries one.
+    @param[in]  payloads Candidate runtime payloads in priority order.
+    @return     Reported runtime version or None.
+    @exception  None
+    """
+    for payload in payloads:
+        if not isinstance(payload, dict):
+            continue
+        runtime_version = str(payload.get("runtime_version", "")).strip()
+        if runtime_version:
+            return runtime_version
+    return None
 
 
 def _request_json_endpoint(

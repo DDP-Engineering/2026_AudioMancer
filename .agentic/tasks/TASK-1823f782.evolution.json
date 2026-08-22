@@ -1,0 +1,110 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-22T18:39:37.718009Z",
+      "anchor_head": "76712bc382435637f0cfb42d63071e0e01a2b82a",
+      "anchor_id": "20d35429f664288f",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0c57ff8fde8356a4ae0b170b34001b6632d4853ca5ceb07c41b23b2edc02468c"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "a77bc114a5954d0cb7adb05957fed651a7458f5021b6ece3bed7509453f0c321"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d5c3cbe00a50e5d95b40894fda54ff1d4488a240bfa56d263c2f7dd8b7b34455"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "266a81447463beecdb9519620ec4cfceef57b7f41a325df0853ce1422088a0a5"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8b670db7110f743f46bbcad837bf10d59f9e759cfccd8274ee12e38c8b005665"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "e05f4575ffb4236d87a0065e144e5c3542904c195ffbe647a5e9ab884993c89d"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4e578232f178cd671989c4b85278367418142f62a7be0c4eb38b72636cdf91ca"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "cf071734509cf4efd5f0499be69a9a10adb07ba375c38a85344c537b84ee966a"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3a329af14429b24de67d2419dd41a756fa612ada6891e24314a352eb1e167650"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "fb9759a4018287fef5f3e449fa31bccbdca53e445e49b1457d8ec3d8f7965f02"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 99
+          },
+          "source": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 99
+          },
+          "tests": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 121
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 319
+        }
+      },
+      "current_head": "76712bc382435637f0cfb42d63071e0e01a2b82a",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-22T18:47:41.334715Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-1823f782"
+}

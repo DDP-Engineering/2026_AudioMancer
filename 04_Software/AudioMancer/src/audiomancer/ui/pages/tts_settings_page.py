@@ -172,7 +172,7 @@ class TtsSettingsPage(QWidget):
         ambience_limits_form.addRow(self._scene_ambience_placement_label, self._scene_ambience_placement_combo)
         self._scene_ambience_duration_label = QLabel("Scene Ambience Duration (s)", self)
         self._scene_ambience_duration_spin = QSpinBox(self)
-        self._scene_ambience_duration_spin.setRange(1, 120)
+        self._scene_ambience_duration_spin.setRange(1, int(config.MAX_SOUND_PROMPT_DURATION_SECONDS))
         self._scene_ambience_duration_spin.setValue(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS)
         self._configure_limit_spinbox(self._scene_ambience_duration_spin)
         ambience_limits_form.addRow(self._scene_ambience_duration_label, self._scene_ambience_duration_spin)

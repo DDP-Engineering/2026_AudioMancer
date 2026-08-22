@@ -717,6 +717,9 @@ DEFAULT_SCENE_AMBIENCE_PLACEMENT = "none"
 # @brief Default maximum generated Scene Ambience sequence duration in seconds.
 DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS = 10
 
+# @brief Longest sound-prompt duration VoiceWeaver accepts; the Stable Audio output ceiling.
+MAX_SOUND_PROMPT_DURATION_SECONDS = 47.55
+
 # @brief Default maximum generated Scene Ambience blocks in one ambience sequence.
 DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE = 6
 

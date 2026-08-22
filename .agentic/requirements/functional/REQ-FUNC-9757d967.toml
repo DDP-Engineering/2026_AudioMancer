@@ -38,12 +38,12 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When VoiceWeaver discovered-model data crosses the runtime or settings boundary, AudioMancer shall canonicalize it through the same public service-owned contract without mutating caller-owned input.
+When VoiceWeaver discovered-model data crosses the runtime or settings boundary, AudioMancer shall canonicalize it through the same public service-owned contract without mutating caller-owned input, and shall discard a persisted model inventory that declares a generation mode the current runtime contract does not define rather than reporting capabilities derived from it.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "A deliberately messy model produces the same canonical payload through runtime probing and settings validation, including normalized range/default metadata and status, with only scalar model parameters retained and the original nested input unchanged and unaliased."
+verification = "A deliberately messy model produces the same canonical payload through runtime probing and settings validation, including normalized range/default metadata and status, with only scalar model parameters retained and the original nested input unchanged and unaliased; a persisted inventory declaring an undefined generation mode leaves settings with no cached models, no active model, and the connection reported as untested."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -58,6 +58,7 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_uses_canonical_voiceweaver_model_normalization_without_aliases",
   "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_probe_runtime_cache_save_preserves_discovered_model_ranges",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_read_status_filters_non_scalar_effective_parameters_without_mutating_input",
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_discards_a_model_cache_carrying_unknown_generation_modes",
 ]
 
 # --- optional below this line ---
@@ -69,4 +70,4 @@ priority = "high"
 rationale = "A single owner prevents persisted settings from drifting from the runtime discovery contract."
 
 created = 2026-08-09
-updated = 2026-08-09
+updated = 2026-08-22

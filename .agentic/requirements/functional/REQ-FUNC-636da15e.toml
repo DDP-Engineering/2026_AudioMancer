@@ -4,10 +4,10 @@ title = "Configure and probe VoiceWeaver through the simplified connection contr
 status = "active"
 
 requirement = """
-When an operator configures and tests the VoiceWeaver connection by base URL, AudioMancer shall derive the normalized model inventory, active model, and capability matrix from `GET /models` followed by `GET /status`.
+When an operator configures and tests the VoiceWeaver connection by base URL, AudioMancer shall derive the normalized model inventory, active model, reported runtime version, and capability matrix from `GET /models` followed by `GET /status`, and shall report a refusal using the runtime's own error message rather than the bare status code.
 """
 
-verification = "Focused settings and runtime tests exercise the base-URL connection form, record the two probe URLs, return representative model and status payloads, and observe the normalized probe result."
+verification = "Focused settings and runtime tests exercise the base-URL connection form, record the two probe URLs, return representative model and status payloads, and observe the normalized probe result, including the reported runtime version on success and the runtime's own error message when the runtime refuses with an error envelope."
 
 affected_paths = [
   "02_Tools/package_linux_release.sh",
@@ -32,6 +32,8 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_exposes_simple_connection_status_states",
   "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_probe_runtime_cache_save_preserves_discovered_model_ranges",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_normalizes_models_and_capabilities",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_surfaces_the_runtime_error_envelope",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_records_the_reported_runtime_version",
 ]
 
 priority = "high"

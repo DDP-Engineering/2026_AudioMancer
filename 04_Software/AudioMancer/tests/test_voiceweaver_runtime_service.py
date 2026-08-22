@@ -16,6 +16,8 @@
 # IMPORTS
 
 import copy
+import io
+import json
 from urllib import error
 
 import pytest
@@ -824,6 +826,107 @@ def test_wait_for_terminal_operation_ignores_idle_before_running(monkeypatch) ->
     )
 
     assert result["operation"]["status"] == "completed"
+
+
+def test_sound_prompt_duration_is_bounded_by_the_model_output_ceiling(monkeypatch) -> None:
+    """
+    @brief      Verify a sound-prompt duration above the model ceiling is sent at the ceiling.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    observed_payloads: list[dict[str, object]] = []
+
+    def _fake_post_json_endpoint(base_url, endpoint, payload, timeout_seconds):
+        """
+        @brief      Provide the fake post json endpoint test helper.
+        @return     None.
+        @exception  None
+        """
+        _ = (base_url, endpoint, timeout_seconds)
+        observed_payloads.append(dict(payload or {}))
+        return {"status": "running"}
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_post_json_endpoint", _fake_post_json_endpoint)
+
+    voiceweaver_runtime_service.generate_sound_prompt(
+        "http://127.0.0.1:8059",
+        "Distant thunder",
+        duration_seconds=60,
+    )
+    voiceweaver_runtime_service.generate_sound_prompt(
+        "http://127.0.0.1:8059",
+        "Distant thunder",
+        duration_seconds=12,
+    )
+
+    assert observed_payloads[0]["duration_seconds"] == config.MAX_SOUND_PROMPT_DURATION_SECONDS
+    assert observed_payloads[1]["duration_seconds"] == 12.0
+
+
+def test_probe_runtime_surfaces_the_runtime_error_envelope(monkeypatch) -> None:
+    """
+    @brief      Verify a refused probe reports the runtime's own error message.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+
+    def _fake_read_json(*_args, **_kwargs):
+        """
+        @brief      Provide the fake read json test helper.
+        @return     None.
+        @exception  None
+        """
+        raise error.HTTPError(
+            url="",
+            code=500,
+            msg="Server Error",
+            hdrs=None,
+            fp=io.BytesIO(
+                json.dumps(
+                    {
+                        "error_code": "models_audit_invalid",
+                        "message": "The model audit file is invalid.",
+                        "details": {},
+                    }
+                ).encode("utf-8")
+            ),
+        )
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_read_json", _fake_read_json)
+
+    result = voiceweaver_runtime_service.probe_runtime("http://127.0.0.1:8059")
+
+    assert result["success"] is False
+    assert result["message"] == "The model audit file is invalid."
+
+
+def test_probe_runtime_records_the_reported_runtime_version(monkeypatch) -> None:
+    """
+    @brief      Verify a successful probe records the runtime version reported by the runtime.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+
+    def _fake_read_json(url, headers, timeout_seconds):
+        """
+        @brief      Provide the fake read json test helper.
+        @return     None.
+        @exception  None
+        """
+        _ = (headers, timeout_seconds)
+        if url.endswith("/models"):
+            return {"runtime_version": "1.0.0", "models": []}
+        return {"runtime_version": "1.0.0", "active_model": None}
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_read_json", _fake_read_json)
+
+    result = voiceweaver_runtime_service.probe_runtime("http://127.0.0.1:8059")
+
+    assert result["success"] is True
+    assert result["runtime_version"] == "1.0.0"
 
 
 # END OF FILE
