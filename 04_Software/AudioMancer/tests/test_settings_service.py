@@ -75,6 +75,28 @@ def test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics() -
         assert field_name not in validated_settings
 
 
+def test_settings_drop_every_key_the_factory_defaults_do_not_define(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify REQ-SEC-ddb1f692 keeps only current schema keys in persisted settings.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+
+    stored_settings = settings_service.build_default_settings()
+    stored_settings["a_field_the_schema_no_longer_defines"] = "operator-secret"
+    settings_path.write_text(json.dumps(stored_settings, indent=2), encoding="utf-8")
+
+    loaded_settings = settings_service.load_settings()
+    persisted_settings = json.loads(settings_path.read_text(encoding="utf-8"))
+
+    assert "a_field_the_schema_no_longer_defines" not in loaded_settings
+    assert "a_field_the_schema_no_longer_defines" not in persisted_settings
+
+
 def test_committed_settings_example_uses_config_defined_factory_defaults() -> None:
     """
     @brief      Verify the shipped settings example agrees with shared factory defaults.
@@ -390,7 +412,7 @@ def test_load_settings_repair_write_oserror_returns_validated_settings(tmp_path,
     content_marker = "do-not-log-repair-write-marker"
     repairable_settings = settings_service.build_default_settings()
     repairable_settings["language"] = "unsupported"
-    repairable_settings["future_marker"] = content_marker
+    repairable_settings["scene_ambience_negative_prompt"] = f"  {content_marker}  "
     settings_path.write_text(json.dumps(repairable_settings, indent=2), encoding="utf-8")
 
     def _raise_write_error(_settings_payload) -> None:
@@ -403,7 +425,7 @@ def test_load_settings_repair_write_oserror_returns_validated_settings(tmp_path,
         loaded_settings = settings_service.load_settings()
 
     assert loaded_settings["language"] == config.DEFAULT_LANGUAGE
-    assert loaded_settings["future_marker"] == content_marker
+    assert loaded_settings["scene_ambience_negative_prompt"] == content_marker
     assert json.loads(settings_path.read_text(encoding="utf-8")) == repairable_settings
     assert "could not persist the repaired settings" in caplog.text.lower()
     assert content_marker not in caplog.text
@@ -713,20 +735,6 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     assert validated_settings["default_narrator_profile_generation_profile_id"] == "profile_1"
     assert validated_settings["default_speech_blocks_profile_id"] == "profile_1"
     assert validated_settings["default_character_extraction_profile_id"] == "profile_1"
-
-
-def test_validate_settings_preserves_unknown_extra_keys() -> None:
-    """
-    @brief      Verify validation keeps unknown extra keys in the payload.
-    @return     None.
-    @exception  None
-    """
-    candidate_settings = settings_service.build_default_settings()
-    candidate_settings["future_key"] = {"enabled": True}
-
-    validated_settings = settings_service.validate_settings(candidate_settings)
-
-    assert validated_settings["future_key"] == {"enabled": True}
 
 
 def test_validate_settings_preserves_query_and_fragment_provider_base_url() -> None:

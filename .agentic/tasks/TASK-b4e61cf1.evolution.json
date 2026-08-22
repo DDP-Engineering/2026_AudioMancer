@@ -1,0 +1,110 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-22T15:27:20.864745Z",
+      "anchor_head": "610c317a4099a99a8b91acd9375b447e605bb5a2",
+      "anchor_id": "8706091a95fc15c7",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4db24f3eb833200eccec0d2eee92c12f4d653985cd0898fc517b17e616b3f1a8"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "190785f5765591799c233a359896479293005fb1b7cb6d63fae57e25398e849d"
+          },
+          "path": "02_Tools/package_linux_release.sh",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "75b0eac2f96d93315160d503f4f7bc916b344f5159a4ad3170e1501db93e7cf7"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "6e55f5cf33c5afc8bf5bde3fcf764363b03580feb2f1e1d2c9acaa1dd767eb0f"
+          },
+          "path": "02_Tools/package_windows_release.ps1",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "266a81447463beecdb9519620ec4cfceef57b7f41a325df0853ce1422088a0a5"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "3e27bfae557e05c119e9f560f7a250f8c76ba3637e52bfce4ab90e92dd34fbff"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b1e082d2947483e2e6be72ab37098f34e6848d96adbf88dfae6625443a395182"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "8153d03d799cc4f809b40aa6fd89a04a7510832aad485a72197f41fe2a412cab"
+          },
+          "path": "04_Software/AudioMancer/tests/test_settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2520e6e682e844c0624b02b427f7001c87273a5c071d0701835508e27bb95ee4"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "393e7b920fa43b70ea5b0b54660ec327d23540784a4aa85541d7a2cc9af8390b"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 97
+          },
+          "source": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 120
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 319
+        }
+      },
+      "current_head": "610c317a4099a99a8b91acd9375b447e605bb5a2",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-22T15:40:43.747678Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-b4e61cf1"
+}

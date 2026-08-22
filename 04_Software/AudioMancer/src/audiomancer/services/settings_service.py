@@ -413,30 +413,17 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         )
         normalized_settings["language"] = defaults["language"]
 
-    for deprecated_field_name in (
-        "scene_ambience_generation_enabled",
-        "scene_ambience_audio_generation_enabled",
-    ):
-        if deprecated_field_name in normalized_settings:
-            normalized_settings.pop(deprecated_field_name, None)
-            _log_settings_repair(
-                f"Removed deprecated '{deprecated_field_name}' setting; Scene Ambience placement now owns enablement.",
-                deprecated_field_name,
-                repair_tracker=repairs_made,
-            )
-
-    for retired_field_name, retirement_reason in (
-        ("tts_preview_text_character_limit", "the accepted preview word range is the only preview length limit"),
-        ("speech_block_target_audio_seconds", "narration blocks always follow the TTS model budget"),
-        ("tts_runtime_device_diagnostics", "runtime device diagnostics are no longer persisted"),
-    ):
-        if retired_field_name in normalized_settings:
-            normalized_settings.pop(retired_field_name, None)
-            _log_settings_repair(
-                f"Removed retired '{retired_field_name}' setting; {retirement_reason}.",
-                retired_field_name,
-                repair_tracker=repairs_made,
-            )
+    # The factory defaults are the whole schema, so any other key is a field a
+    # past release persisted and this one no longer defines. Dropping it here
+    # means removing a field from the defaults also clears whatever an operator
+    # already stored under it - including a secret the UI can no longer reach.
+    for unknown_field_name in [field_name for field_name in normalized_settings if field_name not in defaults]:
+        normalized_settings.pop(unknown_field_name, None)
+        _log_settings_repair(
+            f"Removed unknown settings field '{unknown_field_name}'; it is not part of the current settings schema.",
+            unknown_field_name,
+            repair_tracker=repairs_made,
+        )
 
     normalized_ui_themes = ui_theme_service.normalize_theme_collection(normalized_settings.get("ui_themes"))
     if normalized_settings.get("ui_themes") != normalized_ui_themes:

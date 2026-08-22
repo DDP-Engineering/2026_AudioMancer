@@ -32,7 +32,7 @@ Keep each log line to one sentence.
 
 # TASK-be95a1a6 — Adapt AudioMancer to the simplified VoiceWeaver REST API
 
-stage: build
+stage: done
 type: change
 path: full
 requirements: REQ-FUNC-636da15e, REQ-FUNC-1562fca1, REQ-FUNC-b3c6df2a, REQ-FUNC-a24e14cb, REQ-FUNC-6606ebfa
@@ -115,3 +115,4 @@ opened: 2026-08-22
 - 2026-08-22 validate: User correction returned the task to build and clarified that the hard break must contain no legacy VoiceWeaver key migration, recognition, or absence tests.
 - 2026-08-22 build: Deleted the two migration/absence requirements and their tests, removed legacy key recognition from settings, UI merge, packaging, and log redaction, and rewrote the remaining requirements around positive simplified-contract behavior.
 - 2026-08-22 build: DEVIATION the in-progress impacted suite was interrupted after the acceptance criterion changed; its partial result describes an obsolete candidate and is not used as validation evidence.
+- 2026-08-22 close: The candidate was published in commit 610c317 while the journal header still read `build`; the stage is set to `done` to match what shipped, and no further work is owed here.

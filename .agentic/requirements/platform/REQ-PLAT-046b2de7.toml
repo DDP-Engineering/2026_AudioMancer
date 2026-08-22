@@ -40,7 +40,6 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_overnight_llm_timeout",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_keeps_valid_enabled_default_profile_ids",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_unknown_extra_keys",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_save_settings_writes_validated_payload_to_disk",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_keeps_valid_persisted_payload_unchanged",
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_keeps_empty_api_key_for_lmstudio_profile",

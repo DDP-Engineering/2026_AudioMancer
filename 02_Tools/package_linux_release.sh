@@ -59,14 +59,29 @@ copy_clean_settings_file() {
         exit 1
     fi
 
-    python3 - "${source_path}" "${target_path}" <<'PY'
+    # Run inside the uv-managed app environment so the application's own
+    # factory defaults decide which keys a packaged settings file may carry.
+    ( cd "${APP_ROOT}" && uv run --no-sync python - "${source_path}" "${target_path}" ) <<'PY'
 import json
 import sys
 from pathlib import Path
 
+from audiomancer.services import settings_service
+
 source_path = Path(sys.argv[1])
 target_path = Path(sys.argv[2])
 settings_payload = json.loads(source_path.read_text(encoding="utf-8"))
+
+# Keys the current schema does not define are dropped rather than blanked,
+# so an operator value stored under a since-removed field cannot ship. The
+# application prunes the same keys on load, which would otherwise rewrite the
+# packaged file and fail the delivery smoke test's clean-load assertion.
+schema_field_names = set(settings_service.build_default_settings())
+settings_payload = {
+    field_name: field_value
+    for field_name, field_value in settings_payload.items()
+    if field_name in schema_field_names
+}
 
 for profile in settings_payload.get("llm_profiles", []):
     if not isinstance(profile, dict):
@@ -84,7 +99,6 @@ settings_payload["tts_runtime_probe_succeeded"] = False
 settings_payload["tts_runtime_probe_message"] = ""
 settings_payload["tts_runtime_discovered_models"] = []
 settings_payload["tts_runtime_active_model_id"] = None
-settings_payload.pop("tts_runtime_device_diagnostics", None)
 
 target_path.write_text(json.dumps(settings_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY

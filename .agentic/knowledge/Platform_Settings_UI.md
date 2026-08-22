@@ -117,12 +117,19 @@ instructions from the Chunking document.
   ever read. The committed `settings.example.json` is the source scaffold copied
   to that packaged identity or to an operator's active settings file; runtime
   seeding never reads the example path directly. Invalid supported values are
-  repaired, while unknown future keys are preserved unless an explicit migration
-  removes them.
+  repaired, while any key the factory defaults do not define is dropped.
+- The factory defaults returned by `build_default_settings()` are the whole
+  settings schema, so validation treats every other key as a field a past
+  release persisted and removes it, counting the removal as a repair so the
+  file is rewritten (`REQ-SEC-ddb1f692`). Removing a field from the defaults is
+  therefore the single act that also clears whatever an operator already stored
+  under it, including a secret the UI can no longer reach. Both release
+  packagers filter the staged `settings.json` against the same key set, so a
+  retired field never ships and the packaged file still loads without repairs.
 - Scene Ambience placement is the sole configured enablement policy; the retired
-  global enablement constant is absent, and settings validation deliberately
-  removes the deprecated `scene_ambience_generation_enabled` key
-  (`REQ-PLAT-02331830`).
+  global enablement constant is absent, and settings validation drops the
+  deprecated `scene_ambience_generation_enabled` key along with every other key
+  outside the current schema (`REQ-PLAT-02331830`).
 - Every committed example profile represents the optional
   `discovered_model_name` field as a string, matching the loader contract and
   avoiding a repair when an operator copies the scaffold (`REQ-PLAT-dd51f8cd`).

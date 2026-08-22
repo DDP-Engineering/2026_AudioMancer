@@ -56,6 +56,27 @@ function New-ZipArchiveFromDirectory {
     }
 }
 
+# Ask the application for the settings keys its current schema defines, so the
+# packager never carries its own copy of the field list.
+function Get-SettingsSchemaFieldName {
+    $readerScript = 'import json, sys; from audiomancer.services import settings_service; ' +
+        'sys.stdout.write(json.dumps(sorted(settings_service.build_default_settings())))'
+
+    Push-Location $appRoot
+    try {
+        $schemaJson = & uv run --no-sync python -c $readerScript
+    }
+    finally {
+        Pop-Location
+    }
+
+    $schemaFieldNames = $schemaJson | ConvertFrom-Json
+    if (-not $schemaFieldNames) {
+        throw 'Could not read the settings schema field names from the application environment.'
+    }
+    return $schemaFieldNames
+}
+
 # Copy settings into a delivery package without operator-local secrets or
 # connection-discovery cache. The source settings.json in the app root is not
 # modified.
@@ -111,11 +132,15 @@ function Copy-CleanSettingsFile {
     if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_active_model_id') {
         $settingsPayload.tts_runtime_active_model_id = $null
     }
-    # Retired settings keys are dropped rather than blanked. The application
-    # repairs an unknown key on load and rewrites the file, which makes the
-    # delivery smoke test fail its clean-load assertion.
-    $settingsPayload = $settingsPayload |
-        Select-Object -Property * -ExcludeProperty 'tts_runtime_device_diagnostics'
+    # Keys the current schema does not define are dropped rather than blanked,
+    # so an operator value stored under a since-removed field cannot ship. The
+    # application prunes the same keys on load, which would otherwise rewrite
+    # the packaged file and fail the delivery smoke test's clean-load
+    # assertion. The application's own factory defaults are the key list.
+    $schemaFieldNames = Get-SettingsSchemaFieldName
+    $keptFieldNames = $settingsPayload.PSObject.Properties.Name |
+        Where-Object { $schemaFieldNames -contains $_ }
+    $settingsPayload = $settingsPayload | Select-Object -Property $keptFieldNames
 
     $settingsPayload |
         ConvertTo-Json -Depth 100 |

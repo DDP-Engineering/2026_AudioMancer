@@ -10,6 +10,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Settings that a past version saved but the current version no longer offers
+  are now cleared from `settings.json` the next time AudioMancer starts,
+  instead of sitting in the file forever with no way to reach them. This
+  matters most for the VoiceWeaver API key: the field was removed when
+  VoiceWeaver stopped requiring one, but any key already saved stayed on disk
+  and was copied into new delivery packages. Both release packagers now leave
+  such retired fields out of the packaged `settings.json` as well.
+
 ### Changed
 
 - AudioMancer now targets the simplified VoiceWeaver 1.0.0 REST API
