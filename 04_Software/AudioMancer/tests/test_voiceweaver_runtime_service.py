@@ -210,7 +210,7 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
 
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:
     """
-    @brief      Verify voice-design generation sends the exact simplified REST request.
+    @brief      Verify voice-design generation sends the exact simplified REST request and omits unoffered languages.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -230,10 +230,27 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
 
     voiceweaver_runtime_service.generate_voice_design(
         "http://127.0.0.1:8059",
+        "en",
+        "Hello",
+        "Warm narrator.",
+        {"top_k": 33},
+        timeout_seconds=90,
+    )
+    voiceweaver_runtime_service.generate_voice_design(
+        "http://127.0.0.1:8059",
         "ro",
         "Salut",
         "Warm narrator.",
         {"top_k": 33},
+        timeout_seconds=90,
+    )
+    voiceweaver_runtime_service.generate_voice_design(
+        "http://127.0.0.1:8059",
+        "de",
+        "Hallo",
+        "Warm narrator.",
+        {"top_k": 33},
+        supported_languages=["en", "fr"],
         timeout_seconds=90,
     )
 
@@ -242,8 +259,28 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
             "http://127.0.0.1:8059",
             "/voice/design",
             {
+                "text": "Hello",
+                "language": "en",
+                "voice_description": "Warm narrator.",
+                "model_parameters": {"top_k": 33},
+            },
+            90,
+        ),
+        (
+            "http://127.0.0.1:8059",
+            "/voice/design",
+            {
                 "text": "Salut",
-                "language": "ro",
+                "voice_description": "Warm narrator.",
+                "model_parameters": {"top_k": 33},
+            },
+            90,
+        ),
+        (
+            "http://127.0.0.1:8059",
+            "/voice/design",
+            {
+                "text": "Hallo",
                 "voice_description": "Warm narrator.",
                 "model_parameters": {"top_k": 33},
             },
@@ -343,7 +380,6 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
             "/voice/clone-from-prompt",
             {
                 "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
-                "language": "ro",
                 "text": "Salut.",
                 "model_parameters": {"top_k": 22},
             },
@@ -494,9 +530,9 @@ def test_generated_wav_downloads_preserve_success_http_and_url_contracts(monkeyp
     assert url_error_info.value.__cause__ is url_failure
 
 
-def test_voiceweaver_runtime_service_direct_clone_sends_selected_language(monkeypatch) -> None:
+def test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language(monkeypatch) -> None:
     """
-    @brief      Verify direct clone requests send the selected language required by VoiceWeaver.
+    @brief      Verify direct clone requests send an offered language and omit an unoffered one.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -535,6 +571,14 @@ def test_voiceweaver_runtime_service_direct_clone_sends_selected_language(monkey
     voiceweaver_runtime_service.generate_voice_clone(
         "http://127.0.0.1:8059",
         b"sample-bytes",
+        "Reference transcript.",
+        "fr",
+        "Bonjour.",
+        timeout_seconds=44,
+    )
+    voiceweaver_runtime_service.generate_voice_clone(
+        "http://127.0.0.1:8059",
+        b"sample-bytes",
         "Text de referinta.",
         "ro",
         "Salut.",
@@ -542,7 +586,8 @@ def test_voiceweaver_runtime_service_direct_clone_sends_selected_language(monkey
     )
 
     assert observed_form_fields == [
-        {"sample_text": "Text de referinta.", "language": "ro", "text": "Salut."}
+        {"sample_text": "Reference transcript.", "language": "fr", "text": "Bonjour."},
+        {"sample_text": "Text de referinta.", "text": "Salut."},
     ]
 
 

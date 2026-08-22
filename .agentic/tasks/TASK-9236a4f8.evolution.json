@@ -1,0 +1,84 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-22T16:34:40.409538Z",
+      "anchor_head": "ddf4a04b3bfdccb95a08ad1057f1895907b9d3ca",
+      "anchor_id": "4a04ed7f661d608f",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0672cf4810482f453c3def9058f940589b064cec62577c3c53d1d31c6795756f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "9b4791b1c1a764882cf14692854d2522e08c53fad11ec8d2e5a55364b46d8321"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c743afadbdd5f271d04ea0c6d99bed3183da100b27d768641d680b05c5bd592b"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "201d3ffd756cba74d35d19860d8212d2bc6327ecd3cb4d89131e70fd1802fc51"
+          },
+          "path": "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5cfaf40918f44fc1941c74620631accdb1da23e4d425593203dc9fe3cdee8807"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "2520e6e682e844c0624b02b427f7001c87273a5c071d0701835508e27bb95ee4"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 99
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 101
+          },
+          "tests": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 121
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 3,
+          "removed": 0,
+          "unchanged": 321
+        }
+      },
+      "current_head": "ddf4a04b3bfdccb95a08ad1057f1895907b9d3ca",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-22T16:37:22.691712Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-9236a4f8"
+}

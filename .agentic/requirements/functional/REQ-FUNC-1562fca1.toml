@@ -4,10 +4,10 @@ title = "Send generation requests using the simplified VoiceWeaver contract"
 status = "active"
 
 requirement = """
-When AudioMancer requests voice design, direct clone, clone-prompt creation, clone-from-prompt generation, or sound generation, it shall use the documented unversioned route and exact required fields, including the selected language for every voice request.
+When AudioMancer requests voice design, direct clone, clone-prompt creation, clone-from-prompt generation, or sound generation, it shall use the documented unversioned route and exact required fields, naming the selected language only when the runtime offers that language and omitting the language field otherwise.
 """
 
-verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract."
+verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract, including one request whose selected language is Romanian and one whose selected language is outside the model's reported supported list, both of which carry no language field."
 
 affected_paths = [
   "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
@@ -20,12 +20,16 @@ linked_tests = [
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
   "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_sends_selected_language",
+  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language",
+  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
 ]
 
 priority = "high"
 rationale = """
-TTS invocation must match the runtime's current request contract.
+TTS invocation must match the runtime's current request contract. The runtime
+offers seven languages and refuses any other with `unsupported_language`, so a
+Romanian project would abort its whole Audio Blocks run if the selection were
+forwarded verbatim.
 """
 created = 2026-07-19
 updated = 2026-08-22

@@ -215,6 +215,12 @@ def run_voice_design_generation(
         ),
         "timeout_seconds": timeout_seconds,
     }
+    if "supported_languages" in generation_request:
+        generation_options["supported_languages"] = (
+            list(generation_request.get("supported_languages", []))
+            if isinstance(generation_request.get("supported_languages"), list)
+            else None
+        )
     voiceweaver_runtime_service.generate_voice_design(
         base_url,
         str(generation_request.get("language", default_language)),

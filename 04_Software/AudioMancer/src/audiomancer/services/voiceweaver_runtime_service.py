@@ -33,6 +33,9 @@ from audiomancer.services.url_service import join_endpoint_url
 _VOICEWEAVER_RUNTIME_LOGGER = get_component_logger("voiceweaver_runtime")
 _endpoint_url = partial(join_endpoint_url, collapse_duplicate_version=False)
 
+# @brief Voice language AudioMancer offers that no VoiceWeaver backend can synthesize.
+_LANGUAGE_NEVER_OFFERED_BY_RUNTIME = "ro"
+
 VoiceWeaverModelPayload = dict[str, object]
 VoiceWeaverCapabilityMatrix = dict[str, object]
 VoiceWeaverProbeResult = dict[str, object]
@@ -97,15 +100,26 @@ def _send_json_request(
 def _add_tts_language_field(
     payload: dict[str, object],
     language: str,
+    supported_languages: list[str] | None = None,
 ) -> None:
     """
-    @brief      Add the VoiceWeaver TTS language field when the selected language should be explicit.
+    @brief      Add the VoiceWeaver TTS language field when the runtime offers the selected language.
     @param[in]  payload Mutable outbound TTS request payload.
     @param[in]  language Selected synthesis language code.
+    @param[in]  supported_languages Optional language codes the active model reports as supported.
     @return     None.
     @exception  None
     """
     normalized_language = str(language).strip()
+    normalized_supported_languages = (
+        {str(item).strip() for item in supported_languages if str(item).strip()}
+        if supported_languages is not None
+        else None
+    )
+    if normalized_language == _LANGUAGE_NEVER_OFFERED_BY_RUNTIME:
+        return
+    if normalized_supported_languages is not None and normalized_language not in normalized_supported_languages:
+        return
     if normalized_language:
         payload["language"] = normalized_language
 
@@ -530,6 +544,7 @@ def generate_voice_design(
     text: str,
     voice_description: str,
     model_parameters: dict[str, object] | None = None,
+    supported_languages: list[str] | None = None,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
@@ -539,6 +554,7 @@ def generate_voice_design(
     @param[in]  text Preview text to synthesize.
     @param[in]  voice_description Voice Designer prompt text.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
+    @param[in]  supported_languages Optional language codes the active Voice Designer model reports as supported.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/voice/design`.
     @exception  RuntimeError Raised when the runtime request fails.
@@ -547,7 +563,7 @@ def generate_voice_design(
         "text": str(text).strip(),
         "voice_description": str(voice_description).strip(),
     }
-    _add_tts_language_field(payload, language)
+    _add_tts_language_field(payload, language, supported_languages)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters

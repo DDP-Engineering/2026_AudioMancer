@@ -190,6 +190,7 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
             {
                 "model_parameters": {"temperature": 0.4},
                 "timeout_seconds": 45,
+                "supported_languages": ["en", "ro"],
             },
         )
     ]

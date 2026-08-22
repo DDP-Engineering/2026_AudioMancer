@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Projects whose voice language is Romanian can generate audio again. The
+  VoiceWeaver runtime offers seven languages, Romanian is not one of them, and
+  AudioMancer had started naming the chosen language on every request - so the
+  first voice request in a Romanian project was rejected by the runtime and the
+  whole Audio Blocks run stopped. AudioMancer now leaves the language out of the
+  request whenever the runtime does not offer it, for Romanian and for any
+  language the loaded model does not list.
 - Settings that a past version saved but the current version no longer offers
   are now cleared from `settings.json` the next time AudioMancer starts,
   instead of sitting in the file forever with no way to reach them. This
