@@ -10,11 +10,11 @@ Cleanup shall assign one typed final resolution with confidence and reason codes
 verification = "All-boundary and 27-page-transition tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_all_27_synthetic_page_transitions_receive_safe_typed_decisions",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
+  "05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_all_27_synthetic_page_transitions_receive_safe_typed_decisions",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

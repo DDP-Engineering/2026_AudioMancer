@@ -10,13 +10,13 @@ Speech-block manual insertion shall append blocks in the correct position and in
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_appends_after_selected_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_into_empty_chunk_creates_unapproved_narration",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_initializes_manual_state_without_generation",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_after_first_manual_block_appends_next_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_appends_after_selected_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_into_empty_chunk_creates_unapproved_narration",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_initializes_manual_state_without_generation",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_insert_speech_block_after_first_manual_block_appends_next_block",
 ]
 
 priority = "high"

@@ -10,11 +10,11 @@ The shipped narrator profile generation prompt shall instruct the model to write
 verification = "A focused test reads the shipped narrator profile generation prompt file, extracts the spoken-word range it asks the model for, and observes that both ends fall within the accepted minimum and maximum preview word counts computed from configuration."
 
 affected_paths = [
-  "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_generation_prompt_requests_preview_inside_accepted_range",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_generation_prompt_requests_preview_inside_accepted_range",
 ]
 
 spec = ""

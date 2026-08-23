@@ -51,16 +51,16 @@ verification = "Temporary fixtures simulate read, backup, post-backup default-wr
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_read_oserror_returns_defaults_without_modifying_file",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_backup_oserror_returns_defaults_without_modifying_file",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_default_write_oserror_preserves_backup_and_returns_defaults",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_repair_write_oserror_returns_validated_settings",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_read_oserror_returns_defaults_without_modifying_file",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_backup_oserror_returns_defaults_without_modifying_file",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_default_write_oserror_preserves_backup_and_returns_defaults",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_repair_write_oserror_returns_validated_settings",
 ]
 
 # --- optional below this line ---

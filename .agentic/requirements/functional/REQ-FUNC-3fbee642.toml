@@ -10,10 +10,10 @@ AI chunking shall reject profiles with no input budget.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_profiles_with_no_input_budget",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_profiles_with_no_input_budget",
 ]
 
 priority = "high"

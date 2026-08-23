@@ -10,11 +10,11 @@ Configuration shall resolve a per-user documents directory that always exists an
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_resolves_user_documents_root_across_platforms",
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_resolves_user_documents_root_across_platforms",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_user_documents_root_honours_xdg_documents_dir_on_posix_only",
 ]
 
 spec = "specs/project_dialog_default_directory.spec.md"

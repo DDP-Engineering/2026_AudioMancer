@@ -10,14 +10,14 @@ Speech-block direct-block alignment shall map mixed narration and dialogue to so
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_align_mixed_narration_dialogue_to_source_text",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_unknown_speaker_defaults_to_review_narrator",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_split_long_blocks_to_tts_budget",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_align_mixed_narration_dialogue_to_source_text",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_unknown_speaker_defaults_to_review_narrator",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_split_long_blocks_to_tts_budget",
 ]
 
 priority = "high"

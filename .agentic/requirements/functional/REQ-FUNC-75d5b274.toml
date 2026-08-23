@@ -49,19 +49,19 @@ verification = "Controller tests prove that declining changes neither files nor 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/tests/test_text_cleanup_state_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_reset_failure_starts_no_worker",
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_reset_removes_artifacts_and_forces_fresh_analysis",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_completed_cleanup_rerun_reset_failure_starts_no_worker",
+  "05_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_reset_removes_artifacts_and_forces_fresh_analysis",
 ]
 
 # --- optional below this line ---

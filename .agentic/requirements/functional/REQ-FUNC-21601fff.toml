@@ -10,10 +10,10 @@ Available text budget shall reserve prompt, output, and safety tokens.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_budget_service.py::test_available_text_budget_reserves_prompt_output_and_safety_tokens",
+  "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_available_text_budget_reserves_prompt_output_and_safety_tokens",
 ]
 
 priority = "high"

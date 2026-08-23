@@ -10,11 +10,11 @@ Cleanup analysis shall assign a typed structural role to every source unit befor
 verification = "Role-before-boundary analysis contract test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_analysis_assigns_roles_before_classifying_every_boundary",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

@@ -49,19 +49,19 @@ verification = "Service regressions inject path-carrying metadata-only Scene Amb
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_accepts_a_narrow_path_resolver",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_resolves_default_path_at_call_time",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_preflights_included_legacy_scene_ambience_source",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_valid_legacy_scene_ambience_source",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_ignores_invalid_legacy_scene_ambience_when_disabled",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_accepts_a_narrow_path_resolver",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_resolves_default_path_at_call_time",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_preflights_included_legacy_scene_ambience_source",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_valid_legacy_scene_ambience_source",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_ignores_invalid_legacy_scene_ambience_when_disabled",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
 ]
 
 # --- optional below this line ---

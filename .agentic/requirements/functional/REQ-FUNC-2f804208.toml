@@ -10,10 +10,10 @@ Speech-block audio-preview merge shall use persisted playability without file ch
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_merge_audio_preview_state_uses_persisted_playability_without_file_checks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_merge_audio_preview_state_uses_persisted_playability_without_file_checks",
 ]
 
 priority = "high"

@@ -10,12 +10,12 @@ Audio assembly shall compose time-limited outputs, count inserted silence, and p
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_time_limited_outputs",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_time_limit_counts_inserted_silence",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_preserves_time_limit_warnings",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_time_limited_outputs",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_time_limit_counts_inserted_silence",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_preserves_time_limit_warnings",
 ]
 
 priority = "high"

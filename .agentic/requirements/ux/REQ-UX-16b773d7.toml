@@ -7,13 +7,13 @@ requirement = """
 The built-in UI theme catalog shall include a 'Nordic Slate' theme (theme_id 'nordic_slate', built_in) whose color roles are window_background #2E3440, panel_background #3B4252, text_primary #ECEFF4, text_muted #B4BCCA, accent #88C0D0, border #4C566A, warning #EBCB8B, success #A3BE8C, danger #D4838C, and disabled #7B8494.
 """
 
-verification = "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_nordic_slate_theme_has_expected_roles (passed)"
+verification = "uv run --directory 05_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_nordic_slate_theme_has_expected_roles (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_nordic_slate_theme_has_expected_roles",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_nordic_slate_theme_has_expected_roles",
 ]
 
 spec = "specs/ui_theme_catalog.spec.md"

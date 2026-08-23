@@ -48,14 +48,14 @@ verification = "Automated helper cases exercise short pages, unusable page width
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_normalizes_early_single_column_identity",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_preserves_normal_single_column_top_left_order",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_normalizes_early_single_column_identity",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_preserves_normal_single_column_top_left_order",
 ]
 
 # --- optional below this line ---

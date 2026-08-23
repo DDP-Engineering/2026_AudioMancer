@@ -53,23 +53,23 @@ verification = "Focused controller tests cover known and unknown stages, window-
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_workflow_rank_and_language_helpers_preserve_caller_contracts",
-  "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_controller_local_rank_and_language_duplicates_are_removed",
-  "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_refresh_and_notify_preserves_none_guard_and_event_order",
-  "04_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_synchronous_progress_helper_preserves_create_and_restart_lifecycles",
+  "05_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_workflow_rank_and_language_helpers_preserve_caller_contracts",
+  "05_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_controller_local_rank_and_language_duplicates_are_removed",
+  "05_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_refresh_and_notify_preserves_none_guard_and_event_order",
+  "05_Software/AudioMancer/tests/test_duplicate_controller_consolidation.py::test_synchronous_progress_helper_preserves_create_and_restart_lifecycles",
 ]
 
 # --- optional below this line ---

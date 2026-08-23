@@ -14,9 +14,9 @@ derived audio paths, projections, resume checkpoint, and reset behavior.
   contract, projections, derived artifact paths, resume checkpoint, reset) and
   the updated artifact-naming and artifact-deletion requirements.
 - Modules:
-  - `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py`
-  - `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py`
-  - `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py`
 
 ## Behavior
 

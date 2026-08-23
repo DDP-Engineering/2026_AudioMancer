@@ -10,11 +10,11 @@ Project validation shall return normally when Cleanup completion evidence is inv
 verification = "Focused project-open regression returned normally without exception; E-0011."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_requires_repair_for_malformed_cleanup_quality_metric",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

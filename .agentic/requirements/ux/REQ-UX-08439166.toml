@@ -48,15 +48,15 @@ verification = "Controller tests make profile edit preparation and deletion rais
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_missing_profile_shows_localized_profile_error",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_delete_missing_profile_shows_localized_profile_error",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_missing_profile_shows_localized_profile_error",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_delete_missing_profile_shows_localized_profile_error",
 ]
 
 # --- optional below this line ---

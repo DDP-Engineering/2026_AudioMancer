@@ -10,12 +10,12 @@ Audio Assembly shall reject 8-bit PCM WAV sources instead of rendering them, bec
 verification = "Automated: pytest selectors asserting an 8-bit source is rejected with the unsupported-PCM error, that 16-bit still passes validation, and that gap silence stays zero-filled and frame-exact."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_eight_bit_source_is_rejected_by_input_validation",
-  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_silence_at_retained_widths_is_zero_filled_and_frame_exact",
-  "04_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_sixteen_bit_source_stays_accepted",
+  "05_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_eight_bit_source_is_rejected_by_input_validation",
+  "05_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_silence_at_retained_widths_is_zero_filled_and_frame_exact",
+  "05_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_sixteen_bit_source_stays_accepted",
 ]
 
 priority = "normal"

@@ -10,10 +10,10 @@ Speech-block source resolution shall use the translated text when a translation 
 verification = "resolve_source_chunks mirrors Character Discovery; 4 selector tests green (translated when complete+approved regardless of voice language; original when absent/partial)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_language",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_language",
 ]
 
 priority = "high"

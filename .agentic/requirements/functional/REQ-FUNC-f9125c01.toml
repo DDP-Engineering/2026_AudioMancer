@@ -10,11 +10,11 @@ Cleanup runtime quality reporting shall contain only metrics computable without 
 verification = "Runtime quality excludes ground-truth-only metrics."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_runtime_quality_report_excludes_oracle_only_metrics",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_completed_cleanup_reports_only_runtime_quality_metrics",
+  "05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_runtime_quality_report_excludes_oracle_only_metrics",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_completed_cleanup_reports_only_runtime_quality_metrics",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

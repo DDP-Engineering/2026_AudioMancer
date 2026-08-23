@@ -10,11 +10,11 @@ Cleanup AI adjudication shall split context-oversized batches recursively and ap
 verification = "Context tier and recursive split tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_context_tiers_use_4_8_and_16_question_batches",
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_oversized_batch_splits_recursively_and_single_question_falls_back",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_context_tiers_use_4_8_and_16_question_batches",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_oversized_batch_splits_recursively_and_single_question_falls_back",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

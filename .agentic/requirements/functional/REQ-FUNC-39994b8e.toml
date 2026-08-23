@@ -10,12 +10,12 @@ Audio-block generation shall generate only approved blocks, skip TTS for metadat
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_only_approved_speech_blocks",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_rejects_invalid_generated_wav_bytes",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_only_approved_speech_blocks",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_rejects_invalid_generated_wav_bytes",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ The navigation sidebar shall display a distinct non-empty icon for each of the t
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_assigns_an_icon_to_each_page",
+  "05_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_assigns_an_icon_to_each_page",
 ]
 
 priority = "normal"

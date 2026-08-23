@@ -10,14 +10,14 @@ The Speech Blocks page shall render chunks, read-only block details, compact hea
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_renders_chunks_and_read_only_block_details",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_chunk_list_uses_one_line_full_preview",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_list_shows_operation_name_for_metadata_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_applies_translated_labels",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_renders_chunks_and_read_only_block_details",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_chunk_list_uses_one_line_full_preview",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_list_shows_operation_name_for_metadata_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_applies_translated_labels",
 ]
 
 priority = "high"

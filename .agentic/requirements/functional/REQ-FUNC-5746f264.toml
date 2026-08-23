@@ -10,13 +10,13 @@ The Audio Assembly controller shall control playback: stop on output change, upd
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_stops_active_playback_when_selected_output_changes",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_updates_playback_progress",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_seeks_and_skips_with_clamping",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_ignores_startup_stopped_state",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_stops_active_playback_when_selected_output_changes",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_updates_playback_progress",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_seeks_and_skips_with_clamping",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_ignores_startup_stopped_state",
 ]
 
 priority = "high"

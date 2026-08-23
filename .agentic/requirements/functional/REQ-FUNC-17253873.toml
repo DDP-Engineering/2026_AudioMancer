@@ -10,10 +10,10 @@ The Characters controller shall reject a duplicate character name on add.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_rejects_duplicate_name",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_add_rejects_duplicate_name",
 ]
 
 priority = "high"

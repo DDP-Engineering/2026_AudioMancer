@@ -10,11 +10,11 @@ The application shall create the required flat project structure and manifest, r
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_creates_required_structure_and_manifest",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_rejects_non_empty_target_folder",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_creates_required_structure_and_manifest",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_rejects_non_empty_target_folder",
 ]
 
 priority = "high"

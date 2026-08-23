@@ -10,10 +10,10 @@ The Text Cleanup page shall give its Extracted Text preview and its Cleaned Text
 verification = "Automated: a built Text Cleanup page reports an equal minimum width for both preview panes, and that width is at least the width the Cleaned Text preview needs for its own contents; dragging the separator to either extreme leaves both panes at or above it."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_cleanup_previews_share_one_minimum_width",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py::test_cleanup_previews_share_one_minimum_width",
 ]
 
 spec = ""

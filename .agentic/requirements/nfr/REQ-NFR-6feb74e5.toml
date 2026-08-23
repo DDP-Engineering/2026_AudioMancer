@@ -11,10 +11,10 @@ structured records through the JSON formatter.
 verification = "A logging-service regression configures JSON output, writes one record, and parses the persisted line to verify its structured fields."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/logging_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_uses_json_formatter_when_configured",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_uses_json_formatter_when_configured",
 ]
 
 spec = ""

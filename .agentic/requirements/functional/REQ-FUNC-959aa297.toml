@@ -10,14 +10,14 @@ AI chunking shall checkpoint window progress, preserve committed chunks on resum
 verification = "Automated: 6 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_resumes_from_saved_window_checkpoint",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_running_state_reuses_prebuilt_chunks",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_checkpoint_with_unknown_fields",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_new_checkpoint_resumes_at_next_paragraph_with_committed_chunks_and_usage",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_resumes_from_saved_window_checkpoint",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_running_state_reuses_prebuilt_chunks",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_rejects_checkpoint_with_unknown_fields",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes",
 ]
 
 priority = "high"

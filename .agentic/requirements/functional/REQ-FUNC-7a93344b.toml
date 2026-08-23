@@ -10,13 +10,13 @@ Project Markdown export shall render deliverable content and character dossiers 
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_and_hides_internal_metadata",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_character_dossier_labels",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_character_dossiers_as_tables",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_markdown_character_dossiers_survive_separator_and_colon_prompts",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_and_hides_internal_metadata",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_character_dossier_labels",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_renders_markdown_character_dossiers_as_tables",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_markdown_character_dossiers_survive_separator_and_colon_prompts",
 ]
 
 priority = "high"

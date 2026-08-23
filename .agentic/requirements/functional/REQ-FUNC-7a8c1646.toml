@@ -10,13 +10,13 @@ Manifest validation shall accept structured source payloads, normalize voice-ass
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_accepts_structured_source_document",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_normalizes_voice_assignment_mode",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_normalizes_operations_map",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_save_manifest_projects_detailed_operation_state_to_compact_summary",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_accepts_structured_source_document",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_normalizes_voice_assignment_mode",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_normalizes_operations_map",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_save_manifest_projects_detailed_operation_state_to_compact_summary",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ The Home workflow stepper shall reflect each stage's status token (finished, in_
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_workflow_stepper_reflects_status_tokens",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_workflow_stepper_reflects_status_tokens",
 ]
 
 priority = "normal"

@@ -7,13 +7,13 @@ requirement = """
 The default built-in UI theme identifier returned by default_theme_id() shall be 'audiomancer_dark'.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_default_theme_id_is_audiomancer_dark",
 ]
 
 priority = "high"

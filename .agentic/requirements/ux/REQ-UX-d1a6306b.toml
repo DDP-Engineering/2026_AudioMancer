@@ -10,11 +10,11 @@ Applying a theme shall update the application font family, and the theme stylesh
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_apply_theme_updates_application_font_family",
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_build_theme_stylesheet_applies_text_window_font",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_apply_theme_updates_application_font_family",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_build_theme_stylesheet_applies_text_window_font",
 ]
 
 priority = "high"

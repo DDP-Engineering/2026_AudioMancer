@@ -10,10 +10,10 @@ Audio assembly state shall exclude scene ambience from readiness when it is excl
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_ignores_scene_ambience_when_excluded",
+  "05_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_ignores_scene_ambience_when_excluded",
 ]
 
 priority = "high"

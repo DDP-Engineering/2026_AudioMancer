@@ -16,12 +16,12 @@ The Character Voices page header shall show the page title and the character-sam
 verification = "Automated: a constructed Character Voices page carries no widget attribute for any of the four header indicator boxes or their value labels, and the header layout of the page holds only the title row."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_header_carries_no_language_indicators",
-  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_each_persistent_page_localizes_audited_visible_text",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_header_carries_no_language_indicators",
+  "05_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_each_persistent_page_localizes_audited_visible_text",
 ]
 
 spec = ""

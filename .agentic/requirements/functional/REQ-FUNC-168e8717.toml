@@ -10,12 +10,12 @@ Audio-block generation shall preserve existing audio on fingerprint change, star
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_changes",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_changes",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run",
 ]
 
 priority = "high"

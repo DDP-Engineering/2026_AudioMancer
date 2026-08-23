@@ -10,13 +10,13 @@ For every non-navigation EPUB spine document, Text Extraction shall decode visib
 verification = "Real EPUB ZIP fixtures with UTF-8, UTF-16, declared cp1252/ISO-8859-1, mixed encodings, and invalid declarations verify exact spine-ordered text, truthful ledger encoding, navigation filtering, and actionable item-specific failures."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_honors_uniform_epub_content_encoding",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_preserves_mixed_encoding_epub_spine_order",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_with_invalid_declared_encoding",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_when_declared_decoding_fails",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_honors_uniform_epub_content_encoding",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_preserves_mixed_encoding_epub_spine_order",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_with_invalid_declared_encoding",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_identifies_epub_item_when_declared_decoding_fails",
 ]
 
 spec = "specs/REQ-FUNC-379827ff.md"

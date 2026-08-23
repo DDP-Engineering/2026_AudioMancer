@@ -10,11 +10,11 @@ The Audio Assembly page shall enable the duration control at time limit and use 
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_time_limit_enables_duration_control",
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_uses_two_column_settings_and_scene_ambience_option",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_time_limit_enables_duration_control",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_uses_two_column_settings_and_scene_ambience_option",
 ]
 
 priority = "high"

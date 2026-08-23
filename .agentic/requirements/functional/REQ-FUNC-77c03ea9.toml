@@ -10,12 +10,12 @@ If a narrator or character voice sample is generated from preview text outside t
 verification = "A focused test runs the shared voice-design sequence with preview text below the accepted minimum and a runtime probe that fails the test if it is reached, then observes a raised error naming the supplied word count."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_refuses_out_of_range_preview_text",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_refuses_out_of_range_preview_text",
 ]
 
 spec = ""

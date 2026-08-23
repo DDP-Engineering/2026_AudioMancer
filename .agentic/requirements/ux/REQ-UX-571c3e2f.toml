@@ -53,22 +53,22 @@ verification = "A focused test loads narrator profile state whose preview text s
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics",
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_omits_retired_preview_and_block_target_settings",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_keep_preview_text",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_omits_retired_preview_and_block_target_settings",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_keep_preview_text",
 ]
 
 # --- optional below this line ---

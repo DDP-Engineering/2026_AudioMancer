@@ -10,13 +10,13 @@ TTS settings shall surface runtime limits without requiring an active project or
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_loads_runtime_limits_without_project_plan",
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_keeps_runtime_limits_available_without_project",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_loads_runtime_limits_without_project_plan",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_keeps_runtime_limits_available_without_project",
 ]
 
 priority = "high"

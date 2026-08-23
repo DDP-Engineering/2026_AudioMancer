@@ -137,21 +137,21 @@ work in the owning component as well.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/pyproject.toml`
-- `04_Software/AudioMancer/src/audiomancer/__init__.py`
-- `04_Software/AudioMancer/src/audiomancer/__main__.py`
-- `04_Software/AudioMancer/src/audiomancer/app.py`
-- `04_Software/AudioMancer/src/audiomancer/assets/**`
-- `04_Software/AudioMancer/src/audiomancer/services/__init__.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/__init__.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py`
-- `04_Software/AudioMancer/tests/conftest.py`
-- `04_Software/AudioMancer/tests/test_app_entrypoint.py`
-- `04_Software/AudioMancer/tests/test_main_window_lifecycle.py`
-- `04_Software/AudioMancer/tests/test_package_import.py`
-- `04_Software/AudioMancer/tests/test_ui_localization_coverage.py`
+- `05_Software/AudioMancer/pyproject.toml`
+- `05_Software/AudioMancer/src/audiomancer/__init__.py`
+- `05_Software/AudioMancer/src/audiomancer/__main__.py`
+- `05_Software/AudioMancer/src/audiomancer/app.py`
+- `05_Software/AudioMancer/src/audiomancer/assets/**`
+- `05_Software/AudioMancer/src/audiomancer/services/__init__.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/__init__.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py`
+- `05_Software/AudioMancer/tests/conftest.py`
+- `05_Software/AudioMancer/tests/test_app_entrypoint.py`
+- `05_Software/AudioMancer/tests/test_main_window_lifecycle.py`
+- `05_Software/AudioMancer/tests/test_package_import.py`
+- `05_Software/AudioMancer/tests/test_ui_localization_coverage.py`

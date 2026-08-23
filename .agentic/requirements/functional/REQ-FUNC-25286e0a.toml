@@ -10,11 +10,11 @@ Chunking self-heal shall preserve source, Extraction, and Cleanup artifacts and 
 verification = "Focused self-heal test passed with byte-preserved Source, Extraction, cleanup.json, and clean_text.txt."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
 ]
 
 priority = "high"

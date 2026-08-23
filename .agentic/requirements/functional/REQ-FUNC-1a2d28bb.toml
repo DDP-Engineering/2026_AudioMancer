@@ -52,11 +52,11 @@ When Chunking derives chapter labels, it shall use the canonical Cleanup detecto
 verification = "Focused chapter-label tests compare Cleanup and Chunking for supported European-language headings and exclude removed CJK and Korean forms."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py", "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py", "05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_uses_cleanup_chapter_labels_for_supported_european_languages"]
+linked_tests = ["05_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_uses_cleanup_chapter_labels_for_supported_european_languages"]
 
 # --- optional below this line ---
 

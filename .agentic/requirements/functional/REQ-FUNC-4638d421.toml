@@ -10,10 +10,10 @@ AI Chunking shall accept an exact complete anchor for a punctuation-only paragra
 verification = "Focused pytest passed: exact normalized punctuation-only anchors validate without weakening lexical anchor checks."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_exact_punctuation_only_scene_separator",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_descriptor_validation_accepts_exact_punctuation_only_scene_separator",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

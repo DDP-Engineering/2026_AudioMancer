@@ -10,16 +10,16 @@ Persisting an operation summary through `project_workspace_service.sync_manifest
 verification = "Automated: Project Lifecycle selectors cover stage promotion, ignored regression, completed downstream-summary preservation, and manifest self-consistency; a workflow-controller selector verifies that the canonical path preserves a completed downstream stage and summaries when a controller requests a lower stage."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_allowed_operations_follow_the_configured_workflow_prefix",
-  "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_finished_manifest_claims_no_completed_work_above_its_stage",
-  "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_lower_requested_stage_does_not_destroy_completed_downstream_work",
-  "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_advances_the_stage",
-  "04_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_never_moves_the_stage_backwards",
-  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_ignores_regressing_stage_and_preserves_downstream_summaries",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_allowed_operations_follow_the_configured_workflow_prefix",
+  "05_Software/AudioMancer/tests/test_project_stage_consistency.py::test_finished_manifest_claims_no_completed_work_above_its_stage",
+  "05_Software/AudioMancer/tests/test_project_stage_consistency.py::test_lower_requested_stage_does_not_destroy_completed_downstream_work",
+  "05_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_advances_the_stage",
+  "05_Software/AudioMancer/tests/test_project_stage_consistency.py::test_operation_summary_never_moves_the_stage_backwards",
+  "05_Software/AudioMancer/tests/test_workflow_controller_service.py::test_sync_manifest_operation_from_disk_ignores_regressing_stage_and_preserves_downstream_summaries",
 ]
 
 priority = "high"

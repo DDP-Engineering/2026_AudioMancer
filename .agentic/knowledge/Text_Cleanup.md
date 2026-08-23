@@ -431,36 +431,36 @@ splitting, cancellation checkpoints, and resume invalidation.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/prompts/text_cleanup_*.txt`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
+- `05_Software/AudioMancer/prompts/text_cleanup_*.txt`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
   - renders span/boundary projections and enforces introduced-fusion safety
-- `04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
   - persists conservative paragraph-local provenance after manual whitespace edits
-- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
-- `04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
-- `04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
-- `04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py`
-- `04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
-- `04_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
-- `04_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
+- `05_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
+- `05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py`
+- `05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
+- `05_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
+- `05_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
   - covers rendered-span fusion, valid joins, and manual-edit structure/provenance
-- `04_Software/AudioMancer/tests/test_cleanup_service.py`
+- `05_Software/AudioMancer/tests/test_cleanup_service.py`
   - covers unique, mixed, merge/split, duplicate, warning, role, chunk, and offset cases
-- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
-- `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_home_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_localization_parity.py`
-- `04_Software/AudioMancer/tests/test_text_extraction_service.py`
+- `05_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `05_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
+- `05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_home_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_localization_parity.py`
+- `05_Software/AudioMancer/tests/test_text_extraction_service.py`

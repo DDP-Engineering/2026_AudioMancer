@@ -10,15 +10,15 @@ When a project manifest is built, validated, saved, loaded, or repaired, AudioMa
 verification = "Focused tests compare domain and manifest defaults and normalization for valid, invalid, unknown, and boundary inputs, preserve normalized settings through save/load, and import both modules in either order without a cycle failure."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_project_workspace_calls_audio_assembly_settings_contract",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_project_manifest_settings_match_domain_bounds_and_preserve_save_load",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_audio_assembly_and_project_workspace_import_without_cycle",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_narrator_stage",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_project_manifest_normalizes_audio_assembly_settings",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_project_workspace_calls_audio_assembly_settings_contract",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_project_manifest_settings_match_domain_bounds_and_preserve_save_load",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_audio_assembly_and_project_workspace_import_without_cycle",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_repair_manifest_preserves_character_discovery_for_narrator_stage",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_project_manifest_normalizes_audio_assembly_settings",
 ]
 
 priority = "high"

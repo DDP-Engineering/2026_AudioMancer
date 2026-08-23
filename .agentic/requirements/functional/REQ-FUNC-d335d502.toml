@@ -10,10 +10,10 @@ The AI Settings controller shall persist, reload, and refresh the current page a
 verification = "A controller regression applies AI Settings and observes the merged settings saved, the reloaded payload adopted, and the current page refreshed, with the dialog left open on Apply."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
+  "05_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
 ]
 
 priority = "high"

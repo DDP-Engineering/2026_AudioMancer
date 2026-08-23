@@ -52,13 +52,13 @@ When JSON repair follows a provider token-parameter compatibility adaptation, th
 verification = "A focused provider sequence rejects max_tokens, accepts max_completion_tokens, returns malformed JSON, and verifies repair also uses max_completion_tokens."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_max_completion_tokens_for_json_repair",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_max_completion_tokens_for_json_repair",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled",
 ]
 
 # --- optional below this line ---

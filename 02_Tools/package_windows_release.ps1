@@ -151,13 +151,13 @@ function Copy-CleanSettingsFile {
 # from any current working directory.
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
-$appRoot = Join-Path $repoRoot '04_Software\AudioMancer'
+$appRoot = Join-Path $repoRoot '05_Software\AudioMancer'
 $deliveryRoot = Join-Path $repoRoot '07_Delivery'
 $specPath = Join-Path $scriptRoot 'audiomancer_windows.spec'
 $pyprojectPath = Join-Path $appRoot 'pyproject.toml'
 $changelogPath = Join-Path $repoRoot 'CHANGELOG.md'
-$englishUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide'
-$romanianUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide_ro'
+$englishUserGuidePath = Join-Path $repoRoot '06_SoftwareDocu\UserGuide'
+$romanianUserGuidePath = Join-Path $repoRoot '06_SoftwareDocu\UserGuide_ro'
 $promptTemplatePath = Join-Path $appRoot 'prompts'
 
 if (-not (Test-Path $pyprojectPath)) {

@@ -16,10 +16,10 @@ The AI Translation page shall place its Chunk List above the Original Chunk and 
 verification = "Automated: the AI Translation page exposes a vertical splitter whose first widget is the Chunk List group and whose second widget is the Original/Translated chunk splitter, and setting new sizes on that splitter changes the rendered height of the Chunk List group."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_splits_chunk_list_from_chunk_text",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_splits_chunk_list_from_chunk_text",
 ]
 
 spec = ""

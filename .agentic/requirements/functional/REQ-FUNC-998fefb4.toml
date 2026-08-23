@@ -10,12 +10,12 @@ Text Extraction shall build self-contained canonical text and a structurally ind
 verification = "Full pytest gate E-0009 passed: 1025 passed, 62 skipped, 1 deselected."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
 ]
 
 priority = "high"

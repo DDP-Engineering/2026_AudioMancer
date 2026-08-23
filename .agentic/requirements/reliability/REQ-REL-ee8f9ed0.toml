@@ -47,23 +47,23 @@ verification = "Focused persistence tests prove parent creation, successful repl
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_creates_parent_and_replaces_complete_payload",
-  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_failed_replace_preserves_target_and_cleans_temporary_file",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_same_narrator_sync_skips_unchanged_copied_samples",
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_refresh_is_read_only_when_character_voices_are_unchanged",
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_sample_audio_uses_atomic_byte_writer",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_generation_checkpoints_a_split_block_without_error",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
+  "05_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_creates_parent_and_replaces_complete_payload",
+  "05_Software/AudioMancer/tests/test_persistence_service.py::test_write_bytes_atomic_failed_replace_preserves_target_and_cleans_temporary_file",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_same_narrator_sync_skips_unchanged_copied_samples",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_refresh_is_read_only_when_character_voices_are_unchanged",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_sample_audio_uses_atomic_byte_writer",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_generation_checkpoints_a_split_block_without_error",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
 ]
 
 # --- optional below this line ---

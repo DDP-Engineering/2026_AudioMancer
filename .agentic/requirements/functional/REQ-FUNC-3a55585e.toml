@@ -10,10 +10,10 @@ Character voices state shall surface a warning when the narrator sample is missi
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_missing_narrator_sample_surfaces_warning",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_missing_narrator_sample_surfaces_warning",
 ]
 
 priority = "high"

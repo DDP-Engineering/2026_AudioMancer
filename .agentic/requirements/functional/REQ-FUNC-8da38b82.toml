@@ -10,12 +10,12 @@ The operation runner shall run one worker, relay progress and terminal results o
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_reports_progress_and_cleans_up",
-  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_failure_calls_failure_handler_and_cleans_up",
+  "05_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_reports_progress_and_cleans_up",
+  "05_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_failure_calls_failure_handler_and_cleans_up",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ The Characters controller shall show a first-run info popup.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_first_run_shows_info_popup",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_first_run_shows_info_popup",
 ]
 
 priority = "high"

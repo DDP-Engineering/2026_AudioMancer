@@ -10,10 +10,10 @@ The existing Cleanup action shall start or resume Cleanup through the threaded r
 verification = "Existing Cleanup action routes the selected optional profile through the runner."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_cleanup_controller_passes_optional_selected_profile",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_cleanup_controller_passes_optional_selected_profile",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

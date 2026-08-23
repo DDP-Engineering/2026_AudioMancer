@@ -10,10 +10,10 @@ AI Chunking shall preserve explicit heading and scene-separator boundaries when 
 verification = "Focused pytest passed: a no-prefix response preserves explicit scene-separator structure during deterministic fallback."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_invalid_window_fallback_preserves_explicit_scene_separator_boundaries",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_invalid_window_fallback_preserves_explicit_scene_separator_boundaries",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

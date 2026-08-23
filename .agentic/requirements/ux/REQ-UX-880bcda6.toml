@@ -16,10 +16,10 @@ The row of actions under the preview text box on the Character Voices page shall
 verification = "Automated: the action row layout of a constructed Character Voices page reports the edit, save, import, generate and preview buttons at positions zero through four."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_action_row_orders_edit_save_import_generate_preview",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_action_row_orders_edit_save_import_generate_preview",
 ]
 
 spec = ""

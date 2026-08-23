@@ -10,10 +10,10 @@ The provider client shall parse fenced JSON from model output.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_parses_fenced_json",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_parses_fenced_json",
 ]
 
 priority = "high"

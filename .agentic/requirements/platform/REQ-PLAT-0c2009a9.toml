@@ -10,10 +10,10 @@ build_default_settings shall include ui_font_size_step and text_font_size_step, 
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_default_settings_include_font_size_steps",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_default_settings_include_font_size_steps",
 ]
 
 priority = "high"

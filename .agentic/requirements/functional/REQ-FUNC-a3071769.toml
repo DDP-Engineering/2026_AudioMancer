@@ -10,12 +10,12 @@ The Character Voices controller shall batch-generate current character samples, 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_regenerates_all_current_character_samples",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_targets_only_generatable_characters",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_regenerates_all_current_character_samples",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_batch_targets_only_generatable_characters",
 ]
 
 priority = "high"

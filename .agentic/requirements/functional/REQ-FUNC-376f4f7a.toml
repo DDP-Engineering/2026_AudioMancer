@@ -10,10 +10,10 @@ Saving a whitespace-only manual Cleanup edit shall not assign scene_separator to
 verification = "Issue #32 merge/split regression passed through deterministic Chunking; green evidence E-0006 within the 111-test focused suite."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

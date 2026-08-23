@@ -10,11 +10,11 @@ The Speech Blocks controller shall reset downstream work on insert and confirmed
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream",
 ]
 
 priority = "high"

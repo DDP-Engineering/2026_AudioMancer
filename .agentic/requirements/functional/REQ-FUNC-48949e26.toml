@@ -10,12 +10,12 @@ The Character Voices page shall emit import for character targets and enable or 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_import_button_emits_for_character_targets",
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_enables_for_current_character_targets",
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_disables_when_character_targets_cannot_generate",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_import_button_emits_for_character_targets",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_enables_for_current_character_targets",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_batch_button_disables_when_character_targets_cannot_generate",
 ]
 
 priority = "high"

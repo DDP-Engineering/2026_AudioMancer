@@ -10,12 +10,12 @@ Audio-block generation shall produce ordered clone-prompt WAVs, use the narrator
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_requires_selected_narrator_sample_metadata",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_requires_selected_narrator_sample_metadata",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ Audio Assembly shall raise RuntimeError when a WAV channel conversion other than
 verification = "Automated: RuntimeError message asserted for a 3-to-2 channel conversion."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audio_assembly_rejects_unsupported_channel_conversion",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_audio_assembly_rejects_unsupported_channel_conversion",
 ]
 
 spec = "specs/pcm_codec.spec.md"

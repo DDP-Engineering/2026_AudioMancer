@@ -10,10 +10,10 @@ Character voices state shall disable character edit and generate in same-narrato
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_same_narrator_mode_disables_character_edit_and_generate",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_same_narrator_mode_disables_character_edit_and_generate",
 ]
 
 priority = "high"

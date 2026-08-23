@@ -49,15 +49,15 @@ verification = "State-service and main-window tests supply absent, unknown, disa
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_profile_state_falls_back_from_invalid_or_disabled_selection",
-  "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_narrator_refresh_preserves_live_profile_selection",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_profile_state_falls_back_from_invalid_or_disabled_selection",
+  "05_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_narrator_refresh_preserves_live_profile_selection",
 ]
 
 # --- optional below this line ---

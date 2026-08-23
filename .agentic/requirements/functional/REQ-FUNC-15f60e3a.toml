@@ -10,15 +10,15 @@ AI chunking shall size windows by configured strategy, context mode, and budget,
 verification = "Automated: 6 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_windows_use_configured_strategy_caps",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_large_context_allows_larger_scene_windows",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_small_context_limits_paragraph_windows",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragraph_cap",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_keeps_oversized_paragraphs_whole",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_windows_use_configured_strategy_caps",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_large_context_allows_larger_scene_windows",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_small_context_limits_paragraph_windows",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragraph_cap",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_keeps_oversized_paragraphs_whole",
 ]
 
 priority = "high"

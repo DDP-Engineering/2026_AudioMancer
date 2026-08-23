@@ -10,12 +10,12 @@ Cleanup quality gates shall use a synthetic 20-to-25-fixture cross-format and cr
 verification = "The linked automated tests confirm that the 20-to-25-fixture corpus covers every supported format, language, and required archetype and meets its boundary and projection thresholds. The external measured benchmark and real online/offline model acceptance remain separate operator validations and are not asserted by linked tests."
 
 affected_paths = [
-  "04_Software/AudioMancer/tests/fixtures/cleanup_corpus.json",
-  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py",
+  "05_Software/AudioMancer/tests/fixtures/cleanup_corpus.json",
+  "05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_has_required_size_and_domain_coverage",
-  "04_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_meets_boundary_and_projection_thresholds",
+  "05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_has_required_size_and_domain_coverage",
+  "05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py::test_acceptance_corpus_meets_boundary_and_projection_thresholds",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

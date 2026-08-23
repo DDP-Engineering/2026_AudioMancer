@@ -31,7 +31,7 @@ PYTHON_SUFFIX = ".py"
 # Audits cover the application subtree only. Repository tooling under 02_Tools
 # is deliberately out of scope: it is not shipped and does not follow the
 # application code style.
-AUDITED_SUBTREE = Path("04_Software") / "AudioMancer"
+AUDITED_SUBTREE = Path("05_Software") / "AudioMancer"
 
 # DATA MODELS / TYPEDEFINITIONS
 

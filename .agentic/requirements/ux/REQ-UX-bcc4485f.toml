@@ -10,10 +10,10 @@ The Settings page shall present an interface font-size selector offering the sev
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_interface_font_size_selector_persists",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_interface_font_size_selector_persists",
 ]
 
 priority = "high"

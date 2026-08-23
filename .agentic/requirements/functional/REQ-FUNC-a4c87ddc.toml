@@ -10,11 +10,11 @@ Each persisted Audio Block entry shall carry only speech_block_id, voice_target_
 verification = "Automated contract test: persisted blocks carry exactly the seven contract fields, plus the two split fields only when split_part_count > 1."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_persisted_block_carries_only_the_contracted_field_set",
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_split_fields_are_persisted_only_for_split_blocks",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_persisted_block_carries_only_the_contracted_field_set",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_split_fields_are_persisted_only_for_split_blocks",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

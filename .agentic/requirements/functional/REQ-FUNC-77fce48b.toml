@@ -47,14 +47,14 @@ verification = "Focused page and controller tests load both successful and faile
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_save_without_probe_preserves_persisted_probe_state",
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_saves_unrelated_tts_setting_without_erasing_probe_state",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_save_without_probe_preserves_persisted_probe_state",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_saves_unrelated_tts_setting_without_erasing_probe_state",
 ]
 
 # --- optional below this line ---

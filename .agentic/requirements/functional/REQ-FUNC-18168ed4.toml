@@ -47,17 +47,17 @@ verification = "Automated: exact captured request sequences show response_format
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_response_format_fallback_across_outer_retries",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_max_completion_tokens_across_outer_retries",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_resets_response_format_compatibility_for_separate_calls",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_response_format_fallback_across_outer_retries",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_max_completion_tokens_across_outer_retries",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_resets_response_format_compatibility_for_separate_calls",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
 ]
 
 # --- optional below this line ---

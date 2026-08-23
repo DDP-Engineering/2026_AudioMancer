@@ -10,10 +10,10 @@ The Audio Blocks controller audiobook playback shall include the current pause e
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_without_audio_block",
+  "05_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_without_audio_block",
 ]
 
 priority = "high"

@@ -158,8 +158,8 @@ instructions from the Chunking document.
   `config.DEFAULT_LANGUAGE` before use or persistence. Cleanup source-content
   languages and AI translation targets have separate configuration contracts.
 - Packaged offline Help paths remain relative to `APP_ROOT`, while source
-  checkout Help paths retain the repository's `05_SoftwareDocu/UserGuide` and
-  `05_SoftwareDocu/UserGuide_ro` entry points; shallow installed roots never
+  checkout Help paths retain the repository's `06_SoftwareDocu/UserGuide` and
+  `06_SoftwareDocu/UserGuide_ro` entry points; shallow installed roots never
   require a second available ancestor during configuration initialization.
 - Both offline guides describe only controls the frontend actually builds. This
   is a convention, not a tracked requirement: the project keeps no requirements
@@ -321,32 +321,32 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/settings.example.json`
-- `04_Software/AudioMancer/settings.json`
-- `04_Software/AudioMancer/src/audiomancer/app.py`
-- `04_Software/AudioMancer/src/audiomancer/config.py`
-- `04_Software/AudioMancer/src/audiomancer/services/logging_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/settings_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/time_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/url_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
-- `04_Software/AudioMancer/tests/test_app_entrypoint.py`
-- `04_Software/AudioMancer/tests/test_config_contract.py`
-- `04_Software/AudioMancer/tests/test_localization_parity.py`
-- `04_Software/AudioMancer/tests/test_logging_service.py`
-- `04_Software/AudioMancer/tests/test_misc_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_operator_status_font_role.py`
-- `04_Software/AudioMancer/tests/test_settings_page.py`
-- `04_Software/AudioMancer/tests/test_settings_service.py`
-- `04_Software/AudioMancer/tests/test_ui_scroll_service.py`
-- `04_Software/AudioMancer/tests/test_ui_state_service.py`
-- `04_Software/AudioMancer/tests/test_ui_theme_service.py`
-- `04_Software/AudioMancer/tests/test_ui_localization_coverage.py`
-- `04_Software/AudioMancer/tests/test_url_service.py`
-- `05_SoftwareDocu/UserGuide/index.html`
-- `05_SoftwareDocu/UserGuide_ro/index.html`
-- `04_Software/AudioMancer/tests/test_user_data_location.py`
+- `05_Software/AudioMancer/settings.example.json`
+- `05_Software/AudioMancer/settings.json`
+- `05_Software/AudioMancer/src/audiomancer/app.py`
+- `05_Software/AudioMancer/src/audiomancer/config.py`
+- `05_Software/AudioMancer/src/audiomancer/services/logging_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/settings_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/time_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/url_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
+- `05_Software/AudioMancer/tests/test_app_entrypoint.py`
+- `05_Software/AudioMancer/tests/test_config_contract.py`
+- `05_Software/AudioMancer/tests/test_localization_parity.py`
+- `05_Software/AudioMancer/tests/test_logging_service.py`
+- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_operator_status_font_role.py`
+- `05_Software/AudioMancer/tests/test_settings_page.py`
+- `05_Software/AudioMancer/tests/test_settings_service.py`
+- `05_Software/AudioMancer/tests/test_ui_scroll_service.py`
+- `05_Software/AudioMancer/tests/test_ui_state_service.py`
+- `05_Software/AudioMancer/tests/test_ui_theme_service.py`
+- `05_Software/AudioMancer/tests/test_ui_localization_coverage.py`
+- `05_Software/AudioMancer/tests/test_url_service.py`
+- `06_SoftwareDocu/UserGuide/index.html`
+- `06_SoftwareDocu/UserGuide_ro/index.html`
+- `05_Software/AudioMancer/tests/test_user_data_location.py`

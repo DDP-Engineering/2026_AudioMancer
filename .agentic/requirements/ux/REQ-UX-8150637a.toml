@@ -7,13 +7,13 @@ requirement = """
 The built-in UI theme catalog shall include an 'Ember Night' theme (theme_id 'ember_night', built_in) whose color roles are window_background #1A1512, panel_background #241D18, text_primary #F2E7DA, text_muted #B7A392, accent #FF9F45, border #40342B, warning #E8B14A, success #8FB25A, danger #E0685A, and disabled #7A6A5C.
 """
 
-verification = "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ember_night_theme_has_expected_roles (passed)"
+verification = "uv run --directory 05_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ember_night_theme_has_expected_roles (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_ember_night_theme_has_expected_roles",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_ember_night_theme_has_expected_roles",
 ]
 
 spec = "specs/ui_theme_catalog.spec.md"

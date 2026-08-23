@@ -10,10 +10,10 @@ Speech Blocks resume shall read next_chunk_index, active_chunk_id, next_segment_
 verification = "Resume cursors read from document.checkpoint."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_resume_reads_segment_cursor_from_document_checkpoint",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_resume_reads_segment_cursor_from_document_checkpoint",
 ]
 
 priority = "high"

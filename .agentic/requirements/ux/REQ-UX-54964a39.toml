@@ -10,11 +10,11 @@ The Text Cleanup page shall expose a profile selector, Cleanup and Reset actions
 verification = "The Cleanup page exposes the contracted controls and interactions."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_edit_save_and_cancel_are_optional",
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_exposes_one_cleanup_action_with_optional_ai_profile",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_edit_save_and_cancel_are_optional",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py::test_page_exposes_one_cleanup_action_with_optional_ai_profile",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

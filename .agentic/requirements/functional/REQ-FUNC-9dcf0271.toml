@@ -10,10 +10,10 @@ Cleanup AI adjudication shall retry an invalid batch once and continue later bat
 verification = "One-retry and later-batch continuation test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_invalid_batch_retries_once_then_falls_back_and_continues",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_invalid_batch_retries_once_then_falls_back_and_continues",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

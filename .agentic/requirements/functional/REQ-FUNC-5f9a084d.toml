@@ -10,10 +10,10 @@ The Home page snapshot button shall follow project and busy state.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_snapshot_button_follows_project_and_busy_state",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_snapshot_button_follows_project_and_busy_state",
 ]
 
 priority = "high"

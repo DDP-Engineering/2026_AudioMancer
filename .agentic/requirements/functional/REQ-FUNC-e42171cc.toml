@@ -10,13 +10,13 @@ When rendering places alphanumeric endpoints from separate retained source spans
 verification = "Rendered-span tests distinguish ordinary separators, preserved punctuation and hyphens, and applicable dehyphenation from unauthorized direct and dropped-unit adjacency, with unsafe renders raising CleanupRenderError before publication."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_controlled_unauthorized_empty_separator",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_rendered_projection_fusion_counter_is_not_constant",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_scopes_dropped_chain_dehyphenation_to_retained_left_span",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_rejects_controlled_unauthorized_empty_separator",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_rendered_projection_fusion_counter_is_not_constant",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_scopes_dropped_chain_dehyphenation_to_retained_left_span",
 ]
 
 spec = "specs/REQ-FUNC-e42171cc.md"

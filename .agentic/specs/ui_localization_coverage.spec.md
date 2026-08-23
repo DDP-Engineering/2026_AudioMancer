@@ -13,9 +13,9 @@ the active Qt surface.
 
 - Requirement: the `ux` localization binding requirement.
 - Affected files:
-  - `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
-  - `04_Software/AudioMancer/src/audiomancer/ui/pages/*.py`
-  - `04_Software/AudioMancer/src/audiomancer/ui/controllers/*.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/ui/pages/*.py`
+  - `05_Software/AudioMancer/src/audiomancer/ui/controllers/*.py`
 
 ## Behavior
 

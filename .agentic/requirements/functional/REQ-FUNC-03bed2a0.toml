@@ -10,11 +10,11 @@ Project opening shall automatically reset an incompatible Chunking document and 
 verification = "Focused project-open self-heal test verifies reset of incompatible Chunking and downstream state followed by one successful validation retry."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_self_heals_incompatible_chunking_and_downstream",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

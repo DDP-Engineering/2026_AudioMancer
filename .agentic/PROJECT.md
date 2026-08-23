@@ -16,11 +16,11 @@ project requirements.
 
 | Thing | Path |
 |---|---|
-| Application source | `04_Software/AudioMancer/src/audiomancer/` |
-| Tests | `04_Software/AudioMancer/tests/` |
+| Application source | `05_Software/AudioMancer/src/audiomancer/` |
+| Tests | `05_Software/AudioMancer/tests/` |
 | Code style (binding) | `01_Documentation/Code_Style.md` |
 | Changelog | `CHANGELOG.md` (repo root) |
-| User help files | `05_SoftwareDocu/UserGuide/`, `05_SoftwareDocu/UserGuide_ro/` |
+| User help files | `06_SoftwareDocu/UserGuide/`, `06_SoftwareDocu/UserGuide_ro/` |
 
 Tests run through `uv` from the application directory; `aegis test` and
 `aegis check --run` already carry the right command.
@@ -46,14 +46,14 @@ in the delivery commit, and record the chosen version in the journal log.
    above it. Every user-visible change of this release must be described
    there in user language, not commit language.
 2. **The project** — two files, which must always agree:
-   - `04_Software/AudioMancer/pyproject.toml` → `version = "X.Y.Z"`
-   - `04_Software/AudioMancer/src/audiomancer/__init__.py` →
+   - `05_Software/AudioMancer/pyproject.toml` → `version = "X.Y.Z"`
+   - `05_Software/AudioMancer/src/audiomancer/__init__.py` →
      `__version__ = "X.Y.Z"`
-3. **The English help file** — `05_SoftwareDocu/UserGuide/index.html`,
+3. **The English help file** — `06_SoftwareDocu/UserGuide/index.html`,
    three occurrences: the `<title>AudioMancer User Guide vX.Y.Z</title>`,
    the **Help version** line and the **Application version** line.
 4. **The Romanian help file** —
-   `05_SoftwareDocu/UserGuide_ro/index.html`, three occurrences: the
+   `06_SoftwareDocu/UserGuide_ro/index.html`, three occurrences: the
    `<title>Ghid AudioMancer vX.Y.Z</title>`, **Versiune ajutor** and
    **Versiune aplicatie**.
 
@@ -62,7 +62,7 @@ check: it reads the version from `pyproject.toml` and fails on any surface that
 disagrees, naming the one that drifted.
 
 ```
-cd 04_Software/AudioMancer && uv run pytest tests/test_package_import.py
+cd 05_Software/AudioMancer && uv run pytest tests/test_package_import.py
 ```
 
 To eyeball the surfaces by hand, scope the search to them. A repository-wide
@@ -70,11 +70,11 @@ grep is not a useful count, because task journals record the versions they
 delivered and accumulate over time.
 
 ```
-git grep -n "X\.Y\.Z" -- 04_Software/AudioMancer/pyproject.toml \
-  04_Software/AudioMancer/src/audiomancer/__init__.py \
-  04_Software/AudioMancer/uv.lock CHANGELOG.md \
-  05_SoftwareDocu/UserGuide/index.html \
-  05_SoftwareDocu/UserGuide_ro/index.html
+git grep -n "X\.Y\.Z" -- 05_Software/AudioMancer/pyproject.toml \
+  05_Software/AudioMancer/src/audiomancer/__init__.py \
+  05_Software/AudioMancer/uv.lock CHANGELOG.md \
+  06_SoftwareDocu/UserGuide/index.html \
+  06_SoftwareDocu/UserGuide_ro/index.html
 # expect 10 hits: pyproject 1, __init__ 1, uv.lock 1, CHANGELOG 1, each guide 3
 git grep -n "<previous>"       # the old version: expect none outside CHANGELOG.md
 ```

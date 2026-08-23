@@ -48,16 +48,16 @@ verification = "State-service and localization tests prove English and Romanian 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_completed_character_notes_report_only_persisted_character_count",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_recovery_and_summary_localizations_share_placeholders",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_completed_character_notes_report_only_persisted_character_count",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_recovery_and_summary_localizations_share_placeholders",
 ]
 
 # --- optional below this line ---

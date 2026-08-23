@@ -47,14 +47,14 @@ verification = "Focused narrator-split tests close German low-high quotes, retai
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_low_quote_closers_end_nested_quotation_before_budget_splitting",
+  "05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_low_quote_closers_end_nested_quotation_before_budget_splitting",
 ]
 
 # --- optional below this line ---

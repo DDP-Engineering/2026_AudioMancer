@@ -10,10 +10,10 @@ The PCM codec shall convert linear PCM sample data between mono and stereo chann
 verification = "Automated: golden floor/clip vectors plus byte-exact differential comparison against audioop.tostereo and audioop.tomono."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_channel_conversion_is_byte_identical_to_audioop",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_channel_conversion_is_byte_identical_to_audioop",
 ]
 
 spec = "specs/pcm_codec.spec.md"

@@ -10,10 +10,10 @@ The provider client shall retry with max_completion_tokens when the backend requ
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
 ]
 
 priority = "high"

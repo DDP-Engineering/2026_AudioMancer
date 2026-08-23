@@ -10,12 +10,12 @@ The AI Settings page shall load profiles and build merged settings including chu
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_profiles_and_builds_merged_settings",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_profiles_and_builds_merged_settings",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode",
 ]
 
 priority = "high"

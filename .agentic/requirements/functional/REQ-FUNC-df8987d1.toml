@@ -10,12 +10,12 @@ The generated audio path for an Audio Block shall be derived from speech_block_i
 verification = "Automated contract test: the WAV and split-part paths equal audio_blocks/<speech_block_id>.wav and .../parts/<speech_block_id>_partNNN.wav, with no speaker name and no persisted path field."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_generated_audio_path_is_derived_from_speech_block_id",
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_split_part_paths_are_derived_from_speech_block_id",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_generated_audio_path_is_derived_from_speech_block_id",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_split_part_paths_are_derived_from_speech_block_id",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

@@ -10,11 +10,11 @@ Project export shall detect readiness for TXT, Markdown, and ZIP export types an
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_narrator_default_filename_uses_user_facing_spelling",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_narrator_default_filename_uses_user_facing_spelling",
 ]
 
 priority = "high"

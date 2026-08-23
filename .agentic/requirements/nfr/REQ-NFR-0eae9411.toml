@@ -53,24 +53,24 @@ verification = "Focused controller tests invoke every participating confirmation
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_preserves_dialog_arguments_and_boolean_semantics",
-  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_propagates_translation_error_before_showing_dialog",
-  "04_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_confirmation_wrapper_preserves_exact_dialog_contract",
-  "04_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_audio_blocks_conditional_confirmation_preserves_short_circuit_and_dialog",
+  "05_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_preserves_dialog_arguments_and_boolean_semantics",
+  "05_Software/AudioMancer/tests/test_misc_ui_controller.py::test_confirm_question_propagates_translation_error_before_showing_dialog",
+  "05_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_confirmation_wrapper_preserves_exact_dialog_contract",
+  "05_Software/AudioMancer/tests/test_confirmation_consolidation.py::test_audio_blocks_conditional_confirmation_preserves_short_circuit_and_dialog",
 ]
 
 # --- optional below this line ---

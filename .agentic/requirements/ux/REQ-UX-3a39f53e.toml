@@ -16,11 +16,11 @@ While the operator drags the boundary between the AI Translation Chunk List and 
 verification = "Automated: with the AI Translation vertical splitter laid out at a known height, the Chunk List group reports a maximum height of half that height, and after the splitter is asked for a first pane as tall as the whole splitter the Chunk List group still reports a size no greater than that half."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_stops_at_half_the_splitter",
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_minimum_wins_on_a_short_page",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_stops_at_half_the_splitter",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_minimum_wins_on_a_short_page",
 ]
 
 spec = ""

@@ -10,10 +10,10 @@ Audio Blocks resume shall read run_token, current_phase, current_block_id, next_
 verification = "Automated contract test: the projected resume checkpoint exposes run_token, current_phase, current_block_id, next_speech_block_index and next_split_part_index."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_load_operation_state_projection_exposes_checkpoint",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_load_operation_state_projection_exposes_checkpoint",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

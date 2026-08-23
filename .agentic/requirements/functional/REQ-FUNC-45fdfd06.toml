@@ -10,12 +10,12 @@ The Speech Blocks page shall emit insert and delete selection, enable insert for
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_insert_delete_buttons_emit_selection",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_insert_enabled_for_empty_selected_chunk",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_resolves_delete_replacement_from_visible_block_order",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_insert_delete_buttons_emit_selection",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_insert_enabled_for_empty_selected_chunk",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_resolves_delete_replacement_from_visible_block_order",
 ]
 
 priority = "high"

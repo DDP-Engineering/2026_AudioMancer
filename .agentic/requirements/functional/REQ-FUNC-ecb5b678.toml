@@ -10,10 +10,10 @@ The Speech Blocks document shall not persist a copy of upstream source-chunk tex
 verification = "Artifact excludes source_chunks; source keeps only fingerprint."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_persisted_document_excludes_source_chunk_text",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_persisted_document_excludes_source_chunk_text",
 ]
 
 priority = "high"

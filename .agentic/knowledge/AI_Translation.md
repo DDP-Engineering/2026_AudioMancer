@@ -177,14 +177,14 @@ integration test replaces controlled manual verification of a chosen model.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/prompts/text_translation_*.txt`
-- `04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py`
-- `04_Software/AudioMancer/tests/test_ai_translation_page.py`
-- `04_Software/AudioMancer/tests/test_ai_translation_service.py`
-- `04_Software/AudioMancer/tests/test_ai_translation_state_service.py`
-- `04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_main_window_ai_profiles.py`
+- `05_Software/AudioMancer/prompts/text_translation_*.txt`
+- `05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py`
+- `05_Software/AudioMancer/tests/test_ai_translation_page.py`
+- `05_Software/AudioMancer/tests/test_ai_translation_service.py`
+- `05_Software/AudioMancer/tests/test_ai_translation_state_service.py`
+- `05_Software/AudioMancer/tests/test_ai_translation_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_main_window_ai_profiles.py`

@@ -10,11 +10,11 @@ The operation runtime shall constrain all project-relative artifact paths to the
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_relative_path_resolver_rejects_escapes",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_resolve_operation_path_uses_project_root_without_creating_folders",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_project_relative_path_resolver_rejects_escapes",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_resolve_operation_path_uses_project_root_without_creating_folders",
 ]
 
 priority = "high"

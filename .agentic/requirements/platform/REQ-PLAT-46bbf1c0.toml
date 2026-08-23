@@ -10,10 +10,10 @@ validate_settings shall repair a missing or invalid ui_font_size_step or text_fo
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_font_size_steps",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_font_size_steps",
 ]
 
 priority = "high"

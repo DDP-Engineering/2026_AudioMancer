@@ -10,10 +10,10 @@ Cleanup AI adjudication shall expose the batch and pass phase of every primary a
 verification = "Primary and verifier request-level progress callback test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
 ]
 
 priority = "high"

@@ -56,7 +56,7 @@ affected_paths = ["CHANGELOG.md"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata"]
+linked_tests = ["05_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata"]
 
 # --- optional below this line ---
 

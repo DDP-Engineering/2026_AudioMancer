@@ -53,16 +53,16 @@ verification = "Focused Audio Blocks tests exercise already-active, runtime-effe
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_loads_waits_and_returns_terminal_status",
-  "04_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_preserves_failure_and_wrong_model_errors",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_skips_reloading_an_already_active_clone_model",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_resumes_after_a_latched_cancelled_runtime_operation",
+  "05_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_loads_waits_and_returns_terminal_status",
+  "05_Software/AudioMancer/tests/test_duplicate_model_activation_consolidation.py::test_ensure_model_active_preserves_failure_and_wrong_model_errors",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_skips_reloading_an_already_active_clone_model",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_resumes_after_a_latched_cancelled_runtime_operation",
 ]
 
 # --- optional below this line ---

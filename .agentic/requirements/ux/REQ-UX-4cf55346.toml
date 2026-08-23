@@ -56,14 +56,14 @@ verification = "A page regression types a multi-digit value into each numeric Ou
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_reports_a_numeric_setting_once_its_value_settles",
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_generates_with_a_typed_but_unconfirmed_setting",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_reports_a_numeric_setting_once_its_value_settles",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_generates_with_a_typed_but_unconfirmed_setting",
 ]
 
 # --- optional below this line ---

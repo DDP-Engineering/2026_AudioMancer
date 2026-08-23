@@ -10,11 +10,11 @@ User-edited Cleanup paragraph reconstruction shall classify conservative explici
 verification = "Focused Cleanup and Chunking module run passed: 126 tests."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

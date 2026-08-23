@@ -10,18 +10,18 @@ Text Chunking state shall derive page notes from the authoritative Chunking docu
 verification = "Focused state-service production-path tests build persisted deterministic and AI-assisted documents and verify localized running, failed, cancelled, completed, and not-started notes contain only durable lifecycle facts while retaining warnings and AI token usage."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_persisted_token_usage_summary",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_retains_ready_guidance_without_a_document",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_persisted_token_usage_summary",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_retains_ready_guidance_without_a_document",
 ]
 
 priority = "high"

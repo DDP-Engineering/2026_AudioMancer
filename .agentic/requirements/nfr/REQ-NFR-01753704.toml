@@ -10,14 +10,14 @@ All durable JSON and byte writes shall use the atomic writer, including settings
 verification = "Atomic persistence contract tests cover Cleanup document/text, settings, operation state, audio assembly, and Extraction metadata."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_audio_assembly_state_uses_atomic_json_writer",
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_manual_cleaned_text_edit_uses_atomic_writers",
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_operation_state_artifact_save_uses_atomic_json_writer",
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_settings_save_uses_atomic_json_writer",
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_text_extraction_running_metadata_uses_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_audio_assembly_state_uses_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_manual_cleaned_text_edit_uses_atomic_writers",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_operation_state_artifact_save_uses_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_settings_save_uses_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_text_extraction_running_metadata_uses_atomic_json_writer",
 ]
 
 priority = "high"

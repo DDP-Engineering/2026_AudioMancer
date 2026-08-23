@@ -10,12 +10,12 @@ The operation runtime shall reset only known root artifacts while preserving req
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_clears_known_root_artifacts_only",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_requested_narrator_artifacts",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_text_revision_artifacts",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_clears_known_root_artifacts_only",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_requested_narrator_artifacts",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_text_revision_artifacts",
 ]
 
 priority = "high"

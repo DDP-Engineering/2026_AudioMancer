@@ -10,10 +10,10 @@ The Characters page shall hold the left pane of its main splitter, which carries
 verification = "Automated: with the Characters page main splitter laid out at a known width, the left pane reports a minimum width of one third of that width and the Evidence pane a minimum width of one quarter, and dragging the splitter fully to the left leaves the left pane at its one-third minimum."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_left_pane_keeps_a_one_third_minimum",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_left_pane_keeps_a_one_third_minimum",
 ]
 
 spec = ""

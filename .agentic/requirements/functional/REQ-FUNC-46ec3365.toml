@@ -10,10 +10,10 @@ The VoiceWeaver capability matrix shall ignore unhealthy models.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_build_capability_matrix_ignores_unhealthy_models",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_build_capability_matrix_ignores_unhealthy_models",
 ]
 
 priority = "high"

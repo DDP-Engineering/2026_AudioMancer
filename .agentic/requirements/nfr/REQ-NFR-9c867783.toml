@@ -47,19 +47,19 @@ verification = "Instrumented regressions call repeated read, approve, edit, inse
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
-  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py",
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_public_review_operations_resolve_source_chunks_at_most_once",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_update_preserves_projection_counts_when_source_resolution_is_unavailable",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_same_narrator_without_calling_a_model",
-  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_resolves_source_chunks_once",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_public_review_operations_resolve_source_chunks_at_most_once",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_update_preserves_projection_counts_when_source_resolution_is_unavailable",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_same_narrator_without_calling_a_model",
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_resolves_source_chunks_once",
 ]
 
 # --- optional below this line ---

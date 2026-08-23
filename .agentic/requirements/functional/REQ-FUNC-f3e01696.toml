@@ -10,10 +10,10 @@ The Characters page shall load and persist manual demographic fields.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_demographic_fields_load_and_save",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_demographic_fields_load_and_save",
 ]
 
 priority = "high"

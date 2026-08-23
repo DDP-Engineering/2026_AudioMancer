@@ -10,10 +10,10 @@ The narrator definition service shall clear the sample and selection when a prof
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ The Home controller shall preserve unlocked draft project options on import.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_import_preserves_unlocked_draft_project_options",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_import_preserves_unlocked_draft_project_options",
 ]
 
 priority = "high"

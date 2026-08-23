@@ -26,8 +26,8 @@ APP_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = APP_ROOT.parents[1]
 CHANGELOG_PATH = REPO_ROOT / "CHANGELOG.md"
 USER_GUIDE_PATHS = (
-    REPO_ROOT / "05_SoftwareDocu" / "UserGuide" / "index.html",
-    REPO_ROOT / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
+    REPO_ROOT / "06_SoftwareDocu" / "UserGuide" / "index.html",
+    REPO_ROOT / "06_SoftwareDocu" / "UserGuide_ro" / "index.html",
 )
 UNRELEASED_HEADING = "## [Unreleased]"
 # @brief Semantic version accepted on every release surface.

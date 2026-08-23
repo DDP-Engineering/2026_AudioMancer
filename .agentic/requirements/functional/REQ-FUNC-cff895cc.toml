@@ -10,11 +10,11 @@ The application shall prevent an unsafe close while a worker thread is active.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py::test_main_window_close_ignores_event_while_operation_thread_is_active",
+  "05_Software/AudioMancer/tests/test_main_window_operation_shutdown.py::test_main_window_close_ignores_event_while_operation_thread_is_active",
 ]
 
 priority = "high"

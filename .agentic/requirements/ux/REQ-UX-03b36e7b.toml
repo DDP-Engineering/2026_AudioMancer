@@ -10,10 +10,10 @@ The theme stylesheet shall style the navigation sidebar selected item (QListWidg
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_marks_active_sidebar_item_with_accent",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_marks_active_sidebar_item_with_accent",
 ]
 
 priority = "normal"

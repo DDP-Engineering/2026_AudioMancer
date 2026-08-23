@@ -49,17 +49,17 @@ verification = "Boundary regressions calculate output bytes from integer frame c
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_size_preflight_uses_shared_planned_reference_lookup",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_classic_wav_size_boundary_uses_whole_frames",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_precedes_output_work_and_persistence",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_allows_exact_legal_boundary",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_treats_per_chunk_outputs_independently",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_size_preflight_uses_shared_planned_reference_lookup",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_classic_wav_size_boundary_uses_whole_frames",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_precedes_output_work_and_persistence",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_allows_exact_legal_boundary",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_size_preflight_treats_per_chunk_outputs_independently",
 ]
 
 # --- optional below this line ---

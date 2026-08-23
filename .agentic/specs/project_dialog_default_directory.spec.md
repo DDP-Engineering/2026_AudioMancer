@@ -14,8 +14,8 @@ which folder the project create and open dialogs start in.
 - Requirements: the `platform` set (per-user documents directory resolution) and
   the `ux` set (project dialog start directory).
 - Affected files:
-  - `04_Software/AudioMancer/src/audiomancer/config.py`
-  - `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
+  - `05_Software/AudioMancer/src/audiomancer/config.py`
+  - `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
 
 ## Behavior
 

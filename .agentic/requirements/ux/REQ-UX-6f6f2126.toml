@@ -10,11 +10,11 @@ The operator-selectable interface language set shall contain exactly en and ro.
 verification = "Focused Qt page test passed: Settings exposes exactly en and ro."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_offers_exactly_supported_ui_languages",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_offers_exactly_supported_ui_languages",
 ]
 
 priority = "high"

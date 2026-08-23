@@ -10,13 +10,13 @@ If a generated narrator profile supplies preview text whose length the accepted 
 verification = "A focused generation test returns one profile whose preview text is far below the accepted minimum alongside otherwise valid profiles, then observes that generation succeeds, that the stored preview text for that profile equals the canonical default for the selected voice language, that the other profiles keep their own preview text, and that the reported warning count is one."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_substitutes_short_preview_text",
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_invalid_prompt_text",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_substitutes_short_preview_text",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_rejects_invalid_prompt_text",
 ]
 
 spec = ""

@@ -10,17 +10,17 @@ After a retryable transient provider failure with another configured outer attem
 verification = "Automated: controlled waits verify the exact 0.5, 1.0, 2.0, 4.0, 4.0 schedule, no waits for permanent failures, immediate compatibility adaptation, or the final failed attempt, prompt cancellation before and during backoff, no dispatch after cancellation, and retained transient-retry success and response-pending cancellation."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_uses_bounded_exponential_retry_delays",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_before_retry_backoff_without_another_request",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_during_sliced_retry_backoff",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_can_cancel_while_waiting_for_model_response",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_without_response_format_when_provider_rejects_it",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_uses_bounded_exponential_retry_delays",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_before_retry_backoff_without_another_request",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_cancels_during_sliced_retry_backoff",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_can_cancel_while_waiting_for_model_response",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_without_response_format_when_provider_rejects_it",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
 ]
 
 spec = "specs/REQ-FUNC-388c7b18.md"

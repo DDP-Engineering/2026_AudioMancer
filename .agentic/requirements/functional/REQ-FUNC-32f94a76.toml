@@ -49,25 +49,25 @@ verification = "Service, state, controller, page, and manifest tests cancel and 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py",
-  "04_Software/AudioMancer/tests/test_characters_page.py",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py",
+  "05_Software/AudioMancer/tests/test_characters_page.py",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_persists_real_window_progress_before_synthesis",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_resume_state_keeps_window_counts_separate_from_chunk_cursor",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_provider_failure_preserves_current_inventory",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_recovers_from_invalid_last_used_profile_field",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_operation_summary_does_not_reload_source_chunks",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_persists_real_window_progress_before_synthesis",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_resume_state_keeps_window_counts_separate_from_chunk_cursor",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_provider_failure_preserves_current_inventory",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_recovers_from_invalid_last_used_profile_field",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_operation_summary_does_not_reload_source_chunks",
 ]
 
 # --- optional below this line ---

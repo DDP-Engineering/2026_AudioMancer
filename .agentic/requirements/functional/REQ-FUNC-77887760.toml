@@ -47,20 +47,20 @@ verification = "Controller tests arrange first-run, failed, and cancelled states
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_profile_instructions_dialog_receives_persisted_prefill",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_retry_prompts_with_persisted_instructions",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_retry_passes_edited_or_cleared_instructions_explicitly",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_instruction_cancel_stops_before_worker",
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_profile_instructions_dialog_receives_persisted_prefill",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_retry_prompts_with_persisted_instructions",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_retry_passes_edited_or_cleared_instructions_explicitly",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_instruction_cancel_stops_before_worker",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis",
 ]
 
 # --- optional below this line ---

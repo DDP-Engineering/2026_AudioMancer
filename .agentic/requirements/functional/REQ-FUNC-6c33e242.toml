@@ -10,13 +10,13 @@ If an AI backend request fails during connection or response reading, backend pr
 verification = "Automated: inject HTTP status, operating-system transport, HTTP protocol, timeout, UTF-8, and JSON failures including during response.read(), then verify a normal failed probe payload and the controller's standard failure popup without an escaping exception."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_maps_backend_failures",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_contains_read_phase_and_decode_failures",
-  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_connect_ai_profile_displays_failure_popup_for_read_transport_error",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_maps_backend_failures",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_contains_read_phase_and_decode_failures",
+  "05_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_connect_ai_profile_displays_failure_popup_for_read_transport_error",
 ]
 
 priority = "high"

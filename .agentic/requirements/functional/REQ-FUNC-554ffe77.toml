@@ -10,10 +10,10 @@ Cleanup document loading shall raise CleanupDocumentError for every invalid comp
 verification = "Focused issue #33 run passed all blocking-metric variants; E-0007."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_load_cleanup_document_rejects_malformed_blocking_quality_metrics",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

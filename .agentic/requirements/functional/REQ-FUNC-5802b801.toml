@@ -10,10 +10,10 @@ Text chunking state shall persist a chunk text edit and selectively reset downst
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream",
 ]
 
 priority = "high"

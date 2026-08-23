@@ -47,13 +47,13 @@ verification = "A focused bootstrap test supplies non-default persisted steps an
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/app.py",
+  "05_Software/AudioMancer/src/audiomancer/app.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_app_entrypoint.py::test_main_creates_application_and_shows_window",
+  "05_Software/AudioMancer/tests/test_app_entrypoint.py::test_main_creates_application_and_shows_window",
 ]
 
 # --- optional below this line ---

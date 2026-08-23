@@ -10,10 +10,10 @@ Project snapshot shall not leave a final ZIP when creation fails.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_does_not_leave_final_zip_when_creation_fails",
+  "05_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_does_not_leave_final_zip_when_creation_fails",
 ]
 
 priority = "high"

@@ -53,14 +53,14 @@ results. Thread execution and cancellation primitives belong to
 
 The implementation boundary is:
 
-- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/import_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/import_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
 
 `project_workspace_service` builds and validates the manifest, resolves a
 selected root or child path, rejects invalid project layouts, proposes
@@ -342,17 +342,17 @@ exports and snapshots.
 
 Primary automated coverage:
 
-- `04_Software/AudioMancer/tests/test_project_workspace_service.py`
-- `04_Software/AudioMancer/tests/test_import_service.py`
-- `04_Software/AudioMancer/tests/test_persistence_service.py`
-- `04_Software/AudioMancer/tests/test_project_export_service.py`
-- `04_Software/AudioMancer/tests/test_project_snapshot_service.py`
-- `04_Software/AudioMancer/tests/test_home_presenter_service.py`
-- `04_Software/AudioMancer/tests/test_home_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_home_page.py`
-- `04_Software/AudioMancer/tests/test_main_window_project_flow.py`
-- `04_Software/AudioMancer/tests/test_main_window_home_exports.py`
-- `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
+- `05_Software/AudioMancer/tests/test_project_workspace_service.py`
+- `05_Software/AudioMancer/tests/test_import_service.py`
+- `05_Software/AudioMancer/tests/test_persistence_service.py`
+- `05_Software/AudioMancer/tests/test_project_export_service.py`
+- `05_Software/AudioMancer/tests/test_project_snapshot_service.py`
+- `05_Software/AudioMancer/tests/test_home_presenter_service.py`
+- `05_Software/AudioMancer/tests/test_home_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_home_page.py`
+- `05_Software/AudioMancer/tests/test_main_window_project_flow.py`
+- `05_Software/AudioMancer/tests/test_main_window_home_exports.py`
+- `05_Software/AudioMancer/tests/test_atomic_io_contracts.py`
 
 The Home controller suite verifies that expected create, open, confirmed-repair,
 and source-import `OSError` failures use the localized project-error warning,
@@ -404,27 +404,27 @@ as part of focused validation.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/import_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared append-only destination-extension normalization.
-- `04_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py` - canonical disk-based operation-summary writer and promotion-only workflow-stage owner.
-- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
-- `04_Software/AudioMancer/tests/test_atomic_io_contracts.py`
-- `04_Software/AudioMancer/tests/test_home_page.py`
-- `04_Software/AudioMancer/tests/test_home_presenter_service.py`
-- `04_Software/AudioMancer/tests/test_home_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_import_service.py`
-- `04_Software/AudioMancer/tests/test_main_window_home_exports.py`
-- `04_Software/AudioMancer/tests/test_main_window_project_flow.py`
-- `04_Software/AudioMancer/tests/test_persistence_service.py`
-- `04_Software/AudioMancer/tests/test_project_export_service.py`
-- `04_Software/AudioMancer/tests/test_project_snapshot_service.py`
-- `04_Software/AudioMancer/tests/test_project_workspace_service.py`
-- `04_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller-to-Project-Lifecycle synchronization regressions.
-- `04_Software/AudioMancer/tests/test_cleanup_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/import_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared append-only destination-extension normalization.
+- `05_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py` - canonical disk-based operation-summary writer and promotion-only workflow-stage owner.
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
+- `05_Software/AudioMancer/tests/test_atomic_io_contracts.py`
+- `05_Software/AudioMancer/tests/test_home_page.py`
+- `05_Software/AudioMancer/tests/test_home_presenter_service.py`
+- `05_Software/AudioMancer/tests/test_home_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_import_service.py`
+- `05_Software/AudioMancer/tests/test_main_window_home_exports.py`
+- `05_Software/AudioMancer/tests/test_main_window_project_flow.py`
+- `05_Software/AudioMancer/tests/test_persistence_service.py`
+- `05_Software/AudioMancer/tests/test_project_export_service.py`
+- `05_Software/AudioMancer/tests/test_project_snapshot_service.py`
+- `05_Software/AudioMancer/tests/test_project_workspace_service.py`
+- `05_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller-to-Project-Lifecycle synchronization regressions.
+- `05_Software/AudioMancer/tests/test_cleanup_service.py`

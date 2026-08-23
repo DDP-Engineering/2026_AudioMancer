@@ -10,11 +10,11 @@ Character voice targets and sample bytes shall be persisted atomically.
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_voices_targets_use_atomic_json_writer",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_voices_targets_use_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_audio_uses_atomic_byte_writer",
 ]
 
 priority = "high"

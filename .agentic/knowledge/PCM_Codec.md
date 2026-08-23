@@ -97,5 +97,5 @@ its own decision.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py`
-- `04_Software/AudioMancer/tests/test_pcm_codec.py`
+- `05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py`
+- `05_Software/AudioMancer/tests/test_pcm_codec.py`

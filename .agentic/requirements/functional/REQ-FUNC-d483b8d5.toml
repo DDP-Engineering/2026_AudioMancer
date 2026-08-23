@@ -10,13 +10,13 @@ The Speech Blocks controller shall handle approval and reset: preserve audio blo
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancing",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_sync_manifest_completes_only_after_full_approval",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancing",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_sync_manifest_completes_only_after_full_approval",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ While the Characters page Character Profile pane is narrower than the profile fo
 verification = "Automated: with the Characters page main splitter dragged fully to the left, the Character Profile scroll area reports a horizontal scroll policy of ScrollBarAsNeeded and a horizontal scroll range greater than zero, and that range returns to zero once the pane is wider than the form."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_profile_pane_scrolls_horizontally_when_narrow",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_profile_pane_scrolls_horizontally_when_narrow",
 ]
 
 spec = ""

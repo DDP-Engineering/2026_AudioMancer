@@ -10,10 +10,10 @@ The project create and open dialogs shall start in the active project folder con
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_project_dialogs_start_outside_the_install_root",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_project_dialogs_start_outside_the_install_root",
 ]
 
 spec = "specs/project_dialog_default_directory.spec.md"

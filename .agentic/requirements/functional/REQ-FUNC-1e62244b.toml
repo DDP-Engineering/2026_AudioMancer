@@ -10,10 +10,10 @@ The Speech Blocks operation-state projection shall omit source chunks and expose
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpoint",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpoint",
 ]
 
 priority = "high"

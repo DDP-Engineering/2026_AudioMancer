@@ -47,18 +47,18 @@ verification = "A deliberately messy model produces the same canonical payload t
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_uses_canonical_voiceweaver_model_normalization_without_aliases",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_probe_runtime_cache_save_preserves_discovered_model_ranges",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_read_status_filters_non_scalar_effective_parameters_without_mutating_input",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_discards_a_model_cache_carrying_unknown_generation_modes",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_uses_canonical_voiceweaver_model_normalization_without_aliases",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_probe_runtime_cache_save_preserves_discovered_model_ranges",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_read_status_filters_non_scalar_effective_parameters_without_mutating_input",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_discards_a_model_cache_carrying_unknown_generation_modes",
 ]
 
 # --- optional below this line ---

@@ -223,18 +223,18 @@ for translating their own failure state into operator-facing outcomes.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
-- `04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
-- `04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
-- `04_Software/AudioMancer/tests/test_operation_progress_dialog.py`
-- `04_Software/AudioMancer/tests/test_misc_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_operation_runner_controller.py`
-- `04_Software/AudioMancer/tests/test_operation_runtime_service.py`
-- `04_Software/AudioMancer/tests/test_cleanup_service.py`
-- `04_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller synchronization and final-window-manifest regressions.
-- `04_Software/AudioMancer/tests/test_workflow_impact_service.py`
-- `04_Software/AudioMancer/tests/test_workflow_order_consistency.py`
+- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
+- `05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
+- `05_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
+- `05_Software/AudioMancer/tests/test_operation_progress_dialog.py`
+- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_operation_runner_controller.py`
+- `05_Software/AudioMancer/tests/test_operation_runtime_service.py`
+- `05_Software/AudioMancer/tests/test_cleanup_service.py`
+- `05_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller synchronization and final-window-manifest regressions.
+- `05_Software/AudioMancer/tests/test_workflow_impact_service.py`
+- `05_Software/AudioMancer/tests/test_workflow_order_consistency.py`

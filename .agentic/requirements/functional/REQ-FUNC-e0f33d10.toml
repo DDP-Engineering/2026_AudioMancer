@@ -47,17 +47,17 @@ verification = "Controller tests capture the QInputDialog default for an unfinis
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_unfinished_checkpoint_seeds_saved_count",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_nonresumable_state_uses_configured_count",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_malformed_state_uses_configured_count",
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_unfinished_checkpoint_seeds_saved_count",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_nonresumable_state_uses_configured_count",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_malformed_state_uses_configured_count",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_resumes_after_completed_style_window",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_changed_count_or_instructions_restart_style_analysis",
 ]
 
 # --- optional below this line ---

@@ -10,11 +10,11 @@ The translation controller shall resume without prompting for all resumable stat
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_controller_resumes_without_prompt_for_all_resumable_statuses",
+  "05_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_controller_resumes_without_prompt_for_all_resumable_statuses",
 ]
 
 priority = "high"

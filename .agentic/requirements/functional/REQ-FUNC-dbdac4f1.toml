@@ -10,12 +10,12 @@ The Text Chunking controller shall route AI chunking with the selected profile a
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_strategy",
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmation",
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_strategy",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmation",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile",
 ]
 
 priority = "high"

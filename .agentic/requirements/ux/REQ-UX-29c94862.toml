@@ -52,11 +52,11 @@ When operation progress omits token usage, the progress dialog shall preserve th
 verification = "A focused controller test sends a usage update followed by ordinary progress and observes the usage label unchanged."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py", "04_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_progress_update_without_usage_preserves_displayed_token_summary"]
+linked_tests = ["05_Software/AudioMancer/tests/test_misc_ui_controller.py::test_progress_update_without_usage_preserves_displayed_token_summary"]
 
 # --- optional below this line ---
 

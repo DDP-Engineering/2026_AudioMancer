@@ -47,14 +47,14 @@ verification = "Automated: edit every profile-owned field, switch repeatedly amo
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_switching_profiles_preserves_outgoing_editor_values",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_profile_add_remove_operations_do_not_redirect_editor_values",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_switching_profiles_preserves_outgoing_editor_values",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_profile_add_remove_operations_do_not_redirect_editor_values",
 ]
 
 # --- optional below this line ---

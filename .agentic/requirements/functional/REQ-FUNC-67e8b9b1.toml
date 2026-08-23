@@ -10,10 +10,10 @@ Project export shall report not-ready and a missing artifact when export prerequ
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_not_ready_and_missing_artifact",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_not_ready_and_missing_artifact",
 ]
 
 priority = "high"

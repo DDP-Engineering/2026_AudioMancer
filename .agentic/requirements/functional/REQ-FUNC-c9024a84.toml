@@ -10,10 +10,10 @@ Narrator profile source resolution shall return cleanup.json as the backing arti
 verification = "Automated test: the source resolver returns the cleanup.json path and the cleaned-metadata source token for a project holding only Cleanup artifacts."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata",
 ]
 
 priority = "high"

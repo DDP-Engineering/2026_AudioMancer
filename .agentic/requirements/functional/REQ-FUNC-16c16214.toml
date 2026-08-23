@@ -10,14 +10,14 @@ The Text Chunking UI shall derive not-started, running, resumable, completed, wa
 verification = "Text Chunking UI state derives resume and strategy without durable progress."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_text_chunking_state_projects_resumable_document_without_durable_progress",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_state_uses_persisted_lifecycle_without_fabricated_progress",
 ]
 
 priority = "high"

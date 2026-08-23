@@ -10,11 +10,11 @@ Character default-prompt building shall not default to male or young when gender
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_male_default_when_gender_is_unknown",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_young_default_when_age_is_unknown",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_male_default_when_gender_is_unknown",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prevents_young_default_when_age_is_unknown",
 ]
 
 priority = "high"

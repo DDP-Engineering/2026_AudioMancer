@@ -10,12 +10,12 @@ When a supported text source has no usable signature or format declaration and i
 verification = "Public Extraction tests produce exact canonical Unicode and truthful ledger encodings for UTF-8, UTF-8 BOM, cp1250, cp1251, and cp1252 TXT sources, honor an RTF code-page declaration, and prove the documented Latin-1 terminal case."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_selects_supported_text_encoding_without_mojibake",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_honors_rtf_code_page_declaration",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_text_decoder_uses_explicit_latin1_terminal_fallback",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_selects_supported_text_encoding_without_mojibake",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_honors_rtf_code_page_declaration",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_text_decoder_uses_explicit_latin1_terminal_fallback",
 ]
 
 spec = "specs/REQ-FUNC-c7960ee8.md"

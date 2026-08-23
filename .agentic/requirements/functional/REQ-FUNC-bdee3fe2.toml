@@ -10,14 +10,14 @@ The application shall play one audible completion beep when a threaded workflow 
 verification = "Automated: pytest selectors patching QApplication.beep verify the resolver, the emitter, and one beep on each of the success and failure runner outcomes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_misc_ui_controller.py::test_play_completion_beep_emits_one_beep_when_enabled",
-  "04_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_and_failure_play_completion_beep_when_enabled",
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_completion_beep_enabled_from_settings_resolves_persisted_flag",
+  "05_Software/AudioMancer/tests/test_misc_ui_controller.py::test_play_completion_beep_emits_one_beep_when_enabled",
+  "05_Software/AudioMancer/tests/test_operation_runner_controller.py::test_threaded_operation_success_and_failure_play_completion_beep_when_enabled",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_completion_beep_enabled_from_settings_resolves_persisted_flag",
 ]
 
 priority = "normal"

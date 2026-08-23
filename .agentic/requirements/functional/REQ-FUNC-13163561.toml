@@ -10,16 +10,16 @@ Audio assembly shall compose ambience mixes: skip ambience blocks, list and prev
 verification = "Automated: 6 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_can_skip_scene_ambience_blocks",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_converts_scene_mix_wav_params",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_lists_and_generates_scene_mix_preview",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_scene_mix_group_not_ready_without_approved_audio",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_can_skip_scene_ambience_blocks",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_converts_scene_mix_wav_params",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_lists_and_generates_scene_mix_preview",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_scene_mix_group_not_ready_without_approved_audio",
 ]
 
 priority = "high"

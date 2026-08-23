@@ -55,15 +55,15 @@ verification = "A state-service regression counts Audio Blocks loads across one 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_loads_audio_blocks_once",
-  "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_ignores_scene_ambience_when_excluded",
+  "05_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_loads_audio_blocks_once",
+  "05_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_ignores_scene_ambience_when_excluded",
 ]
 
 # --- optional below this line ---

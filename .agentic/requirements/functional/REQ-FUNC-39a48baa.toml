@@ -10,10 +10,10 @@ AI-context-budget splitting shall preserve ordered segments.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_split_text_for_ai_context_budget_preserves_ordered_segments",
+  "05_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_split_text_for_ai_context_budget_preserves_ordered_segments",
 ]
 
 priority = "high"

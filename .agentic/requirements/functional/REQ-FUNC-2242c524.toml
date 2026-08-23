@@ -10,10 +10,10 @@ The PCM codec shall raise ValueError when asked to operate on a sample width out
 verification = "Automated: 2 linked pytest selectors covering unsupported widths and non-positive channel/rate values."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_rejects_unsupported_sample_width",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_rejects_unsupported_sample_width",
 ]
 
 spec = "specs/pcm_codec.spec.md"

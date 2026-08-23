@@ -10,11 +10,11 @@ Narrator AI profile generation shall atomically persist attempt status, cumulati
 verification = "Compact AI resume checkpoint test passes; success-path companion test also passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_cancellation_keeps_compact_resume_in_document",
 ]
 
 priority = "high"

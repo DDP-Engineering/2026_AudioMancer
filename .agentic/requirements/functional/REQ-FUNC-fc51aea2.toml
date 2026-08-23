@@ -49,14 +49,14 @@ verification = "A focused runtime reset test creates both Character Discovery lo
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_deletes_only_character_discovery_ai_logs",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_deletes_only_character_discovery_ai_logs",
 ]
 
 # --- optional below this line ---

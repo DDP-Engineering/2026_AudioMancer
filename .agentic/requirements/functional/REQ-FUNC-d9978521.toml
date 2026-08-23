@@ -51,26 +51,26 @@ verification = "Service, state, page, MainWindow, and controller tests prove the
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py",
-  "04_Software/AudioMancer/tests/test_characters_page.py",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py",
+  "05_Software/AudioMancer/tests/test_characters_page.py",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_one_authoritative_document",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_persists_real_window_progress_before_synthesis",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_prefers_live_then_persisted_last_used_profile",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_recovers_from_invalid_last_used_profile_field",
-  "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_character_refresh_preserves_live_profile_selection",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_one_authoritative_document",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_persists_real_window_progress_before_synthesis",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_prefers_live_then_persisted_last_used_profile",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_recovers_from_invalid_last_used_profile_field",
+  "05_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_character_refresh_preserves_live_profile_selection",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
 ]
 
 # --- optional below this line ---

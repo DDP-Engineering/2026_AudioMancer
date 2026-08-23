@@ -10,10 +10,10 @@ A whitespace-only manual Cleanup edit whose source-unit realignment is incomplet
 verification = "Focused diagnostic test passed; E-0008."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_realign_failure_records_diagnostic",
 ]
 
 spec = "specs/minor_robustness_consistency.spec.md"

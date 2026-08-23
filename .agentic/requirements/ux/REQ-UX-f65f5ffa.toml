@@ -12,7 +12,7 @@ Retired 2026-08-16: the fixed-height operator status pane it sized no longer exi
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = []
 

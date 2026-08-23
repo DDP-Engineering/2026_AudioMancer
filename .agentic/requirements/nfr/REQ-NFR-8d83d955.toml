@@ -10,11 +10,11 @@ When a provider chat exchange fails after the provider returned a response, the 
 verification = "Automated: a failing exchange whose provider response is present appends a failure record whose raw response body and normalized usage match that response and use the successful record's field names; a transport failure that produced no response appends its failure record without those fields and without raising; and the existing redaction of sensitive field names still applies to the record."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_failed_exchange_records_the_response_body_and_usage",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_transport_failure_record_omits_the_response_fields",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_failed_exchange_records_the_response_body_and_usage",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_transport_failure_record_omits_the_response_fields",
 ]
 
 spec = ""

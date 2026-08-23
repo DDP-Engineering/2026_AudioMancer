@@ -45,8 +45,8 @@ The tool refuses to overwrite a non-empty output folder.
 `regenerate_help_screenshots.py` refreshes the UI screenshots referenced by the
 English and Romanian offline help bundles. It opens a populated sample project,
 renders each documented workflow page and settings dialog, and writes the PNG
-files under `05_SoftwareDocu/UserGuide/assets/screenshots/` and
-`05_SoftwareDocu/UserGuide_ro/assets/screenshots/`.
+files under `06_SoftwareDocu/UserGuide/assets/screenshots/` and
+`06_SoftwareDocu/UserGuide_ro/assets/screenshots/`.
 
 Run it from the application folder so the Qt dependencies resolve:
 
@@ -125,7 +125,7 @@ The Linux output archive is:
 
 Both archive filenames are intentionally stable so Git stores one delivery
 artifact per platform instead of one new filename per application version. The
-application version is still read from `04_Software/AudioMancer/pyproject.toml`
+application version is still read from `05_Software/AudioMancer/pyproject.toml`
 and written inside the packaged release notes and application metadata.
 Both packaging scripts write a cleaned staging copy of `settings.json`:
 operator AI-provider keys, local LM Studio host addresses, runtime

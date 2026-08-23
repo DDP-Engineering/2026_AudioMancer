@@ -10,11 +10,11 @@ The Text Chunking controller shall route deterministic starts through the shared
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_start_operation_clears_dialog",
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_chunk_request_uses_controller_start",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_start_operation_clears_dialog",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_chunk_request_uses_controller_start",
 ]
 
 priority = "high"

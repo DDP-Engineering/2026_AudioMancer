@@ -13,13 +13,13 @@ remove the export-owned temporary file before re-raising the original failure.
 verification = "Focused archive-export tests verify expected archive contents, failed source-read preservation and temporary cleanup, and successful replacement of an existing archive."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_creates_voice_and_audio_archives",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_failure_preserves_existing_archive_and_cleans_temp",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_success_replaces_existing_archive",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_cleanup_does_not_mask_original_failure",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_creates_voice_and_audio_archives",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_failure_preserves_existing_archive_and_cleans_temp",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_success_replaces_existing_archive",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_cleanup_does_not_mask_original_failure",
 ]
 
 priority = "high"

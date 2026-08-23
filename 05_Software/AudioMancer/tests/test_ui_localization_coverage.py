@@ -38,7 +38,7 @@ from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 # CONSTANTS
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-_UI_ROOT = _REPOSITORY_ROOT / "04_Software" / "AudioMancer" / "src" / "audiomancer" / "ui"
+_UI_ROOT = _REPOSITORY_ROOT / "05_Software" / "AudioMancer" / "src" / "audiomancer" / "ui"
 
 # PUBLIC API
 

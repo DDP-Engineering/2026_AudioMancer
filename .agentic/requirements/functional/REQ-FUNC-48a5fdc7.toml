@@ -10,10 +10,10 @@ The AI Settings page shall apply a probe result and update status.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_applies_probe_result_and_updates_status",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_applies_probe_result_and_updates_status",
 ]
 
 priority = "high"

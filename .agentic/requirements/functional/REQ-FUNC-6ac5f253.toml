@@ -10,11 +10,11 @@ Cleanup paragraph records shall live in cleanup.json as output offsets without d
 verification = "Paragraph offset reconstruction test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_paragraph_offsets_reconstruct_clean_text",
+  "05_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_paragraph_offsets_reconstruct_clean_text",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

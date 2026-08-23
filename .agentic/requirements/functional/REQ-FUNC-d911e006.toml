@@ -10,11 +10,11 @@ When the main batch translation operation is cancelled or fails, AI Translation 
 verification = "Automated service tests interrupt the main batch after completed work and after a paid partial segment, then observe completed chunks, accrued usage, no partial current chunk, and the appropriate resumable cancelled or failed status."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_cancel_and_failure_preserve_completed_chunks",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_partial_segment_failure_preserves_usage_without_partial_chunk",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_cancel_and_failure_preserve_completed_chunks",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_partial_segment_failure_preserves_usage_without_partial_chunk",
 ]
 
 priority = "high"

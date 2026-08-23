@@ -174,7 +174,7 @@ def _source_help_index_paths(app_source_root: Path) -> dict[str, Path]:
     @return     English and Romanian source user-guide entry points.
     @exception  None
     """
-    documentation_root = app_source_root.parent.parent / "05_SoftwareDocu"
+    documentation_root = app_source_root.parent.parent / "06_SoftwareDocu"
     return {
         "en": documentation_root / "UserGuide" / "index.html",
         "ro": documentation_root / "UserGuide_ro" / "index.html",

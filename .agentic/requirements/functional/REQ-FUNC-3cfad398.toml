@@ -10,10 +10,10 @@ The Home page export buttons shall follow readiness state.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_export_buttons_follow_readiness_state",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_export_buttons_follow_readiness_state",
 ]
 
 priority = "high"

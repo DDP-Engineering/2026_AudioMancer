@@ -10,13 +10,13 @@ The narrator definition service shall store or import a single profile sample, m
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata",
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_imports_profile_sample_and_marks_selected_metadata",
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_store_profile_sample_preserves_other_profile_samples",
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_sample_path_uses_stored_audio_path_after_rename",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_imports_profile_sample_and_marks_selected_metadata",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_store_profile_sample_preserves_other_profile_samples",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_sample_path_uses_stored_audio_path_after_rename",
 ]
 
 priority = "high"

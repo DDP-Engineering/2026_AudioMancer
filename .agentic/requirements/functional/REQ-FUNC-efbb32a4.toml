@@ -49,24 +49,24 @@ verification = "Focused controller, state-service, and page tests prove a space-
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_rejects_compact_script_budget_before_runtime_work",
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness",
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_use_compact_script_budget_units",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_budget_uses_compact_script_units",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_rejects_compact_script_budget_before_runtime_work",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_use_compact_script_budget_units",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_budget_uses_compact_script_units",
 ]
 
 # --- optional below this line ---

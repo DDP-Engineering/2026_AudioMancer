@@ -10,14 +10,14 @@ When the first provider choice contains empty or null assistant content, the pro
 verification = "Automated: null content with and without refusal, reasoning-only content, mixed null/valid multipart content, valid multipart content, and output-length responses demonstrate exactly one request for every empty/refused case, refusal-specific or generic safe errors as appropriate, unchanged valid text parsing, and unchanged output-limit precedence."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_invalid_backslash_escapes_in_model_output",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_repair_empty_message_content",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_null_or_refused_content_without_repair",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_joins_multipart_content_with_null_text_parts",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_invalid_backslash_escapes_in_model_output",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_repair_empty_message_content",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_null_or_refused_content_without_repair",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_joins_multipart_content_with_null_text_parts",
 ]
 
 priority = "high"

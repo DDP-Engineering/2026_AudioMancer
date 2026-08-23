@@ -47,14 +47,14 @@ verification = "Home-page tests switch between English and Romanian for each sou
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
-  "04_Software/AudioMancer/tests/test_home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/tests/test_home_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_language_switch_preserves_all_source_statuses",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_language_switch_preserves_all_source_statuses",
 ]
 
 # --- optional below this line ---

@@ -10,11 +10,11 @@ When an EPUB content document contains an ignored HTML subtree, Text Extraction 
 verification = "Public EPUB extraction fixtures with bare and valued hidden attributes, aria-hidden values, ignored nested and void elements, and script/style/nav content verify exact canonical text and source-ledger units contain only the visible text in spine order."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible_text",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible_text",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger",
 ]
 
 spec = "specs/REQ-FUNC-fb96f028.md"

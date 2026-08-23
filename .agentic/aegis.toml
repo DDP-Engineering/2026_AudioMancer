@@ -4,18 +4,18 @@
 schema = 1
 
 [commands]
-# The application lives in 04_Software/AudioMancer and runs through uv.
+# The application lives in 05_Software/AudioMancer and runs through uv.
 # The full suite changes directory so pytest picks up `testpaths` from the
 # application's pyproject.toml.
-test = "cd 04_Software/AudioMancer && uv run pytest -q"
+test = "cd 05_Software/AudioMancer && uv run pytest -q"
 # The impacted set must NOT change directory: AEGIS substitutes
 # repository-root-relative selectors into {tests}, and a `cd` would make
 # pytest resolve them a second time against the application folder
-# (04_Software/AudioMancer/04_Software/AudioMancer/tests/...). `--project`
+# (05_Software/AudioMancer/05_Software/AudioMancer/tests/...). `--project`
 # selects the application's environment without moving the working
 # directory, and pytest still infers the application as its rootdir from
 # the selector paths, so `pythonpath` and `testpaths` keep working.
-test_impacted = "uv run --project 04_Software/AudioMancer pytest -q {tests}"
+test_impacted = "uv run --project 05_Software/AudioMancer pytest -q {tests}"
 # Repository audits from 02_Tools/audits, scoped to the files this task
 # changed so the advisory report stays proportionate. Drop --changed-only to
 # audit the whole application subtree.
@@ -32,8 +32,8 @@ test = 3600
 
 [layout]
 # Globs used by the traceability heuristics of `aegis check`.
-source = ["04_Software/AudioMancer/src/"]
-tests = ["04_Software/AudioMancer/tests/"]
+source = ["05_Software/AudioMancer/src/"]
+tests = ["05_Software/AudioMancer/tests/"]
 
 [check]
 secret_patterns_extra = []

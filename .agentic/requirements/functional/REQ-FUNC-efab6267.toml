@@ -49,13 +49,13 @@ verification = "A cancellation-handler regression persists one completed sample 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_cancelled_character_sample_batch_refreshes_partial_page_and_manifest",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_cancelled_character_sample_batch_refreshes_partial_page_and_manifest",
 ]
 
 # --- optional below this line ---

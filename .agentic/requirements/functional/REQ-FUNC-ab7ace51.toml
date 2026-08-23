@@ -10,10 +10,10 @@ Each application run shall write to a log file whose name is unique per process,
 verification = "Automated: a pytest selector asserting two process ids at one fixed timestamp yield distinct log paths that keep the app-name prefix, date, time and .log suffix."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/logging_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_log_file_name_is_unique_per_process_for_the_same_second",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_log_file_name_is_unique_per_process_for_the_same_second",
 ]
 
 priority = "normal"

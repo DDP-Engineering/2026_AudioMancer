@@ -7,13 +7,13 @@ requirement = """
 In the theme stylesheet, QPushButton and the single-line input controls QLineEdit, QComboBox, QSpinBox and QDoubleSpinBox shall use a border-radius of at least 6px, the theme panel_background background and text_primary text.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_controls_use_rounded_corners",
 ]
 
 priority = "normal"

@@ -10,11 +10,11 @@ Deterministic chunking shall persist one cancelled terminal document before prop
 verification = "Automated focused pytest: deterministic and single-document contract files passed; cancellation persists one resumable terminal document before OperationCancelledError propagates."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph",
-  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_persists_one_cancelled_terminal_document",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_cancellation_preserves_committed_chunks_and_next_paragraph",
+  "05_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_persists_one_cancelled_terminal_document",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

@@ -10,11 +10,11 @@ Text extraction shall split RTF and EPUB sources into multiple progress units.
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_splits_rtf_into_multiple_progress_units",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_splits_epub_into_multiple_progress_units",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_splits_rtf_into_multiple_progress_units",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_splits_epub_into_multiple_progress_units",
 ]
 
 priority = "high"

@@ -78,10 +78,10 @@ dist/
 09_Others/
 
 # Operator-local settings (commit settings.example.json instead)
-04_Software/AudioMancer/settings.json
+05_Software/AudioMancer/settings.json
 
 # Runtime logs
-04_Software/AudioMancer/Logs/
-04_Software/AudioMancer_Voice_Runtime/models/
-04_Software/AudioMancer_Voice_Runtime/runtime_output/
-04_Software/AudioMancer_Voice_Runtime/runtime_cache/
+05_Software/AudioMancer/Logs/
+05_Software/AudioMancer_Voice_Runtime/models/
+05_Software/AudioMancer_Voice_Runtime/runtime_output/
+05_Software/AudioMancer_Voice_Runtime/runtime_cache/

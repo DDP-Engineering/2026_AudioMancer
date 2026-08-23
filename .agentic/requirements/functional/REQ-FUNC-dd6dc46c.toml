@@ -10,14 +10,14 @@ Voice sample import shall admit only valid audible WAV samples, rejecting short,
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_accepts_valid_sample",
-  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_short_sample",
-  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_silent_sample",
-  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_non_wav",
-  "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_unreadable_wav",
+  "05_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_accepts_valid_sample",
+  "05_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_short_sample",
+  "05_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_silent_sample",
+  "05_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_non_wav",
+  "05_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_unreadable_wav",
 ]
 
 priority = "high"

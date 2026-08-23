@@ -10,11 +10,11 @@ While the workflow operation of the current page has no recorded run status, mea
 verification = "Automated: with a project whose manifest records the current page's operation as not started, the button is disabled; with the same page's operation recorded as running, completed, failed, or cancelled, the button is enabled; with no project open, the button is disabled."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_is_disabled_without_a_project",
-  "04_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_follows_the_current_page_operation_status",
+  "05_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_is_disabled_without_a_project",
+  "05_Software/AudioMancer/tests/test_operation_status_button.py::test_operation_status_button_follows_the_current_page_operation_status",
 ]
 
 spec = ""

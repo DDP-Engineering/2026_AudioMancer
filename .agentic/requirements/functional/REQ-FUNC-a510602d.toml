@@ -12,10 +12,10 @@ Retired 2026-08-20: character preview text is now composed by the model in the c
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_uses_dialogue_preview_fallback",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_uses_dialogue_preview_fallback",
 ]
 
 priority = "high"

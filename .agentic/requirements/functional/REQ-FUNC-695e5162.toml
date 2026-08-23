@@ -10,10 +10,10 @@ Text chunking chunk deletion shall remove only the selected chunk's translation 
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_delete_chunk_removes_only_selected_translation_record",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_delete_chunk_removes_only_selected_translation_record",
 ]
 
 priority = "high"

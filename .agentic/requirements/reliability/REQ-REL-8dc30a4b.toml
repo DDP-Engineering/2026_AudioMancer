@@ -52,14 +52,14 @@ The provider client shall retry only exceptions explicitly classified as transie
 verification = "Focused provider tests retry typed timeouts and transient HTTP failures while permanent errors containing transient-looking words are attempted once."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_retry_classification_uses_exception_type_not_message_text",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_retry_classification_uses_exception_type_not_message_text",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_transient_failure",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_does_not_retry_permanent_http_failure",
 ]
 
 # --- optional below this line ---

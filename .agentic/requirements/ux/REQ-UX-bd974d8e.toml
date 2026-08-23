@@ -10,10 +10,10 @@ The Home workflow pipeline stepper shall draw every stage caption fully inside i
 verification = "Automated: across the window widths the stepper is drawn at, the computed caption band of the first stage starts at or after the left edge and the caption band of the last stage ends at or before the right edge, for both nine and ten stages."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_workflow_stepper_keeps_end_captions_inside_its_width",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_workflow_stepper_keeps_end_captions_inside_its_width",
 ]
 
 spec = ""

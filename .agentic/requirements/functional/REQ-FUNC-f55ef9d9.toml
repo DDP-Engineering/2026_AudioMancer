@@ -10,11 +10,11 @@ Character discovery shall request demographic-confidence candidates and preserve
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_prompts_request_demographic_confidence",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_window_candidate_normalization_preserves_demographic_confidence",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_prompts_request_demographic_confidence",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_window_candidate_normalization_preserves_demographic_confidence",
 ]
 
 priority = "high"

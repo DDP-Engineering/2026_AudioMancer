@@ -10,11 +10,11 @@ Extraction metadata loading shall reject incompatible schemas and invalid JSON.
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_incompatible_schema",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_invalid_json",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_incompatible_schema",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_load_extraction_metadata_rejects_invalid_json",
 ]
 
 priority = "high"

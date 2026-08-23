@@ -10,12 +10,12 @@ Settings validation shall replace any interface language outside config.SUPPORTE
 verification = "Focused settings tests passed: invalid fr heals to en on load and save."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_self_heals_missing_and_invalid_values",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_save_settings_writes_validated_payload_to_disk",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_self_heals_missing_and_invalid_values",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_save_settings_writes_validated_payload_to_disk",
 ]
 
 priority = "high"

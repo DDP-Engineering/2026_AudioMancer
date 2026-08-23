@@ -56,15 +56,15 @@ verification = "A controller regression saves AI Settings against a window doubl
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_refreshes_only_the_current_page",
-  "04_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
+  "05_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_refreshes_only_the_current_page",
+  "05_Software/AudioMancer/tests/test_ai_settings_ui_controller.py::test_apply_ai_settings_persists_reloads_and_refreshes_window",
 ]
 
 # --- optional below this line ---

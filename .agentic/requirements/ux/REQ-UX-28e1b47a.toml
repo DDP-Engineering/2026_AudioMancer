@@ -10,10 +10,10 @@ All supported languages shall share identical translation keys.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
+  "05_Software/AudioMancer/tests/test_localization_parity.py::test_supported_languages_share_identical_translation_keys",
 ]
 
 priority = "high"

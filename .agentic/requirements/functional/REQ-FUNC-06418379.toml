@@ -10,10 +10,10 @@ Translation summary shall require canonical chunk-ID alignment with the source.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_translation_summary_requires_canonical_chunk_id_alignment",
+  "05_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_translation_summary_requires_canonical_chunk_id_alignment",
 ]
 
 priority = "high"

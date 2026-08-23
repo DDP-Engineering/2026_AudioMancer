@@ -50,16 +50,16 @@ verification = "Service tests prove a fresh start and a compatible resume create
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_one_authoritative_document",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_resumes_from_saved_synthesis_checkpoint",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_one_authoritative_document",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_resumes_from_saved_synthesis_checkpoint",
 ]
 
 # --- optional below this line ---

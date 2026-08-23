@@ -47,15 +47,15 @@ verification = "Character Voices state and controller tests inject manifest vali
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_manifest_save_failure_returns_recovery_without_target_sync",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_page_activation_surfaces_corrupt_manifest_without_target_mutation",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_manifest_save_failure_returns_recovery_without_target_sync",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_page_activation_surfaces_corrupt_manifest_without_target_mutation",
 ]
 
 # --- optional below this line ---

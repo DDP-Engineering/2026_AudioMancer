@@ -10,12 +10,12 @@ TTS-budget unit counting shall handle spaced words and space-free scripts using 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_estimate_budget_units_handles_words_and_compact_scripts",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_stay_word_paced_for_latin_script",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_use_characters_for_space_free_scripts",
+  "05_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_estimate_budget_units_handles_words_and_compact_scripts",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_stay_word_paced_for_latin_script",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_units_use_characters_for_space_free_scripts",
 ]
 
 priority = "high"

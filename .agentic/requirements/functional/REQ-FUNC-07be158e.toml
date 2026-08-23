@@ -10,15 +10,15 @@ The Narrator Voice page shall lay out selection, editors, edit mode, preview tog
 verification = "Automated: 6 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_places_select_button_in_profiles_group",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_toggle_updates_label_and_select_enablement",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_renders_ai_profile_selector_and_generation_button",
-  "04_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_keeps_language_value_internal",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_places_select_button_in_profiles_group",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_preview_toggle_updates_label_and_select_enablement",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_renders_ai_profile_selector_and_generation_button",
+  "05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_keeps_language_value_internal",
 ]
 
 priority = "high"

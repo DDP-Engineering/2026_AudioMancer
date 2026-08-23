@@ -10,11 +10,11 @@ The Characters controller save shall stay synchronous with progress and clear pr
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_with_progress_stays_synchronous",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_progress_clears_after_failure",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_with_progress_stays_synchronous",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_progress_clears_after_failure",
 ]
 
 priority = "high"

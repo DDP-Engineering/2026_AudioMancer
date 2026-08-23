@@ -47,17 +47,17 @@ verification = "Service tests compare manifest and target bytes across corrupt a
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_preserves_locked_manifest_language",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_keeps_missing_manifest_fallback",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_rejects_corrupt_manifest_before_target_initialization",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_does_not_swallow_manifest_failures",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_preserves_locked_manifest_language",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_keeps_missing_manifest_fallback",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_rejects_corrupt_manifest_before_target_initialization",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_does_not_swallow_manifest_failures",
 ]
 
 # --- optional below this line ---

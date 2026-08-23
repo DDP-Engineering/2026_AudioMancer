@@ -10,19 +10,19 @@ The application shall resolve one writable data root by taking the AUDIOMANCER_D
 verification = "Automated: 10 linked pytest selectors covering the override, blank-override skip, writable portable root, non-directory root, Windows LOCALAPPDATA and APPDATA fallbacks, Linux XDG_DATA_HOME and ~/.local/share fallbacks, macOS Application Support, and _MEIPASS rejection."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_application_support_on_macos",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_local_appdata_on_windows",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_local_share_on_linux",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_roaming_appdata_on_windows",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_xdg_data_home_on_linux",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_ignores_blank_environment_override",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_prefers_environment_override",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_rejects_a_non_directory_application_root",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_rejects_frozen_extraction_directory",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_uses_writable_application_root",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_application_support_on_macos",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_local_appdata_on_windows",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_local_share_on_linux",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_roaming_appdata_on_windows",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_falls_back_to_xdg_data_home_on_linux",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_ignores_blank_environment_override",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_prefers_environment_override",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_rejects_a_non_directory_application_root",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_rejects_frozen_extraction_directory",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_resolve_user_data_root_uses_writable_application_root",
 ]
 
 spec = "specs/user_data_location.spec.md"

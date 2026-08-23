@@ -10,10 +10,10 @@ Audio-block artifacts shall use project-local paths derived from speech_block_id
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
+  "05_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

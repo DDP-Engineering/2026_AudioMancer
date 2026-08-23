@@ -10,12 +10,12 @@ The Home controller shall apply the selected export extension, write UTF-8, and 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_applies_selected_export_extension_and_writes_utf8",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_routes_zip_export_to_archive_writer",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_applies_zip_extension_and_writes_snapshot",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_applies_selected_export_extension_and_writes_utf8",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_routes_zip_export_to_archive_writer",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_applies_zip_extension_and_writes_snapshot",
 ]
 
 priority = "high"

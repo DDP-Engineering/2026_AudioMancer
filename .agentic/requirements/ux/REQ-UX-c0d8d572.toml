@@ -10,10 +10,10 @@ Each navigation sidebar page entry shall carry its full page label as a tooltip 
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_sets_full_label_tooltip",
+  "05_Software/AudioMancer/tests/test_navigation_sidebar.py::test_navigation_sidebar_sets_full_label_tooltip",
 ]
 
 priority = "normal"

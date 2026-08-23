@@ -53,25 +53,25 @@ verification = "A focused test resolves a budget from a model reporting a recomm
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_lowers_the_runtime_reported_budget",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_never_raises_the_runtime_reported_budget",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_generation_token_limit_falls_back_to_the_shipped_default",
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_round_trips_the_max_block_tokens_setting",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_lowers_the_runtime_reported_budget",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_operator_token_maximum_never_raises_the_runtime_reported_budget",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_generation_token_limit_falls_back_to_the_shipped_default",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_round_trips_the_max_block_tokens_setting",
 ]
 
 # --- optional below this line ---

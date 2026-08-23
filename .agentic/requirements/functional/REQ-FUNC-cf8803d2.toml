@@ -10,10 +10,10 @@ An invalid Audio Blocks root contract shall be rejected.
 verification = "Automated contract test: writing an incomplete root raises AudioBlocksDocumentError and an unexpected root key set reads as not-started."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_invalid_root_contract_is_rejected",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_invalid_root_contract_is_rejected",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

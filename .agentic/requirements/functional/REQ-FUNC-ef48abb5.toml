@@ -10,12 +10,12 @@ The Text Chunking page shall render chunks and the selected preview and keep sel
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_renders_chunks_and_selected_preview",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_selectors_readable_while_busy",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_full_chunk_list_preview_text",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_renders_chunks_and_selected_preview",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_selectors_readable_while_busy",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_keeps_full_chunk_list_preview_text",
 ]
 
 priority = "high"

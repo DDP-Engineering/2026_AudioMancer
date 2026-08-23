@@ -33,15 +33,15 @@ verification = "Focused AI descriptor tests show progress disclosure for each em
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_responses_count_and_disclose_every_fallback_window",
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_final_response_counts_persists_and_discloses_one_fallback_window",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_responses_count_and_disclose_every_fallback_window",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_empty_final_response_counts_persists_and_discloses_one_fallback_window",
 ]
 
 # --- optional below this line ---

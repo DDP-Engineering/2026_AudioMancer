@@ -10,10 +10,10 @@ Context budget metadata shall build the common fields and reject a tiny text bud
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_budget_service.py::test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget",
+  "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ The PCM codec shall return empty output for empty input, and rate conversion sha
 verification = "Automated: empty-input case asserted for all four sample widths across every conversion."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_returns_empty_output_for_empty_input",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_returns_empty_output_for_empty_input",
 ]
 
 spec = "specs/pcm_codec.spec.md"

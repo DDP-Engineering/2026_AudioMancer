@@ -10,10 +10,10 @@ Prompt templates shall load only from their configured root and require exact re
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_requires_exact_placeholders",
+  "05_Software/AudioMancer/tests/test_prompt_template_service.py::test_render_prompt_requires_exact_placeholders",
 ]
 
 priority = "high"

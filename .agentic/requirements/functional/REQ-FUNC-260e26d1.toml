@@ -10,12 +10,12 @@ The Characters page and controller shall emit the requested character ID on sele
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_selection_change_emits_requested_character_id",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_selection_change_cancel_restores_current_row",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_selection_change_emits_requested_character_id",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_selection_change_cancel_restores_current_row",
 ]
 
 priority = "high"

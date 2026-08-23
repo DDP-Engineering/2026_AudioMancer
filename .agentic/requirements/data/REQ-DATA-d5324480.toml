@@ -52,11 +52,11 @@ When Character Discovery fails, it shall persist the actual failure detail with 
 verification = "A focused failure test injects a distinctive exception and observes that text in the durable operation record."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_failed_state"]
+linked_tests = ["05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_failed_state"]
 
 # --- optional below this line ---
 

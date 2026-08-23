@@ -47,14 +47,14 @@ verification = "Focused tests load active and packaged-seed valid non-default se
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_accepts_utf8_bom_without_creating_backup",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_accepts_bom_bundled_default",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_accepts_utf8_bom_without_creating_backup",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_accepts_bom_bundled_default",
 ]
 
 # --- optional below this line ---

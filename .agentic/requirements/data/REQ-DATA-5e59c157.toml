@@ -52,13 +52,13 @@ Before replacing the active project, the main window shall flush any pending deb
 verification = "A focused project-switch test schedules an edit, activates another project, and observes the old project updated while the new project remains unchanged."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_activate_project_flushes_translation_edit_and_displays_home",
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_state_refresh_flushes_pending_edit",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_activate_project_flushes_translation_edit_and_displays_home",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_state_refresh_flushes_pending_edit",
 ]
 
 # --- optional below this line ---

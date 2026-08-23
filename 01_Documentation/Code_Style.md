@@ -46,8 +46,8 @@ Docstrings retain applicable `@brief`, `@details`, `@param`, `@return`, and
 `@exception` tags, but contain no `@author`, `@date`, or `@version` tags. The
 file-top copyright/license comment block is the sole in-file attribution.
 Versioning is project-level only, through
-`04_Software/AudioMancer/pyproject.toml`,
-`04_Software/AudioMancer/src/audiomancer/**init**.py`, and the existing root
+`05_Software/AudioMancer/pyproject.toml`,
+`05_Software/AudioMancer/src/audiomancer/**init**.py`, and the existing root
 `CHANGELOG.md`.
 
 Required section markers where meaningful:

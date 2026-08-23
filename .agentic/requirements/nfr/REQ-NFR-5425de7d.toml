@@ -10,12 +10,12 @@ Cleanup shall resume from cleanup.json without repeating compatible completed de
 verification = "Compatible and changed-profile resume tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_changed_model_reuses_analysis_but_restarts_all_ai_decisions",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_changed_model_reuses_analysis_but_restarts_all_ai_decisions",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

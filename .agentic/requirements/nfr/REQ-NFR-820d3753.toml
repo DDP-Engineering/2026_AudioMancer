@@ -10,12 +10,12 @@ Critical text and JSON persistence shall write a complete same-directory tempora
 verification = "Automated focused pytest coverage passed for atomic replacement, failure preservation, cleanup, and manifest writer integration."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/persistence_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_json_atomic_replaces_file_with_valid_json",
-  "04_Software/AudioMancer/tests/test_persistence_service.py::test_write_json_atomic_failed_replace_leaves_previous_json_intact",
-  "04_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_project_manifest_save_uses_atomic_json_writer",
+  "05_Software/AudioMancer/tests/test_persistence_service.py::test_write_json_atomic_replaces_file_with_valid_json",
+  "05_Software/AudioMancer/tests/test_persistence_service.py::test_write_json_atomic_failed_replace_leaves_previous_json_intact",
+  "05_Software/AudioMancer/tests/test_atomic_io_contracts.py::test_project_manifest_save_uses_atomic_json_writer",
 ]
 
 priority = "high"

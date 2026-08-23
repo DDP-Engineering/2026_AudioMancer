@@ -53,15 +53,15 @@ verification = "A focused test drives Audio Blocks generation with a recording r
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_request_raises_the_token_ceiling_for_an_over_target_part",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_request_keeps_the_operator_ceiling_for_a_part_within_target",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_request_raises_the_token_ceiling_for_an_over_target_part",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_request_keeps_the_operator_ceiling_for_a_part_within_target",
 ]
 
 # --- optional below this line ---

@@ -8,7 +8,7 @@
 from pathlib import Path
 
 # Resolve paths from the app root because PyInstaller is invoked from
-# 04_Software/AudioMancer by the packaging script.
+# 05_Software/AudioMancer by the packaging script.
 SPEC_ROOT = Path.cwd()
 SOURCE_ROOT = SPEC_ROOT / "src"
 TOOLS_ROOT = SPEC_ROOT.parents[1] / "02_Tools"

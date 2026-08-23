@@ -10,10 +10,10 @@ Audio-block artifacts shall validate WAV inputs and outputs before entering the 
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching",
+  "05_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching",
 ]
 
 priority = "high"

@@ -47,17 +47,17 @@ verification = "Automated service tests cover every resumable status, non-resuma
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_resumable_translation_status_retains_stored_instructions",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_uses_normalized_new_instructions_everywhere",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_without_new_instructions_retains_stored_value",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_new_translation_normalizes_instructions_for_budget_prompt_and_persistence",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_resumable_translation_status_retains_stored_instructions",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_uses_normalized_new_instructions_everywhere",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_non_resumable_translation_without_new_instructions_retains_stored_value",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_new_translation_normalizes_instructions_for_budget_prompt_and_persistence",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
 ]
 
 # --- optional below this line ---

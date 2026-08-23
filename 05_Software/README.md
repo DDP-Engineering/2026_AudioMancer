@@ -4,7 +4,7 @@ This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
 See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
-# 04_Software
+# 05_Software
 
 Implementation sources and runnable software artifacts.
 
@@ -20,7 +20,7 @@ Implementation sources and runnable software artifacts.
   packaging entry points.
 - `../.agentic/knowledge/` contains per-component implementation and workflow
   documentation, one page per component.
-- `../05_SoftwareDocu/` contains the offline operator help bundles and
+- `../06_SoftwareDocu/` contains the offline operator help bundles and
   model-selection guidance.
 - `../02_Tools/` contains the packaging and release automation.
 - `../HowToTest.md` contains the broader validation baseline.

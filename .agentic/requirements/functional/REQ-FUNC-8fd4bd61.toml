@@ -10,14 +10,14 @@ Deterministic and AI-assisted Chunking shall atomically create the running docum
 verification = "Focused deterministic and AI lifecycle, separator materialization, and separator-aware resume tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_ai_chunking_omits_and_splits_around_scene_separator_artifacts",
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
-  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
+  "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py::test_ai_chunking_omits_and_splits_around_scene_separator_artifacts",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_deterministic_chunking_commits_one_document_without_persisted_progress",
+  "05_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_resume_counts_processed_separator_without_persisting_it",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

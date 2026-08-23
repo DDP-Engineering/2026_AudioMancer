@@ -10,10 +10,10 @@ Translation state shall prefer the default translation profile.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_profile_state_prefers_default_translation_profile",
+  "05_Software/AudioMancer/tests/test_ai_translation_state_service.py::test_build_ai_translation_profile_state_prefers_default_translation_profile",
 ]
 
 priority = "high"

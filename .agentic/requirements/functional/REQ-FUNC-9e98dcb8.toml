@@ -10,12 +10,12 @@ The AI Settings page shall lay out default selectors in workflow order, use a tw
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_numeric_profile_options_use_two_column_grid",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_structured_output_is_in_model_name_row",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_numeric_profile_options_use_two_column_grid",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_structured_output_is_in_model_name_row",
 ]
 
 priority = "high"

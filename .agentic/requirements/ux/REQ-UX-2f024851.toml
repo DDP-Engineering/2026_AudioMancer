@@ -10,11 +10,11 @@ The editor that displays operator status text shall carry the UI control font ro
 verification = "Automated: the operation-status dialog's text editor carries the UI control font-role property, and the stylesheet rule for that role applies to it."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/operation_status_dialog.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_editor_uses_the_ui_font_role",
+  "05_Software/AudioMancer/tests/test_operation_status_dialog.py::test_operation_status_dialog_editor_uses_the_ui_font_role",
 ]
 
 priority = "high"

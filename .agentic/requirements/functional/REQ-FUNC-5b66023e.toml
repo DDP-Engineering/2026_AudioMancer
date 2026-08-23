@@ -10,10 +10,10 @@ Narrator profile generation shall merge token usage into the report and state.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_merges_token_usage_into_report_and_state",
+  "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_merges_token_usage_into_report_and_state",
 ]
 
 priority = "high"

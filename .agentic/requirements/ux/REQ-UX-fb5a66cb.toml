@@ -10,11 +10,11 @@ If an operator saves a character voice whose edited preview text falls outside t
 verification = "A focused controller test requests a character prompt save carrying preview text below the accepted minimum, then observes that no target write is attempted and that a warning dialog is shown carrying the localized out-of-range message with the accepted bounds and the supplied word count filled in."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_blocks_out_of_range_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_blocks_out_of_range_preview_text",
 ]
 
 spec = ""

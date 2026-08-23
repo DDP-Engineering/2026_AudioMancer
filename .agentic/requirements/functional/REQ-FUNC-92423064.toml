@@ -10,13 +10,13 @@ The Home presenter shall derive finished and not-started stage status from compl
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completion",
-  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_chunking_finished_after_chunking_completion",
-  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_character_voices_ready_as_finished",
-  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_trusts_not_started_operation_over_advanced_stage",
+  "05_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completion",
+  "05_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_chunking_finished_after_chunking_completion",
+  "05_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_character_voices_ready_as_finished",
+  "05_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_trusts_not_started_operation_over_advanced_stage",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ When speech_blocks.json is missing, load_speech_blocks_document() shall return N
 verification = "A service contract test loads Speech Blocks from a project with no speech_blocks.json and observes None."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_missing_document_is_treated_as_not_started",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_missing_document_is_treated_as_not_started",
 ]
 
 priority = "high"

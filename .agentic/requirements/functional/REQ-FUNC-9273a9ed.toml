@@ -47,18 +47,18 @@ verification = "Table-driven regressions prove matching `/v1/chat/completions` a
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/url_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/url_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_openai_compatible_model_probe_uses_shared_versioned_derivation",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_build_chat_endpoint_uses_shared_versioned_derivation",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_requests_the_shared_versioned_endpoint",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_query_and_fragment_provider_base_url",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_openai_compatible_model_probe_uses_shared_versioned_derivation",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_build_chat_endpoint_uses_shared_versioned_derivation",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_requests_the_shared_versioned_endpoint",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_query_and_fragment_provider_base_url",
 ]
 
 # --- optional below this line ---

@@ -23,10 +23,10 @@ maximum output tokens rather than the context window.
 """
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_refuses_a_profile_whose_reply_capacity_is_too_low",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_refuses_a_profile_whose_reply_capacity_is_too_low",
 ]
 
 priority = "high"

@@ -10,11 +10,11 @@ Speech-block logging shall create a timestamped log from a null-like start and r
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_null_like_started_at_creates_timestamped_speech_blocks_log",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_update_replaces_null_like_started_at",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_null_like_started_at_creates_timestamped_speech_blocks_log",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_update_replaces_null_like_started_at",
 ]
 
 priority = "high"

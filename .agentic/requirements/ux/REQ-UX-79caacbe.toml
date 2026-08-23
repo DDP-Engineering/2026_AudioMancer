@@ -10,11 +10,11 @@ The scroll step filter shall move the scroll pane by configured steps and ignore
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_moves_scroll_pane_by_configured_steps",
-  "04_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_ignores_non_scroll_area_widgets",
+  "05_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_moves_scroll_pane_by_configured_steps",
+  "05_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_ignores_non_scroll_area_widgets",
 ]
 
 priority = "high"

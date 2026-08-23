@@ -12,13 +12,13 @@ unmatched or uncovered text for operator review.
 verification = "Automated: 3 linked direct-block normalization selectors."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_flags_direct_source_gaps_and_unmatched_text",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_flags_direct_source_gaps_and_unmatched_text",
 ]
 
 priority = "high"

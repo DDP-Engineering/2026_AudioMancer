@@ -10,18 +10,18 @@ Cleanup AI progress shall count completed provider requests rather than answered
 verification = "Cancellation and resume tests with multi-question, mixed-type, multi-batch, verifier, and recursive-split cases prove exact provider-call counts, an exact durable first-resume baseline, truthful total expansion, monotonic percentages, and no repeated completed pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_resume_uses_durable_multi_question_request_baseline",
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_completed_primary_and_verifier_resume_invents_no_requests",
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_recursive_splits_expand_request_progress_total",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_mixed_type_multi_batch_plan_survives_cancel_and_resume",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_recursive_split_resume_expands_durable_request_total",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_resume_uses_durable_multi_question_request_baseline",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_completed_primary_and_verifier_resume_invents_no_requests",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_recursive_splits_expand_request_progress_total",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requests",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_mixed_type_multi_batch_plan_survives_cancel_and_resume",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_recursive_split_resume_expands_durable_request_total",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

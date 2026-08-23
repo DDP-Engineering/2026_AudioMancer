@@ -50,18 +50,18 @@ verification = "Focused runtime reset tests seed character and narrator target m
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_deletes_referenced_character_samples_before_targets_document",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_discovery_reset_preserves_narrator_and_deletes_character_samples",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_preserves_unowned_and_unsafe_paths",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_tolerates_non_utf8_targets_document",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_character_voice_document_and_samples",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_deletes_referenced_character_samples_before_targets_document",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_discovery_reset_preserves_narrator_and_deletes_character_samples",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_preserves_unowned_and_unsafe_paths",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_character_voice_sample_reset_tolerates_non_utf8_targets_document",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_reset_operation_data_preserves_character_voice_document_and_samples",
 ]
 
 # --- optional below this line ---

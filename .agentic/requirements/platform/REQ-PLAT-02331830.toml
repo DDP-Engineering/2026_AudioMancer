@@ -12,14 +12,14 @@ attribute or its deprecated persisted settings key.
 verification = "A focused configuration regression observes the retired attribute absent, settings validation removes the deprecated key, and Audio Blocks state derives enablement from Scene Ambience placement."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_omits_retired_scene_ambience_enablement_switch",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit",
-  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_scene_ambience_audio_selector_follows_the_placement_setting",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_omits_retired_scene_ambience_enablement_switch",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit",
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_scene_ambience_audio_selector_follows_the_placement_setting",
 ]
 
 spec = ""

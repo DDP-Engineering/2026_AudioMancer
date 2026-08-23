@@ -10,11 +10,11 @@ Audio-block approve-all shall mark only generated blocks and promote stale in-pr
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_marks_only_generated_blocks",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_promotes_stale_in_progress_state",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_marks_only_generated_blocks",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_all_promotes_stale_in_progress_state",
 ]
 
 priority = "high"

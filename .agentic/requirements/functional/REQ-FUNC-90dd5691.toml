@@ -10,11 +10,11 @@ Character voice preview text shall cover each supported translation target langu
 verification = "Focused tests prove every supported translation target has preview text, removed ja/ko/zh targets do not, and saved preview text persists."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_preview_text_covers_supported_translation_targets_only",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_save_target_prompt_persists_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_preview_text_covers_supported_translation_targets_only",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_save_target_prompt_persists_preview_text",
 ]
 
 priority = "high"

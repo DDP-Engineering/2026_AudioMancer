@@ -48,14 +48,14 @@ verification = "Main-window and narrator-list controller tests select a non-defa
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_narrator_refresh_preserves_live_profile_selection",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state",
+  "05_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_narrator_refresh_preserves_live_profile_selection",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state",
 ]
 
 # --- optional below this line ---

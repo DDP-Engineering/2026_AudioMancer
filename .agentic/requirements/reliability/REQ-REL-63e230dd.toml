@@ -47,14 +47,14 @@ verification = "A service regression resumes a realistic document whose middle s
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_blocks",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment",
 ]
 
 # --- optional below this line ---

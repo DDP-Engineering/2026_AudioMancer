@@ -10,11 +10,11 @@ Theme import shall make duplicate IDs unique and strip the built-in flag while g
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_makes_duplicate_ids_unique",
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_strips_built_in_flag_and_generates_missing_id",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_makes_duplicate_ids_unique",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_import_theme_payload_strips_built_in_flag_and_generates_missing_id",
 ]
 
 priority = "high"

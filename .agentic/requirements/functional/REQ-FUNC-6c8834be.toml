@@ -10,10 +10,10 @@ The narrator definition service shall report selected sample metadata even when 
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_reports_selected_sample_metadata_when_canonical_wav_is_missing",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_reports_selected_sample_metadata_when_canonical_wav_is_missing",
 ]
 
 priority = "high"

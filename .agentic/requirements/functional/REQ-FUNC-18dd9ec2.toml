@@ -26,11 +26,11 @@ insertion remains permitted when no Chunking document exists.
 verification = "A parameterized state-service regression seeds valid running, cancelled, and failed documents with two chunks and a non-null checkpoint; each public edit, insert, and delete call raises the operator-guidance ValueError and preserves byte snapshots of the document, project.json, and representative downstream artifacts. Existing completed-document mutation and first-manual-insertion tests remain green."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted",
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_reject_resumable_documents_without_side_effects",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_manual_mutations_preserve_document_origin_and_set_manual_adjusted",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_reject_resumable_documents_without_side_effects",
 ]
 
 priority = "high"

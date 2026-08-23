@@ -10,12 +10,12 @@ Character voice-definition regeneration shall preserve the compact voice prompt 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_preserves_compact_voice_prompt",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_prevents_young_default_when_age_unknown",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_guidance",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_preserves_compact_voice_prompt",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_prevents_young_default_when_age_unknown",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_guidance",
 ]
 
 priority = "high"

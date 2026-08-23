@@ -56,16 +56,16 @@ verification = "A controller regression saves changed settings against a project
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_without_reset_refreshes_only_the_page",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_with_reset_refreshes_the_project",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outputs",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_without_reset_refreshes_only_the_page",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_with_reset_refreshes_the_project",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outputs",
 ]
 
 # --- optional below this line ---

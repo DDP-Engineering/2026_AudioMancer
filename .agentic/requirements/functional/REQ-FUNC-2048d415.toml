@@ -10,10 +10,10 @@ Manual Chunking mutations shall preserve an existing leading scene-separator bou
 verification = "Focused state-service mutation test passed within the 126-test module run."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_preserve_leading_scene_boundary",
+  "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_manual_chunk_mutations_preserve_leading_scene_boundary",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

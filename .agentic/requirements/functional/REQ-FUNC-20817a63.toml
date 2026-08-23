@@ -47,19 +47,19 @@ verification = "Automated: mock generic OpenAI-compatible, LM Studio native, and
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_discovers_generic_inline_context_for_exact_model",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_discovers_lm_studio_loaded_instance_context",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_uses_lm_studio_model_context_limit_without_loaded_match",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_lm_studio_optional_metadata_failure_preserves_model_success",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_posts_exact_ollama_model_for_context",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_ignores_invalid_context_metadata",
-  "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_does_not_claim_context_for_a_different_model",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_discovers_generic_inline_context_for_exact_model",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_discovers_lm_studio_loaded_instance_context",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_uses_lm_studio_model_context_limit_without_loaded_match",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_lm_studio_optional_metadata_failure_preserves_model_success",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_posts_exact_ollama_model_for_context",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_ignores_invalid_context_metadata",
+  "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_does_not_claim_context_for_a_different_model",
 ]
 
 # --- optional below this line ---

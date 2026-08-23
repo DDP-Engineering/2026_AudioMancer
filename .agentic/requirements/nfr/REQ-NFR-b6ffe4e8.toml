@@ -49,16 +49,16 @@ verification = "Instrumented service and state refresh regressions prove each un
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_lists_and_generates_scene_mix_preview",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_refresh_reuses_unchanged_source_digests",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_shared_source_uses_one_digest",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_digest_cache_is_bounded_and_clearable",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_lists_and_generates_scene_mix_preview",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_refresh_reuses_unchanged_source_digests",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_shared_source_uses_one_digest",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_scene_mix_digest_cache_is_bounded_and_clearable",
 ]
 
 # --- optional below this line ---

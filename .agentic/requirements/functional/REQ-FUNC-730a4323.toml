@@ -10,11 +10,11 @@ Text Chunking shall use one strict root-object chunks_text.json document with ex
 verification = "Focused strict-document round-trip and incompatible-shape tests verify exact current fields and Reset Chunking guidance."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_rejects_incompatible_root_and_chunk_shapes",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_document_api_round_trips_exact_contract_and_returns_defensive_chunks",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

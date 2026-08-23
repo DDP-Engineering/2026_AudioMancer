@@ -10,13 +10,13 @@ Audio-block generation shall generate and regenerate scene ambience after spoken
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_normalize_speaker_name_handles_diacritics",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reconciles_playability_for_missing_files",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_normalize_speaker_name_handles_diacritics",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reconciles_playability_for_missing_files",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

@@ -10,15 +10,15 @@ Character Voices, Audio Blocks, narrator state, and applicable UI controllers sh
 verification = "Downstream selected-profile resolution test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_character_voice_readiness_uses_selected_profile_resolution",
+  "05_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_character_voice_readiness_uses_selected_profile_resolution",
 ]
 
 priority = "high"

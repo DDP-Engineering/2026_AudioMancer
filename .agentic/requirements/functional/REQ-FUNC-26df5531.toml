@@ -10,12 +10,12 @@ Cleanup shall complete from deterministic priors when no selected profile can pe
 verification = "Deterministic no-profile and incompatible-profile fallback tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_incompatible_profile_uses_priors_without_provider_calls",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_without_usable_ai_completes_from_deterministic_priors",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_incompatible_profile_uses_priors_without_provider_calls",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_without_usable_ai_completes_from_deterministic_priors",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

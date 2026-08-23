@@ -10,10 +10,10 @@ The application shell shall display an 'AudioMancer' wordmark label (object name
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_toolbar_shows_audiomancer_wordmark",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_toolbar_shows_audiomancer_wordmark",
 ]
 
 priority = "normal"

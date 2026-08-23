@@ -10,10 +10,10 @@ When audio_blocks.json is missing, load_audio_blocks_document() shall return Non
 verification = "A service contract test loads Audio Blocks from a project with no audio_blocks.json and observes None."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_missing_document_is_treated_as_not_started",
+  "05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py::test_missing_document_is_treated_as_not_started",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

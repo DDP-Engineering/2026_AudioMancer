@@ -12,13 +12,13 @@ usage, and outcome status for a later resume.
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_resumes_from_saved_synthesis_checkpoint",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_cancelled_state_and_resumes_synthesis",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_failed_state",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_resume_state_requires_current_checkpoint_boundary",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_resumes_from_saved_synthesis_checkpoint",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_cancelled_state_and_resumes_synthesis",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_failed_state",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_resume_state_requires_current_checkpoint_boundary",
 ]
 
 priority = "high"

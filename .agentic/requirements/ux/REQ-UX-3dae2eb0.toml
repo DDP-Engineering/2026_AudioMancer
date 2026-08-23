@@ -47,13 +47,13 @@ verification = "Automated UI tests observe the action disabled for initial, busy
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_retranslate_selected_requires_started_idle_translation_state",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_retranslate_selected_requires_started_idle_translation_state",
 ]
 
 # --- optional below this line ---

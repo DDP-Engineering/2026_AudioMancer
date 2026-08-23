@@ -10,10 +10,10 @@ Audio-block review shall meet a large-block performance baseline.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_blocks_performance_baseline.py::test_large_block_review_performance_baseline",
+  "05_Software/AudioMancer/tests/test_blocks_performance_baseline.py::test_large_block_review_performance_baseline",
 ]
 
 priority = "high"

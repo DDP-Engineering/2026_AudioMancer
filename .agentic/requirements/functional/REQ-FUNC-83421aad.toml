@@ -10,10 +10,10 @@ Workflow controllers shall resolve only enabled AI profiles by identifier, ignor
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles",
+  "05_Software/AudioMancer/tests/test_workflow_controller_service.py::test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles",
 ]
 
 priority = "high"

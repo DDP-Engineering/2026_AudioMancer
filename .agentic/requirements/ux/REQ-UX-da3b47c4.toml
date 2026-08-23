@@ -10,13 +10,13 @@ When project creation, opening, confirmed repair, or source import raises OSErro
 verification = "Focused controller tests inject OSError subclasses at the create, import, repair, and open boundaries plus ValueError during open, then assert the localized warning title and original text are shown without project activation, manifest replacement, or success notification."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_project_creation_filesystem_error",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_source_import_filesystem_error",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_confirmed_repair_filesystem_error",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_shows_warning_for_open_project_error",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_project_creation_filesystem_error",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_source_import_filesystem_error",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_confirmed_repair_filesystem_error",
 ]
 
 priority = "high"

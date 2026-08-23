@@ -10,11 +10,11 @@ The application shell shall place one operation-status button directly below the
 verification = "Automated: the shell's left column contains the navigation sidebar above the operation-status button, the button width matches the sidebar width, and the sidebar item count still equals the number of registered workflow pages."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_places_operation_status_button_under_the_sidebar",
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_navigation_is_a_left_vertical_sidebar",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_places_operation_status_button_under_the_sidebar",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_navigation_is_a_left_vertical_sidebar",
 ]
 
 spec = ""

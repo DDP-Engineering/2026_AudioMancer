@@ -53,20 +53,20 @@ verification = "A focused test renders the scene-ambience user prompt from setti
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-  "04_Software/AudioMancer/prompts/scene_ambience_system.txt",
-  "04_Software/AudioMancer/prompts/scene_ambience_user.txt",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/prompts/scene_ambience_system.txt",
+  "05_Software/AudioMancer/prompts/scene_ambience_user.txt",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_prompt_carries_the_configured_negative_core",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_without_exclusions_falls_back_to_the_configured_core",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_keeps_model_chosen_exclusions",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_shipped_ambience_prompts_exclude_no_periodicity_terms_by_default",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_prompt_carries_the_configured_negative_core",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_without_exclusions_falls_back_to_the_configured_core",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_block_keeps_model_chosen_exclusions",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_shipped_ambience_prompts_exclude_no_periodicity_terms_by_default",
 ]
 
 # --- optional below this line ---

@@ -10,12 +10,12 @@ Character default-prompt building shall derive a compact prompt, prefer a charac
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_uses_compact_character_profile",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_preserves_existing_age_instruction",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_uses_compact_character_profile",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_preserves_existing_age_instruction",
 ]
 
 priority = "high"

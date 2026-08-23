@@ -10,14 +10,14 @@ Speech-block approval and regeneration shall mark only targeted blocks, preserve
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_all_and_edit_preserve_warning_cleared_state",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_selected_speech_block_only_marks_target_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_unapprove_selected_speech_block_only_clears_target_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_update_character_speech_block_display_name_preserves_approval",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_all_and_edit_preserve_warning_cleared_state",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_approve_selected_speech_block_only_marks_target_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_unapprove_selected_speech_block_only_clears_target_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_update_character_speech_block_display_name_preserves_approval",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks",
 ]
 
 priority = "high"

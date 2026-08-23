@@ -52,19 +52,19 @@ verification = "Page tests edit cleaned text, refresh and toggle busy state, and
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_active_cleaned_text_edit_survives_refresh_and_blocks_workflow_actions",
-  "04_Software/AudioMancer/tests/test_text_cleanup_page.py::test_busy_transition_keeps_active_cleaned_text_draft",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_failed_cleaned_text_save_keeps_editable_draft",
-  "04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_successful_cleaned_text_save_exits_edit_mode_before_refresh",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py::test_active_cleaned_text_edit_survives_refresh_and_blocks_workflow_actions",
+  "05_Software/AudioMancer/tests/test_text_cleanup_page.py::test_busy_transition_keeps_active_cleaned_text_draft",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_failed_cleaned_text_save_keeps_editable_draft",
+  "05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py::test_successful_cleaned_text_save_exits_edit_mode_before_refresh",
 ]
 
 # --- optional below this line ---

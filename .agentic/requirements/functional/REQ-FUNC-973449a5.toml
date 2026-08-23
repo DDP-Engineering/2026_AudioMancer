@@ -50,15 +50,15 @@ verification = "A real MainWindow first-entry regression starts at narrator_defi
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_voices_readiness_rejects_empty_target_list",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_first_entry_waits_for_persisted_targets_and_sample_evidence",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_voices_readiness_rejects_empty_target_list",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_first_entry_waits_for_persisted_targets_and_sample_evidence",
 ]
 
 # --- optional below this line ---

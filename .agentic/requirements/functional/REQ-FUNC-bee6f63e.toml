@@ -10,10 +10,10 @@ Token usage merge shall sum available usage and tolerate a missing base.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_merge_token_usage_sums_available_usage_and_tolerates_missing_base",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_merge_token_usage_sums_available_usage_and_tolerates_missing_base",
 ]
 
 priority = "high"

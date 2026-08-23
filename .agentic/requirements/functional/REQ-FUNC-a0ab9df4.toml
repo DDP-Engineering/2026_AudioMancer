@@ -47,16 +47,16 @@ verification = "Automated service tests interrupt selected-chunk retranslation f
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_interruption_preserves_completed_review_state",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_failure_rederives_status_from_unchanged_chunks",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_segment_failure_persists_usage_without_partial_text",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_interruption_preserves_completed_review_state",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_failure_rederives_status_from_unchanged_chunks",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_retranslate_segment_failure_persists_usage_without_partial_text",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_successful_retranslation_clears_only_selected_approval_and_keeps_general_instructions",
 ]
 
 # --- optional below this line ---

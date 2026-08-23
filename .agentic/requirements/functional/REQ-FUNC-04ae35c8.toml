@@ -10,12 +10,12 @@ Audio assembly shall compose per-chunk outputs, write pause blocks as silence, a
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_per_chunk_outputs",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_missing_pause_duration_uses_default",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_composes_per_chunk_outputs",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_missing_pause_duration_uses_default",
 ]
 
 priority = "high"

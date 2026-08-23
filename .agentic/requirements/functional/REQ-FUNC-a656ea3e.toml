@@ -10,11 +10,11 @@ The Narrator Voice controller shall manage profile generation with worker start 
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_count_cancel_stops_before_worker",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_profiles_count_cancel_stops_before_worker",
 ]
 
 priority = "high"

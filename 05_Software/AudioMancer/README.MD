@@ -56,12 +56,12 @@ Per-component implementation documentation lives in
 - `../../.agentic/knowledge/AI_Runtime.md`
 - `../../.agentic/knowledge/Operation_Orchestration.md`
 
-`../../05_SoftwareDocu/README.md` indexes the operator-facing material:
+`../../06_SoftwareDocu/README.md` indexes the operator-facing material:
 
-- `../../05_SoftwareDocu/UserGuide/` - English offline help bundle.
-- `../../05_SoftwareDocu/UserGuide_ro/` - Romanian offline help bundle.
-- `../../05_SoftwareDocu/AudioMancer_OpenAI_Online_Model_Recommendations.md`
-- `../../05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md`
+- `../../06_SoftwareDocu/UserGuide/` - English offline help bundle.
+- `../../06_SoftwareDocu/UserGuide_ro/` - Romanian offline help bundle.
+- `../../06_SoftwareDocu/AudioMancer_OpenAI_Online_Model_Recommendations.md`
+- `../../06_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md`
 
 ## Environment Setup
 
@@ -117,7 +117,7 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 - Each app launch writes a log under `Logs/` in this folder.
 - Project workflow artifacts are written inside the selected project root.
 - Detailed artifact and workflow contracts belong in
-  `../../05_SoftwareDocu/`.
+  `../../06_SoftwareDocu/`.
 
 ## Packaging
 

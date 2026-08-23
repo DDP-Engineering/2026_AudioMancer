@@ -10,10 +10,10 @@ Cleanup shall expose exactly en, ro, de, fr, ru, pt, es, and it as its supported
 verification = "Focused pytest selector passed: Cleanup source-language constant equals the approved eight-language tuple."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_supported_languages_are_exactly_the_approved_eight",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_supported_languages_are_exactly_the_approved_eight",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

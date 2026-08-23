@@ -10,11 +10,11 @@ Speech-block chunk normalization shall split over-budget blocks at sentence boun
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries",
 ]
 
 priority = "high"

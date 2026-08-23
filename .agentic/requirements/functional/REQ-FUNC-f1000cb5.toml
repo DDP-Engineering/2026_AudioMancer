@@ -10,10 +10,10 @@ Narrator state shall keep generate enabled when the cached runtime is stale.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale",
 ]
 
 priority = "high"

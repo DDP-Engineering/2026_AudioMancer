@@ -52,11 +52,11 @@ When a project is activated, the main window shall display its Home page contain
 verification = "A focused UI test activates a second project from another workflow page and observes Home as the current stacked container."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_home_ui_controller.py::test_activate_project_flushes_translation_edit_and_displays_home"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_ui_controller.py::test_activate_project_flushes_translation_edit_and_displays_home"]
 
 # --- optional below this line ---
 

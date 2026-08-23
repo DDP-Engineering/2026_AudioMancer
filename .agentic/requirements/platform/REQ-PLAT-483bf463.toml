@@ -10,11 +10,11 @@ AudioMancer shall provide its PCM conversion through the internal codec and rema
 verification = "Automated: source tree dependency scan and Audio Assembly import coverage on supported interpreters."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_use_internal_pcm_codec",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_sources_use_internal_pcm_codec",
 ]
 
 spec = "specs/python_interpreter_range.spec.md"

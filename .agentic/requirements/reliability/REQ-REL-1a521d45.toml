@@ -52,11 +52,11 @@ When VoiceWeaver reports idle before an operation has been observed running, the
 verification = "A focused polling test returns idle, running, and completed and observes the completed terminal result."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_ignores_idle_before_running"]
+linked_tests = ["05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_ignores_idle_before_running"]
 
 # --- optional below this line ---
 

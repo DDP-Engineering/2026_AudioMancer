@@ -52,11 +52,11 @@ When visible EPUB text is contained by common structural HTML elements, Text Ext
 verification = "A focused structured-HTML regression extracts div, table-cell, definition-list, figure-caption, and bare-body text without duplicating nested content."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_text_extraction_service.py::test_structured_html_extractor_preserves_common_visible_containers"]
+linked_tests = ["05_Software/AudioMancer/tests/test_text_extraction_service.py::test_structured_html_extractor_preserves_common_visible_containers"]
 
 # --- optional below this line ---
 

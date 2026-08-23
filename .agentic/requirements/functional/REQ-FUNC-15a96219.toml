@@ -47,16 +47,16 @@ verification = "Focused normalization tests split text containing blank lines, r
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_preserves_exact_source_whitespace_slices",
-  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_keeps_differing_audio_text_out_of_source_provenance",
-  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_preserves_whitespace_only_semantic_spans",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries",
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_preserves_exact_source_whitespace_slices",
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_keeps_differing_audio_text_out_of_source_provenance",
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_tts_budget_split_preserves_whitespace_only_semantic_spans",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries",
 ]
 
 # --- optional below this line ---

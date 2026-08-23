@@ -10,24 +10,24 @@ When AudioMancer requests voice design, direct clone, clone-prompt creation, clo
 verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract, including one request whose selected language is Romanian and one whose selected language is outside the model's reported supported list, both of which carry no language field, and one sound request whose requested duration exceeds the model's output ceiling and is submitted at the ceiling; settings and TTS Settings tests confirm no out-of-range duration can be configured in the first place."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_sound_prompt_duration_is_bounded_by_the_model_output_ceiling",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_scene_ambience_duration_above_the_model_ceiling",
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_caps_scene_ambience_duration_at_the_model_ceiling",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_sound_prompt_duration_is_bounded_by_the_model_output_ceiling",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_scene_ambience_duration_above_the_model_ceiling",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_caps_scene_ambience_duration_at_the_model_ceiling",
 ]
 
 priority = "high"

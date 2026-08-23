@@ -10,12 +10,12 @@ The operation runtime shall persist the shared compact operation-state envelope 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_utc_now_iso_uses_utc_without_microseconds",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_build_operation_state_payload_uses_shared_envelope",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_operation_json_artifact_round_trips_via_shared_io",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_utc_now_iso_uses_utc_without_microseconds",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_build_operation_state_payload_uses_shared_envelope",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_operation_json_artifact_round_trips_via_shared_io",
 ]
 
 priority = "high"

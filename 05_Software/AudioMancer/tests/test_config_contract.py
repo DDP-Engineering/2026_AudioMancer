@@ -152,7 +152,7 @@ def test_config_preserves_source_tree_help_paths() -> None:
     source_root = config._source_tree_root_from_package(config.APP_PACKAGE_ROOT)
 
     assert source_root is not None
-    documentation_root = source_root.parent.parent / "05_SoftwareDocu"
+    documentation_root = source_root.parent.parent / "06_SoftwareDocu"
     expected_source_paths = {
         "en": documentation_root / "UserGuide" / "index.html",
         "ro": documentation_root / "UserGuide_ro" / "index.html",

@@ -10,16 +10,16 @@ AudioMancer release surfaces shall declare one identical semantic version.
 verification = "An automated test reads the release version from pyproject.toml and confirms that the package runtime metadata, the dependency lock, a single dated changelog release section, and both offline help bundles declare that same version. The test hard-codes no version, so a surface left behind after a release bump fails it."
 
 affected_paths = [
-  "04_Software/AudioMancer/pyproject.toml",
-  "04_Software/AudioMancer/src/audiomancer/__init__.py",
-  "04_Software/AudioMancer/tests/test_package_import.py",
-  "04_Software/AudioMancer/uv.lock",
-  "05_SoftwareDocu/UserGuide/index.html",
-  "05_SoftwareDocu/UserGuide_ro/index.html",
+  "05_Software/AudioMancer/pyproject.toml",
+  "05_Software/AudioMancer/src/audiomancer/__init__.py",
+  "05_Software/AudioMancer/tests/test_package_import.py",
+  "05_Software/AudioMancer/uv.lock",
+  "06_SoftwareDocu/UserGuide/index.html",
+  "06_SoftwareDocu/UserGuide_ro/index.html",
   "CHANGELOG.md",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata",
+  "05_Software/AudioMancer/tests/test_package_import.py::test_package_exposes_main_and_release_version_metadata",
 ]
 
 spec = "specs/release_version_sync.spec.md"

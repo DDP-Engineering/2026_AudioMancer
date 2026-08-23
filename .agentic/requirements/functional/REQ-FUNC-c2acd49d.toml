@@ -10,10 +10,10 @@ Source import shall copy one supported source file into the project root and rec
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/import_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copies_file_and_records_metadata",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_copies_file_and_records_metadata",
 ]
 
 priority = "high"

@@ -7,13 +7,13 @@ requirement = """
 The built-in UI theme catalog shall include an 'AudioMancer Parchment' theme (theme_id 'audiomancer_parchment', built_in) whose color roles are window_background #F1E8D6, panel_background #FFFDF6, text_primary #17292C, text_muted #5B6D6B, accent #B07A22, border #E4D8C0, warning #A6701A, success #2F7A4E, danger #A93C36, and disabled #A99F8B.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_audiomancer_parchment_theme_has_brand_roles",
 ]
 
 priority = "normal"

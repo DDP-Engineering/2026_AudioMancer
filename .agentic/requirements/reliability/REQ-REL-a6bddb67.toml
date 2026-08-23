@@ -16,15 +16,15 @@ If a syntactically readable Cleanup checkpoint fails the strict nested reuse con
 verification = "Run-path corruption tests cover malformed progress, batch plans, boundary prior/final/adjudication data, and non-list boundaries with matching hashes; each proves a fresh analysis without raw built-in exceptions, while strict loads reject the same documents and valid lifecycle states remain reusable."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_malformed_reuse_checkpoint_starts_fresh_analysis",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_malformed_reuse_checkpoint_uses_fresh_cancellation_path",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_profile_change_cannot_reset_invalid_boundary_layer",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_valid_checkpoint_lifecycle_states_remain_reusable",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_malformed_reuse_checkpoint_starts_fresh_analysis",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_malformed_reuse_checkpoint_uses_fresh_cancellation_path",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_profile_change_cannot_reset_invalid_boundary_layer",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_valid_checkpoint_lifecycle_states_remain_reusable",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

@@ -10,11 +10,11 @@ The Characters controller shall gate edit entry through a confirmation, keeping 
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_accepts_edit_mode",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_edit_confirmation_accepts_edit_mode",
 ]
 
 priority = "high"

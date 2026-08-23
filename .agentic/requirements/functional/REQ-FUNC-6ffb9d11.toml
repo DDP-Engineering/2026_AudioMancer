@@ -10,13 +10,13 @@ Open project shall not over-heal: it shall skip repair for stale-state-only warn
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_does_not_heal_audio_blocks_with_missing_derived_audio",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_does_not_require_repair_when_only_stale_state_warning_remains",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstream_artifacts",
-  "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_does_not_heal_audio_blocks_with_missing_derived_audio",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_does_not_require_repair_when_only_stale_state_warning_remains",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstream_artifacts",
+  "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing",
 ]
 
 priority = "high"

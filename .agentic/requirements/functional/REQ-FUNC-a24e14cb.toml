@@ -10,15 +10,15 @@ When local cancellation is requested while the VoiceWeaver operation advertises 
 verification = "Focused polling tests report a running cancellable operation and request local cancellation before the first poll, between polls, and while `POST /cancel` raises a dropped connection, observing one `/cancel` request and the cancellation exception in each case."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_posts_cancel_for_cancellable_runtime_operation",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_posts_cancel_when_requested_after_status_read",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_cancels_remotely_when_cancelled_before_the_first_poll",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_keeps_cancellation_when_remote_cancel_drops_the_connection",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_posts_cancel_for_cancellable_runtime_operation",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_posts_cancel_when_requested_after_status_read",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_cancels_remotely_when_cancelled_before_the_first_poll",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_wait_for_terminal_operation_keeps_cancellation_when_remote_cancel_drops_the_connection",
 ]
 
 priority = "high"

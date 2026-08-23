@@ -10,11 +10,11 @@ Removing a page artifact shall leave an explicit safe boundary between the neare
 verification = "Page-artifact gap guard test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_removed_page_artifact_keeps_a_typed_safe_gap",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_removed_page_artifact_keeps_a_typed_safe_gap",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

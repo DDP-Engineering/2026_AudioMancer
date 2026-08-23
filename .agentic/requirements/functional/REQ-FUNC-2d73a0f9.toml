@@ -10,11 +10,11 @@ Narrator profile, sample, and selection mutations shall update the authoritative
 verification = "Canonical profile WAV ownership and no-copy selection test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_profile_sample_and_selection_use_only_document_and_canonical_wav",
+  "05_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_profile_sample_and_selection_use_only_document_and_canonical_wav",
 ]
 
 priority = "high"

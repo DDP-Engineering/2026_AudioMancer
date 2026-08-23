@@ -7,13 +7,13 @@ requirement = """
 The built-in UI theme catalog shall include an 'Ink and Paper' theme (theme_id 'ink_and_paper', built_in) whose color roles are window_background #EFEFEC, panel_background #FFFFFF, text_primary #1A1A18, text_muted #5C5C57, accent #33475B, border #DCDCD6, warning #8A6100, success #2C6E49, danger #9B2C2C, and disabled #A8A8A2.
 """
 
-verification = "uv run --directory 04_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles (passed)"
+verification = "uv run --directory 05_Software/AudioMancer pytest -q tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_ink_and_paper_theme_has_expected_roles",
 ]
 
 spec = "specs/ui_theme_catalog.spec.md"

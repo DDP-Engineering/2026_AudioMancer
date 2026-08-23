@@ -53,19 +53,19 @@ verification = "Focused tests feed a paragraph holding one 200-word sentence bet
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_target_is_kept_whole_below_the_hard_ceiling",
-  "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_hard_ceiling_is_split_at_the_ceiling",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_keeps_a_sentence_whole_below_the_hard_ceiling",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_breaks_a_sentence_only_above_the_hard_ceiling",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_reports_the_model_hard_token_maximum_alongside_the_operator_target",
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_target_is_kept_whole_below_the_hard_ceiling",
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_sentence_over_the_hard_ceiling_is_split_at_the_ceiling",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_keeps_a_sentence_whole_below_the_hard_ceiling",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_generation_split_breaks_a_sentence_only_above_the_hard_ceiling",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_reports_the_model_hard_token_maximum_alongside_the_operator_target",
 ]
 
 # --- optional below this line ---

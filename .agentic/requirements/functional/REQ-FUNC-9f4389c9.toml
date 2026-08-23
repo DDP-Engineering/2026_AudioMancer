@@ -10,15 +10,15 @@ Character discovery shall construct bounded source windows once using the select
 verification = "Automated: 6 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_builds_windows_once_with_budget_metadata_parameters",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_use_eight_chunks_as_cap",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_shrink_for_small_text_budget",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_reject_oversized_single_chunk",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_synthesis_candidate_payload_is_trimmed_to_budget_metadata",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_builds_windows_once_with_budget_metadata_parameters",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_use_eight_chunks_as_cap",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_shrink_for_small_text_budget",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_reject_oversized_single_chunk",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_synthesis_candidate_payload_is_trimmed_to_budget_metadata",
 ]
 
 priority = "high"

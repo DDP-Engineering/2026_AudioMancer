@@ -120,12 +120,12 @@ Automated tests cannot assess audible mixing, loudness, transitions, ambience ba
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/main_window.py` (page-scoped refresh entry point)
-- `04_Software/AudioMancer/tests/test_audio_assembly_page.py`
-- `04_Software/AudioMancer/tests/test_audio_assembly_service.py`
-- `04_Software/AudioMancer/tests/test_audio_assembly_state_service.py`
-- `04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py` (page-scoped refresh entry point)
+- `05_Software/AudioMancer/tests/test_audio_assembly_page.py`
+- `05_Software/AudioMancer/tests/test_audio_assembly_service.py`
+- `05_Software/AudioMancer/tests/test_audio_assembly_state_service.py`
+- `05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py`

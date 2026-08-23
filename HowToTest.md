@@ -11,7 +11,7 @@ This file describes the automated test suite that ships with the application
 and the manual QA pass used to confirm the selective downstream preservation
 behavior.
 
-Run every command from `04_Software/AudioMancer/`.
+Run every command from `05_Software/AudioMancer/`.
 
 ## Test Suite At A Glance
 

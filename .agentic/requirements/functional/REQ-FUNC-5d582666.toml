@@ -10,10 +10,10 @@ Character voice selection shall persist the selected voice language.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_selected_voice_language_persists",
 ]
 
 priority = "high"

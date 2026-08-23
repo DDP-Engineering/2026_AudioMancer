@@ -10,11 +10,11 @@ Each Cleanup adjudication prompt shall state the exact response object it requir
 verification = "Automated: the primary and verifier prompt bodies each contain the required response object with its answers, question_id and choice field names, and distinguish it from the request's questions array. Manual: one adjudication run against a provider that does not enforce the supplied JSON Schema returns the answers envelope on its verifier passes, including single-question ones."
 
 affected_paths = [
-  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt",
-  "04_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt",
+  "05_Software/AudioMancer/prompts/text_cleanup_adjudication_primary_system.txt",
+  "05_Software/AudioMancer/prompts/text_cleanup_adjudication_verifier_system.txt",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_state_the_required_response_shape",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_cleanup_prompts_state_the_required_response_shape",
 ]
 
 spec = ""

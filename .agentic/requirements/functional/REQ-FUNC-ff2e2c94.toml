@@ -10,11 +10,11 @@ Cleanup shall reject predominantly CJK or Hangul source text before producing an
 verification = "Dominant CJK and Hangul rejection test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_rejects_predominantly_cjk_or_hangul",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_rejects_predominantly_cjk_or_hangul",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

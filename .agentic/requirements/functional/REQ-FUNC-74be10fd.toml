@@ -10,11 +10,11 @@ load_speech_blocks_report() and load_operation_state() shall return projections 
 verification = "Report/state projections match recomputed values."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_load_report_projection_matches_recomputed_counts",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_load_report_projection_matches_recomputed_counts",
 ]
 
 priority = "high"

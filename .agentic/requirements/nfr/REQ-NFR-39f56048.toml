@@ -10,10 +10,10 @@ Logging initialization shall remove only expired log files.
 verification = "A logging-service regression creates expired and recent log entries, initializes logging, and observes only the expired entry removed."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/logging_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_removes_only_expired_log_files",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_initialize_logging_removes_only_expired_log_files",
 ]
 
 priority = "high"

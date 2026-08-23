@@ -10,10 +10,10 @@ Text extraction shall reject a misnamed binary Word document carrying an RTF ext
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_rejects_misnamed_binary_doc_with_rtf_extension",
 ]
 
 priority = "high"

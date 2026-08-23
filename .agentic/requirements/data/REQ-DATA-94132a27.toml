@@ -49,17 +49,17 @@ verification = "End-to-end service regressions use controlled UTC values to prov
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_persists_truthful_run_timestamps",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_cancel_resume_preserves_run_token_and_outputs",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_legacy_state_without_checkpoint_gets_fresh_run_token",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_preserves_time_limit_warnings",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_persists_truthful_run_timestamps",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_cancel_resume_preserves_run_token_and_outputs",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_legacy_state_without_checkpoint_gets_fresh_run_token",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_resume_preserves_time_limit_warnings",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder",
 ]
 
 # --- optional below this line ---

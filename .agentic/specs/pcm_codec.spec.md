@@ -12,7 +12,7 @@ Companion specification for AudioMancer's internal PCM conversion requirements.
 - Requirements: the `pcm_codec` functional set (sample-width conversion, channel
   conversion, stateful rate conversion, rejection and boundary behavior) and the
   testing requirement covering differential parity.
-- Module: `04_Software/AudioMancer/src/audiomancer/services/pcm_codec.py`
+- Module: `05_Software/AudioMancer/src/audiomancer/services/pcm_codec.py`
 
 ## Behavior
 

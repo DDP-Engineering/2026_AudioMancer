@@ -53,15 +53,15 @@ verification = "Automated: a focused pytest selector confirms that the xdist plu
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/pyproject.toml",
-  "04_Software/AudioMancer/uv.lock",
+  "05_Software/AudioMancer/pyproject.toml",
+  "05_Software/AudioMancer/uv.lock",
   "HowToTest.md",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pytest_runtime_configuration.py::test_parallel_execution_is_available_and_opt_in",
+  "05_Software/AudioMancer/tests/test_pytest_runtime_configuration.py::test_parallel_execution_is_available_and_opt_in",
 ]
 
 # --- optional below this line ---

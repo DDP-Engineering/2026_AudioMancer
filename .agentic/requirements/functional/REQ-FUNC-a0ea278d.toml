@@ -10,16 +10,16 @@ When provider or persisted usage contains valid input and output token counts, t
 verification = "Automated: parameterized normalization and coercion cases cover every accepted and rejected numeric form, absent/null total derivation, preserved provider totals, unavailable partial usage, cumulative merge behavior, ordered restore, and persistence round-trips without changing canonical field names or availability semantics."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_normalizes_provider_usage",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_coerce_token_usage_accepts_non_negative_integral_numeric_forms",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_coerce_token_usage_rejects_invalid_numeric_forms",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_derives_absent_and_null_total",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_preserves_valid_reported_total",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_keeps_unusable_counts_unavailable",
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_token_usage_round_trip_and_merge_derive_missing_totals_consistently",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_normalizes_provider_usage",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_coerce_token_usage_accepts_non_negative_integral_numeric_forms",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_coerce_token_usage_rejects_invalid_numeric_forms",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_derives_absent_and_null_total",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_preserves_valid_reported_total",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_normalize_provider_usage_keeps_unusable_counts_unavailable",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_token_usage_round_trip_and_merge_derive_missing_totals_consistently",
 ]
 
 priority = "high"

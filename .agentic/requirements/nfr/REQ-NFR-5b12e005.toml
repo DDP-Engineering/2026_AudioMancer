@@ -10,17 +10,17 @@ The listed Python files shall use the repository's required source-file structur
 verification = "An automated source-hygiene test confirms that every listed Python file is UTF-8 without a byte-order mark and contains no @author, @date, or @version module tags; focused Ruff checks pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/__init__.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/__init__.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
-  "04_Software/AudioMancer/tests/test_logging_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/__init__.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/__init__.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
+  "05_Software/AudioMancer/tests/test_logging_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_aegis_workflow_artifacts.py::test_requirement_source_hygiene_paths_follow_repository_conventions",
+  "05_Software/AudioMancer/tests/test_aegis_workflow_artifacts.py::test_requirement_source_hygiene_paths_follow_repository_conventions",
 ]
 
 spec = "specs/minor_robustness_consistency.spec.md"

@@ -10,12 +10,12 @@ The Audio Assembly controller shall guard assembly, persist settings and start a
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_persists_settings_and_starts_threaded_operation",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_reset_clears_artifacts_and_manifest_summary",
-  "04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outputs",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_persists_settings_and_starts_threaded_operation",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_reset_clears_artifacts_and_manifest_summary",
+  "05_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py::test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outputs",
 ]
 
 priority = "high"

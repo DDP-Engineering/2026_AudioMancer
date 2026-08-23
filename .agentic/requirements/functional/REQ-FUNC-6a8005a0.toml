@@ -10,11 +10,11 @@ The AI Settings page shall add and remove profiles and mark manual model or cont
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_adds_and_removes_profiles",
-  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_marks_manual_overrides",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_adds_and_removes_profiles",
+  "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_marks_manual_overrides",
 ]
 
 priority = "high"

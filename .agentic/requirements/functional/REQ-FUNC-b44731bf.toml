@@ -10,14 +10,14 @@ The Text Chunking page shall guard chunk editing: allow selected edit and save, 
 verification = "Automated page and page-controller tests cover edit-mode transitions, emitted requests, successful durable refresh, and rejected-save projection."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_allows_selected_chunk_edit_and_save",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_cancelled_edit_confirmation_keeps_read_only",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_emits_insert_and_delete_requests",
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_save_chunk_updates_project_state",
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_rejected_save_reprojects_persisted_page_state",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_allows_selected_chunk_edit_and_save",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_cancelled_edit_confirmation_keeps_read_only",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_emits_insert_and_delete_requests",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_save_chunk_updates_project_state",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_rejected_save_reprojects_persisted_page_state",
 ]
 
 priority = "high"

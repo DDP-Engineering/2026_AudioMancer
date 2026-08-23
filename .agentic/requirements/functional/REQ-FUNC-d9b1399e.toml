@@ -10,10 +10,10 @@ A malformed current narrator document shall be preserved and reported rather tha
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_malformed_current_document_is_preserved_and_reported",
+  "05_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_malformed_current_document_is_preserved_and_reported",
 ]
 
 priority = "high"

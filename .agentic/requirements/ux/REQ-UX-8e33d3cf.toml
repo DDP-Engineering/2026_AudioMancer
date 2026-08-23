@@ -10,14 +10,14 @@ When settings are loaded, the Settings page shall rebuild its theme selector fro
 verification = "Focused Settings-page tests load built-in and valid custom themes, assert catalog order and invalid-theme filtering, round-trip an unchanged custom selection without altering ui_themes, inspect the custom preview stylesheet, preserve custom display names while translating built-ins, and confirm repeated loads contain no stale or duplicate entries."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_theme_selector_loads_and_persists",
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_selection_uses_merged_catalog_and_preserves_payload",
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_preview_uses_loaded_custom_collection",
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_language_change_preserves_custom_theme_display_name",
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_reloading_theme_catalog_clears_stale_and_invalid_items",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_theme_selector_loads_and_persists",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_selection_uses_merged_catalog_and_preserves_payload",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_custom_theme_preview_uses_loaded_custom_collection",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_language_change_preserves_custom_theme_display_name",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_reloading_theme_catalog_clears_stale_and_invalid_items",
 ]
 
 priority = "high"

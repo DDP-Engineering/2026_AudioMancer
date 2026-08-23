@@ -10,12 +10,12 @@ Function tracing shall log start, finish, and duration, log and re-raise excepti
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/logging_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/logging_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_logs_start_finish_and_duration",
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_logs_exception_and_reraises",
-  "04_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_truncates_long_values",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_logs_start_finish_and_duration",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_logs_exception_and_reraises",
+  "05_Software/AudioMancer/tests/test_logging_service.py::test_trace_function_truncates_long_values",
 ]
 
 priority = "high"

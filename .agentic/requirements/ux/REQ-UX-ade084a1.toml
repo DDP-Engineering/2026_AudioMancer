@@ -47,17 +47,17 @@ verification = "Focused Qt tests observe localized labels for every supported co
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_offers_exactly_supported_ui_languages",
-  "04_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_loads_and_builds_merged_settings",
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_applies_settings_without_closing",
-  "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_reloads_dialogs_and_discards_unsaved_changes",
-  "04_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_settings_page_localizes_all_visible_text_and_preserves_option_data",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_offers_exactly_supported_ui_languages",
+  "05_Software/AudioMancer/tests/test_settings_page.py::test_settings_page_loads_and_builds_merged_settings",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_applies_settings_without_closing",
+  "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_reloads_dialogs_and_discards_unsaved_changes",
+  "05_Software/AudioMancer/tests/test_ui_localization_coverage.py::test_settings_page_localizes_all_visible_text_and_preserves_option_data",
 ]
 
 # --- optional below this line ---

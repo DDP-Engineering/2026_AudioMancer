@@ -10,13 +10,13 @@ The Character Voices page shall present the narrator target as preview-only, gat
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_narrator_target_is_preview_only",
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes",
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_editor_payload_includes_preview_text",
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_narrator_target_is_preview_only",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_editor_payload_includes_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing",
 ]
 
 priority = "high"

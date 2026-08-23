@@ -10,11 +10,11 @@ The Speech Blocks page shall expose selected-audio controls including scene ambi
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_selected_audio_controls_emit_and_track_playback",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_enables_selected_audio_controls_for_scene_ambience",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_selected_audio_controls_emit_and_track_playback",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_enables_selected_audio_controls_for_scene_ambience",
 ]
 
 priority = "high"

@@ -10,13 +10,13 @@ When the operator starts or resumes AI translation, the translation page shall p
 verification = "Automated page and controller tests observe edit persistence before worker dispatch, an inactive timer after dispatch, and no duplicate persistence when no edit is pending."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_edit_debounce_and_flush",
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_approve_selected_flushes_pending_edit_before_signal",
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_start_translation_flushes_pending_edit_before_signal_and_stops_timer",
-  "04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_start_worker_observes_latest_pending_page_edit",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_edit_debounce_and_flush",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_approve_selected_flushes_pending_edit_before_signal",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_start_translation_flushes_pending_edit_before_signal_and_stops_timer",
+  "05_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_translation_start_worker_observes_latest_pending_page_edit",
 ]
 
 spec = "specs/REQ-FUNC-9a7e98c9.md"

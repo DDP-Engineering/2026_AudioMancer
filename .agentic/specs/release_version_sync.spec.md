@@ -19,28 +19,28 @@ version. Historical changelog headings remain unchanged.
 
 ## Interface / Format
 
-`04_Software/AudioMancer/pyproject.toml` carries the reference version, because
+`05_Software/AudioMancer/pyproject.toml` carries the reference version, because
 it is what builds the package. For a release `X.Y.Z` dated `YYYY-MM-DD`, the
 authoritative surfaces are:
 
 ```text
-04_Software/AudioMancer/pyproject.toml        (reference)
+05_Software/AudioMancer/pyproject.toml        (reference)
   [project].version = "X.Y.Z"
 
 CHANGELOG.md
   ## [Unreleased]
   ## [X.Y.Z] - YYYY-MM-DD
 
-04_Software/AudioMancer/uv.lock
+05_Software/AudioMancer/uv.lock
   [[package]] name = "audiomancer", version = "X.Y.Z"
 
-04_Software/AudioMancer/src/audiomancer/__init__.py
+05_Software/AudioMancer/src/audiomancer/__init__.py
   __version__ = "X.Y.Z"
 
-05_SoftwareDocu/UserGuide/index.html
+06_SoftwareDocu/UserGuide/index.html
   title, Help version, and Application version = X.Y.Z
 
-05_SoftwareDocu/UserGuide_ro/index.html
+06_SoftwareDocu/UserGuide_ro/index.html
   title, Versiune ajutor, and Versiune aplicatie = X.Y.Z
 ```
 

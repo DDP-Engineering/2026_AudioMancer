@@ -10,12 +10,12 @@ Speech-block generation shall create and normalize block artifacts, persist oper
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction",
 ]
 
 priority = "high"

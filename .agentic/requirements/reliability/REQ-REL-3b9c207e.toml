@@ -10,10 +10,10 @@ When project snapshot creation fails and temporary-file cleanup also fails, the 
 verification = "A focused snapshot test injects a missing source and a locked temporary ZIP, then observes the original FileNotFoundError."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_cleanup_does_not_mask_original_failure",
+  "05_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_cleanup_does_not_mask_original_failure",
 ]
 
 spec = ""

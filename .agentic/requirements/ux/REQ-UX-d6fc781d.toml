@@ -16,10 +16,10 @@ While the operator drags the boundary between the AI Translation Chunk List and 
 verification = "Automated: the AI Translation Chunk List group reports a minimum height of one hundred and fifty pixels, and after the vertical splitter is asked for a first pane of one pixel the Chunk List group still reports a size of at least one hundred and fifty pixels."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_keeps_its_minimum_height",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_chunk_list_keeps_its_minimum_height",
 ]
 
 spec = ""

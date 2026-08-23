@@ -10,10 +10,10 @@ An invalid Speech Blocks root contract shall be rejected.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_invalid_root_contract_is_rejected",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_invalid_root_contract_is_rejected",
 ]
 
 priority = "high"

@@ -10,10 +10,10 @@ Token usage restore shall select the first valid persisted usage payload.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/token_usage_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_token_usage_service.py::test_restore_token_usage_selects_first_valid_persisted_payload",
+  "05_Software/AudioMancer/tests/test_token_usage_service.py::test_restore_token_usage_selects_first_valid_persisted_payload",
 ]
 
 priority = "high"

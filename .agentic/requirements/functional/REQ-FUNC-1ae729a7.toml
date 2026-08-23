@@ -10,13 +10,13 @@ Workflow impact shall derive ordered full and selective invalidation summaries w
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_operation_order_matches_current_workflow",
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_summary_preserves_requested_operations",
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_selective_summary_normalizes_affected_ids",
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_operation_order_matches_current_workflow",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_summary_preserves_requested_operations",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_selective_summary_normalizes_affected_ids",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_full_reset_wrapper_keeps_existing_broad_reset_behavior",
 ]
 
 priority = "high"

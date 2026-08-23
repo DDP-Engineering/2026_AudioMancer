@@ -10,11 +10,11 @@ Character voice-plan sync shall reuse discovery preview text and refresh an uned
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_uses_character_discovery_preview_text",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_uses_character_discovery_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender",
 ]
 
 priority = "high"

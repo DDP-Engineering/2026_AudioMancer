@@ -53,15 +53,15 @@ verification = "A focused test resolves a budget from a discovered-model payload
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_converts_tokens_with_the_runtime_reported_audio_rate",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_falls_back_to_the_configured_audio_rate",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_converts_tokens_with_the_runtime_reported_audio_rate",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_budget_falls_back_to_the_configured_audio_rate",
 ]
 
 # --- optional below this line ---

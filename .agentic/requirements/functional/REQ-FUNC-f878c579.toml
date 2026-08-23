@@ -49,21 +49,21 @@ verification = "State-service, page, controller, and MainWindow tests prove malf
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py",
-  "04_Software/AudioMancer/tests/test_characters_page.py",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py",
+  "05_Software/AudioMancer/tests/test_characters_page.py",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_invalid_character_documents_remain_strict_but_build_recovery_state",
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_renders_invalid_document_recovery_controls",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_reset_recovers_invalid_character_document",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_malformed_and_invalid_root_payloads",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_invalid_character_documents_remain_strict_but_build_recovery_state",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_renders_invalid_document_recovery_controls",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_reset_recovers_invalid_character_document",
 ]
 
 # --- optional below this line ---

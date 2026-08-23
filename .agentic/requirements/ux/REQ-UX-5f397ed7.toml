@@ -7,13 +7,13 @@ requirement = """
 The theme stylesheet shall style QScrollBar handles with the theme border color and highlight the handle with the theme accent color on hover, replacing the native scrollbar rendering.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_styles_scrollbars",
 ]
 
 priority = "normal"

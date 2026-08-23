@@ -58,13 +58,13 @@ reports that a repair occurred.
 """
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/settings_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/settings_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_settings_drop_every_key_the_factory_defaults_do_not_define",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_settings_drop_every_key_the_factory_defaults_do_not_define",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_settings_carry_no_retired_preview_limit_block_target_or_diagnostics",
 ]
 
 # --- optional below this line ---

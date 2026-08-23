@@ -34,13 +34,13 @@ import sys
 # @brief Repository root derived from this tool location.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 # @brief Application source root used for direct imports without installation.
-APP_SOURCE_ROOT = REPO_ROOT / "04_Software" / "AudioMancer" / "src"
+APP_SOURCE_ROOT = REPO_ROOT / "05_Software" / "AudioMancer" / "src"
 # @brief Default populated sample project used by the committed help screenshots.
 DEFAULT_PROJECT_ROOT = REPO_ROOT / "09_Others" / "Command Performance"
 # @brief English offline help screenshot folder.
-ENGLISH_SCREENSHOT_ROOT = REPO_ROOT / "05_SoftwareDocu" / "UserGuide" / "assets" / "screenshots"
+ENGLISH_SCREENSHOT_ROOT = REPO_ROOT / "06_SoftwareDocu" / "UserGuide" / "assets" / "screenshots"
 # @brief Romanian offline help screenshot folder.
-ROMANIAN_SCREENSHOT_ROOT = REPO_ROOT / "05_SoftwareDocu" / "UserGuide_ro" / "assets" / "screenshots"
+ROMANIAN_SCREENSHOT_ROOT = REPO_ROOT / "06_SoftwareDocu" / "UserGuide_ro" / "assets" / "screenshots"
 # @brief Capture width chosen to match the historical full-window help screenshots.
 CAPTURE_WIDTH = 1920
 # @brief Capture height chosen to match the historical full-window help screenshots.

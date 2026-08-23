@@ -48,13 +48,13 @@ verification = "A controller test records media-player stop, source clear, previ
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_delete_profile_releases_preview_before_mutation",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_delete_profile_releases_preview_before_mutation",
 ]
 
 # --- optional below this line ---

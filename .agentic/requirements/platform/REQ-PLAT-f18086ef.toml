@@ -10,15 +10,15 @@ When the active settings file is missing and its path differs from the bundled d
 verification = "Automated: 5 linked pytest selectors covering seeding from a valid packaged scaffold, fallback on a malformed scaffold, the coinciding-path portable case, the absent-scaffold case, and the packaged file staying byte-identical."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_seeds_from_the_bundled_default",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_path",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_creates_default_file_when_missing",
-  "04_Software/AudioMancer/tests/test_user_data_location.py::test_read_only_application_root_keeps_settings_and_logs_under_the_data_root",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_seeds_from_the_bundled_default",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_path",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_creates_default_file_when_missing",
+  "05_Software/AudioMancer/tests/test_user_data_location.py::test_read_only_application_root_keeps_settings_and_logs_under_the_data_root",
 ]
 
 spec = "specs/user_data_location.spec.md"

@@ -10,11 +10,11 @@ Audio-block artifact operations shall delete only project-relative artifacts and
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_deletes_only_project_relative_artifacts",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted_data",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_deletes_only_project_relative_artifacts",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted_data",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

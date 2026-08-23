@@ -49,13 +49,13 @@ verification = "Controller regressions start selected playback on a pause, obser
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_selected_pause_uses_timed_silence_and_stops_cleanly",
+  "05_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_selected_pause_uses_timed_silence_and_stops_cleanly",
 ]
 
 # --- optional below this line ---

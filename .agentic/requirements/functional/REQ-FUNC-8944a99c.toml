@@ -10,11 +10,11 @@ Narrator definition/state shall use one authoritative `narrator_voice.json` docu
 verification = "Strict document contract test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_default_document_has_exact_contract",
+  "05_Software/AudioMancer/tests/test_narrator_voice_single_document_contract.py::test_default_document_has_exact_contract",
 ]
 
 priority = "high"

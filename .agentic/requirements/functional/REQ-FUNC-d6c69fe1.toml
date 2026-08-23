@@ -10,11 +10,11 @@ Cleanup finalization recovery shall deterministically rerender persisted decisio
 verification = "Focused finalizing and completed-output recovery tests pass without an LLM call."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_completed_cleanup_rerenders_when_output_missing_or_mismatched",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

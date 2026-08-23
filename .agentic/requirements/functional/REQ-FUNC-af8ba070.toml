@@ -10,11 +10,11 @@ AI translation shall persist one authoritative target-language document aligned 
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_is_the_only_authoritative_artifact",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_writes_once_per_completed_chunk_and_review_action",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_is_the_only_authoritative_artifact",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_document_writes_once_per_completed_chunk_and_review_action",
 ]
 
 priority = "high"

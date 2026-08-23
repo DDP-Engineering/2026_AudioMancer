@@ -10,13 +10,13 @@ The Speech Blocks page shall advance visible selection within limits, preserve s
 verification = "Automated: 4 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_advances_visible_block_selection_with_limit",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_disables_generate_without_source_and_while_busy",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_single_item_update_preserves_sibling_items",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_advances_visible_block_selection_with_limit",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_disables_generate_without_source_and_while_busy",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_single_item_update_preserves_sibling_items",
 ]
 
 priority = "high"

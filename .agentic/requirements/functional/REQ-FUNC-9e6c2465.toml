@@ -10,14 +10,14 @@ When a cancelled split Audio Block resumes, the service shall continue synthesis
 verification = "A service regression cancels after several split parts, resumes from the persisted next-part index without repeating completed synthesis, verifies ordered final audio and cleanup, and negative regressions prove missing, corrupt, inconsistent, or wrong-plan prefixes restart at the first unusable part."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_resume_continues_from_saved_checkpoint",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_in_order",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint",
-  "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_inconsistent_checkpoint_counts",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_resume_continues_from_saved_checkpoint",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_in_order",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_split_resume_rejects_inconsistent_checkpoint_counts",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

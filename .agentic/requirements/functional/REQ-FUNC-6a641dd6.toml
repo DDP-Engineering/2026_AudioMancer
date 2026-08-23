@@ -10,11 +10,11 @@ Cleanup shall publish clean_text.txt only when cleanup.json contains completed v
 verification = "Finalization recovery and incomplete-output rejection tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
+  "05_Software/AudioMancer/tests/test_cleanup_chunking_contract.py::test_chunking_rejects_noncompleted_cleanup_even_when_text_exists",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_finalizing_recovery_renders_without_an_llm_call",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

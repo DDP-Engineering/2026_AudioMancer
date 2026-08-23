@@ -10,12 +10,12 @@ Saving a whitespace-only manual Cleanup edit shall carry a prior paragraph role 
 verification = "Issue #32 focused Cleanup and deterministic Chunking suite passed 111 tests; red-first evidence E-0004/E-0005 and green evidence E-0006/E-0007."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_role_realign_falls_back_for_ambiguous_content",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_role_realign_falls_back_for_ambiguous_content",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

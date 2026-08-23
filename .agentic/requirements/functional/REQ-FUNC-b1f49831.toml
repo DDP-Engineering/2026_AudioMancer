@@ -10,15 +10,15 @@ Replacing an unlocked project's registered source shall copy the new source befo
 verification = "Automated service and Home-controller regressions confirm copy-first replacement, reserved-name storage, complete downstream invalidation, option preservation, and an unchanged prior project after an injected copy failure."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/import_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copy_failure_preserves_complete_previous_project_state",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_replaces_previous_project_source_file",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_copy_failure_preserves_complete_previous_project_state",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_replaces_previous_project_source_file",
 ]
 
 spec = "specs/REQ-FUNC-b1f49831.md"

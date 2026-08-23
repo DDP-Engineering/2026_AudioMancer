@@ -47,21 +47,21 @@ verification = "Automated tests compare built-in defaults and the committed scaf
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/settings.example.json",
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+  "05_Software/AudioMancer/settings.example.json",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_build_default_settings_uses_config_defined_factory_defaults",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_committed_settings_example_uses_config_defined_factory_defaults",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_valid_explicit_scene_and_enabled_beep",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_self_heals_missing_and_invalid_values",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_seeds_from_the_bundled_default",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable",
-  "04_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_path",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_build_default_settings_uses_config_defined_factory_defaults",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_committed_settings_example_uses_config_defined_factory_defaults",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_preserves_valid_explicit_scene_and_enabled_beep",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_load_settings_self_heals_missing_and_invalid_values",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_seeds_from_the_bundled_default",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_falls_back_when_the_bundled_default_is_unusable",
+  "05_Software/AudioMancer/tests/test_settings_service.py::test_ensure_settings_file_uses_defaults_when_the_active_path_is_the_bundled_path",
 ]
 
 # --- optional below this line ---

@@ -10,10 +10,10 @@ The Characters page shall present evidence-review fields as read-only by default
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_fields_are_read_only_by_default",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_fields_are_read_only_by_default",
 ]
 
 priority = "high"

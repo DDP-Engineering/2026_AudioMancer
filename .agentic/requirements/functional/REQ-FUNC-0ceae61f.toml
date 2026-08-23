@@ -10,10 +10,10 @@ The Character Voices controller shall redact runtime model identifiers from prog
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_progress_messages_hide_model_id",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_progress_messages_hide_model_id",
 ]
 
 priority = "high"

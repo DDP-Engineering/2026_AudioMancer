@@ -10,10 +10,10 @@ The default UI theme identifier config.DEFAULT_UI_THEME_ID shall be 'audiomancer
 verification = "uv run pytest -q (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_default_theme_is_audiomancer_dark",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_default_theme_is_audiomancer_dark",
 ]
 
 priority = "normal"

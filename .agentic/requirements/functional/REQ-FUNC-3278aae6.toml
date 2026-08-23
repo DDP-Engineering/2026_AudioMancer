@@ -47,22 +47,22 @@ verification = "Focused import and Home-controller tests select equivalent resol
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/import_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
-  "04_Software/AudioMancer/tests/test_import_service.py",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/import_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/tests/test_import_service.py",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_reselects_existing_project_copy_without_mutation",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_replaces_with_different_external_file_of_same_name",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_copy_failure_preserves_complete_previous_project_state",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
-  "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_reselects_stored_source_without_reset",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_reselects_existing_project_copy_without_mutation",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_replaces_with_different_external_file_of_same_name",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_copy_failure_preserves_complete_previous_project_state",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
+  "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_reselects_stored_source_without_reset",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
 ]
 
 # --- optional below this line ---

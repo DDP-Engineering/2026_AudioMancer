@@ -10,11 +10,11 @@ The Home page stage rows shall use theme status roles and keep a valid source-lo
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_stage_rows_use_theme_status_roles",
-  "04_Software/AudioMancer/tests/test_home_page.py::test_home_page_theme_fallback_keeps_source_lock_style_valid",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_stage_rows_use_theme_status_roles",
+  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_theme_fallback_keeps_source_lock_style_valid",
 ]
 
 priority = "high"

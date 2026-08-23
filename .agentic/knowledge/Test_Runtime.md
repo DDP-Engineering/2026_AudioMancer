@@ -16,7 +16,7 @@ not define production operation timeouts or application runtime behavior.
 
 ## Public interface
 
-Tests run from `04_Software/AudioMancer` through
+Tests run from `05_Software/AudioMancer` through
 `uv run --extra dev python -m pytest`. The default pytest configuration
 excludes performance tests and limits each collected test, including fixture
 setup and teardown, to 120 seconds.
@@ -32,13 +32,13 @@ and UI-tier execution remains serial.
 
 ## Files
 
-- `04_Software/AudioMancer/pyproject.toml` - declares pytest development
+- `05_Software/AudioMancer/pyproject.toml` - declares pytest development
   dependencies and repository-wide pytest options.
-- `04_Software/AudioMancer/uv.lock` - locks the timeout plugin and its resolved
+- `05_Software/AudioMancer/uv.lock` - locks the timeout plugin and its resolved
   package metadata.
-- `04_Software/AudioMancer/tests/conftest.py` - assigns service and UI tiers
+- `05_Software/AudioMancer/tests/conftest.py` - assigns service and UI tiers
   during collection.
-- `04_Software/AudioMancer/tests/test_pytest_runtime_configuration.py` - checks
+- `05_Software/AudioMancer/tests/test_pytest_runtime_configuration.py` - checks
   that timeout and opt-in local worker safeguards are active.
 - `HowToTest.md` - documents serial and parallel test commands and their safety
   boundary.

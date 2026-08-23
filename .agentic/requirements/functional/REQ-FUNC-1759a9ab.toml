@@ -10,11 +10,11 @@ The translation page shall drive control state from review-pending and completed
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_control_state_uses_review_pending_and_completed",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_page_control_state_uses_review_pending_and_completed",
 ]
 
 priority = "high"

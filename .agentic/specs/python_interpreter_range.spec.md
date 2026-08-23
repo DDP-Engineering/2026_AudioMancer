@@ -12,7 +12,7 @@ PCM codec dependency.
 
 - Requirements: the `platform` set (internal PCM codec; declared interpreter
   range).
-- Affected file: `04_Software/AudioMancer/pyproject.toml`
+- Affected file: `05_Software/AudioMancer/pyproject.toml`
 
 ## Behavior
 
@@ -59,7 +59,7 @@ target-version = "py312"
 ## Acceptance
 
 - [ ] `requires-python` is `>=3.12,<3.14`.
-- [ ] No module under `04_Software/AudioMancer/src` imports `audioop`.
+- [ ] No module under `05_Software/AudioMancer/src` imports `audioop`.
 - [ ] The configured test and lint gates pass on Python 3.12.
 - [ ] The configured test and lint gates pass on Python 3.13.
 - [ ] Ruff `target-version` remains `py312`.

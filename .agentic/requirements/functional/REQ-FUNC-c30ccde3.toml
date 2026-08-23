@@ -47,17 +47,17 @@ verification = "Focused edit tests show paragraph-local source identifiers and m
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_role_realign_falls_back_for_ambiguous_content",
-  "04_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_realign_carries_unique_paragraph_metadata_and_warnings",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_merge_split_preserves_narratable_prose",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_role_realign_falls_back_for_ambiguous_content",
+  "05_Software/AudioMancer/tests/test_cleanup_service.py::test_whitespace_realign_carries_unique_paragraph_metadata_and_warnings",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_manual_whitespace_and_lexical_edits_keep_truthful_structure",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_user_edited_cleanup_reclassifies_only_explicit_scene_separators",
 ]
 
 # --- optional below this line ---

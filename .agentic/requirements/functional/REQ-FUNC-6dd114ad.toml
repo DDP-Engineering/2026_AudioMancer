@@ -49,17 +49,17 @@ verification = "Automated helper and public Extraction-path PDF cases compare re
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_places_centered_spanning_material_once_around_columns",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_emits_vertical_threshold_overlap_once",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_is_identity_permutation_for_every_layout_mode",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_preserves_uncertain_column_warning",
-  "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_emits_centered_pdf_text_once",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_places_centered_spanning_material_once_around_columns",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_emits_vertical_threshold_overlap_once",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_is_identity_permutation_for_every_layout_mode",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_pdf_ordering_preserves_uncertain_column_warning",
+  "05_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_emits_centered_pdf_text_once",
 ]
 
 # --- optional below this line ---

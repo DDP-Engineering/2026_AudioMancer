@@ -12,15 +12,15 @@ and stay honest about local-model guidance.
 verification = "Automated: 6 linked direct-prompt selectors."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites",
 ]
 
 priority = "high"

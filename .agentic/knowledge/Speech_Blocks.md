@@ -209,22 +209,22 @@ Automated tests establish deterministic structural and invalidation contracts, b
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/prompts/scene_ambience_*.txt`
-- `04_Software/AudioMancer/prompts/speech_blocks_*.txt`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_page.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_state_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py`
-- `04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py`
+- `05_Software/AudioMancer/prompts/scene_ambience_*.txt`
+- `05_Software/AudioMancer/prompts/speech_blocks_*.txt`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_page.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_state_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py`
+- `05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py`

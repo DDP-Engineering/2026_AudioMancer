@@ -10,10 +10,10 @@ Workflow impact shall reject an unknown operation kind.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_rejects_unknown_operation_kind",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_rejects_unknown_operation_kind",
 ]
 
 priority = "high"

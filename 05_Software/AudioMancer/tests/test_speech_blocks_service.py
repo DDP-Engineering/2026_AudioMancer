@@ -3331,13 +3331,13 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     @return     None.
     @exception  None
     """
-    local_model_doc = (_REPO_ROOT / "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
+    local_model_doc = (_REPO_ROOT / "06_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
         encoding="utf-8"
     )
     ai_settings_source = (
-        _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
+        _REPO_ROOT / "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
     ).read_text(encoding="utf-8")
-    settings_source = (_REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/services/settings_service.py").read_text(
+    settings_source = (_REPO_ROOT / "05_Software/AudioMancer/src/audiomancer/services/settings_service.py").read_text(
         encoding="utf-8"
     )
 

@@ -10,10 +10,10 @@ The AudioMancer package shall declare its supported interpreter range as Python 
 verification = "Automated: pyproject requires-python parsed and asserted equal to >=3.12,<3.14."
 
 affected_paths = [
-  "04_Software/AudioMancer/pyproject.toml",
+  "05_Software/AudioMancer/pyproject.toml",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_declares_python_3_13_as_supported",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_audiomancer_declares_python_3_13_as_supported",
 ]
 
 spec = "specs/python_interpreter_range.spec.md"

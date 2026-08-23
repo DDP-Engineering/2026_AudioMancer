@@ -10,10 +10,10 @@ The canonical default narrator preview text supplied for each supported voice la
 verification = "A focused test estimates the spoken length of the canonical default preview text for every supported voice language and observes that each one reaches at least the configured minimum accepted narrator preview word count."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_canonical_preview_defaults_clear_the_minimum_word_bound",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_canonical_preview_defaults_clear_the_minimum_word_bound",
 ]
 
 spec = ""

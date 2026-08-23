@@ -10,16 +10,16 @@ If a synthesized character profile carries preview text outside the accepted voi
 verification = "A focused test synthesizes one profile whose composed preview text is below the accepted minimum and one above the accepted maximum, observes that both store empty preview text, then builds the voice plan and observes each target carrying the canonical default preview text for the selected voice language."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
-  "04_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_drops_out_of_range_preview",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_falls_back_to_default_preview_when_discovery_stored_none",
-  "04_Software/AudioMancer/tests/test_character_voices_service.py::test_character_preview_defaults_sit_inside_the_shared_word_range",
-  "04_Software/AudioMancer/tests/test_tts_budget_service.py::test_preview_word_bounds_span_the_configured_clone_reference_window",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_drops_out_of_range_preview",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_sync_voice_plan_falls_back_to_default_preview_when_discovery_stored_none",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_preview_defaults_sit_inside_the_shared_word_range",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_preview_word_bounds_span_the_configured_clone_reference_window",
 ]
 
 spec = ""

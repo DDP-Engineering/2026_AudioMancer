@@ -10,11 +10,11 @@ The Home controller shall export a snapshot on button click for open unlocked an
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_snapshot_button_click_exports_open_unlocked_project",
-  "04_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_snapshot_button_click_exports_locked_source_project",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_snapshot_button_click_exports_open_unlocked_project",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_snapshot_button_click_exports_locked_source_project",
 ]
 
 priority = "high"

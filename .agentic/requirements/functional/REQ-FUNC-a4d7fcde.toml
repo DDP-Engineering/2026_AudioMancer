@@ -10,10 +10,10 @@ reset_speech_blocks shall remove the authoritative speech_blocks.json document s
 verification = "Reset removes the authoritative document."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_reset_removes_document",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_reset_removes_document",
 ]
 
 priority = "high"

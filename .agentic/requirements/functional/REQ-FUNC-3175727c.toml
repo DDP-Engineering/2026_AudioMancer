@@ -10,12 +10,12 @@ The Characters controller shall coordinate resumable discovery, resuming with th
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_cancelled_state_resumes_without_prompt",
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_passes_extra_prompt_to_discovery",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_resume_uses_current_selected_profile",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_cancelled_state_resumes_without_prompt",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_passes_extra_prompt_to_discovery",
 ]
 
 priority = "high"

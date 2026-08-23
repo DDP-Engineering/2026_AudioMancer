@@ -10,11 +10,11 @@ cleanup.json shall persist neither prompt excerpts nor credentials.
 verification = "Automated secret and fragment exclusion test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_online_disclosure_metrics_do_not_persist_fragments_or_secrets",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

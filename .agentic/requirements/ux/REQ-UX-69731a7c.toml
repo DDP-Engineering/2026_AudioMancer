@@ -10,12 +10,12 @@ Theme payload validation shall reject invalid colors, fill missing color roles f
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_rejects_invalid_color_values",
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_fills_missing_color_roles_from_classic_light",
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_accepts_distinct_text_font",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_rejects_invalid_color_values",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_fills_missing_color_roles_from_classic_light",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_validate_theme_payload_accepts_distinct_text_font",
 ]
 
 priority = "high"

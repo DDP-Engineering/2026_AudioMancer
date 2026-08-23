@@ -10,10 +10,10 @@ Token usage notes shall render a usage summary from the persisted report.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_state_note_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report",
+  "05_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report",
 ]
 
 priority = "high"

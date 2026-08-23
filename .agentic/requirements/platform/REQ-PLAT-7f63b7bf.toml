@@ -10,10 +10,10 @@ The application entrypoint shall log an exception and shut down cleanly.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/app.py",
+  "05_Software/AudioMancer/src/audiomancer/app.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_app_entrypoint.py::test_main_logs_exception_and_shuts_down",
+  "05_Software/AudioMancer/tests/test_app_entrypoint.py::test_main_logs_exception_and_shuts_down",
 ]
 
 priority = "high"

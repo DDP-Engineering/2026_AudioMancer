@@ -16,12 +16,12 @@ The Character Voices page state payload shall carry no original-language label, 
 verification = "Automated: every payload the Character Voices state service builds - for an inactive project, for a normal project, and for the read-only manifest-failure recovery state - has none of the four removed keys and still has the selected voice language, and the page's state-application method accepts that payload without them."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_payloads_carry_no_indicator_only_fields",
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_payloads_carry_no_indicator_only_fields",
+  "05_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
 ]
 
 spec = ""

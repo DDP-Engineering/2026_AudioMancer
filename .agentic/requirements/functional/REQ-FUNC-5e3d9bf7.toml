@@ -10,12 +10,12 @@ AI chunking shall persist artifacts and log, append operator instructions, and u
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_writes_chunking_artifacts_and_log",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_appends_operator_instructions_to_prompt_and_state",
-  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_writes_chunking_artifacts_and_log",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_appends_operator_instructions_to_prompt_and_state",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata",
 ]
 
 priority = "high"

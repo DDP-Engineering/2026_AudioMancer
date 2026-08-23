@@ -14,8 +14,8 @@ Studio, Ember Night, Nordic Slate, and Ink and Paper.
 - Requirements: the `ux` set covering the built-in theme catalog
   (`midnight_studio`, `ember_night`, `nordic_slate`, `ink_and_paper`).
 - Affected files:
-  - `04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
-  - `04_Software/AudioMancer/tests/test_ui_theme_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
+  - `05_Software/AudioMancer/tests/test_ui_theme_service.py`
 
 ## Behavior
 

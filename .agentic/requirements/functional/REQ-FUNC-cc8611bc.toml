@@ -10,13 +10,13 @@ When character discovery synthesizes one character profile, it shall accept the 
 verification = "A focused synthesis test supplies a model response whose preview text appears nowhere in the supplied evidence excerpts, and observes that the synthesized profile carries that composed preview text unchanged."
 
 affected_paths = [
-  "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt",
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/prompts/character_profile_synthesis_user.txt",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_synthesis_prompt_requests_preview_inside_accepted_range",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_keeps_composed_preview_absent_from_evidence",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_synthesis_prompt_requests_preview_inside_accepted_range",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_build_profile_from_synthesis_keeps_composed_preview_absent_from_evidence",
 ]
 
 spec = ""

@@ -10,11 +10,11 @@ The Speech Blocks page approval controls shall emit only the selected block and 
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approve_selected_emits_only_selected_block",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approval_button_toggles_label_for_approved_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approve_selected_emits_only_selected_block",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_approval_button_toggles_label_for_approved_block",
 ]
 
 priority = "high"

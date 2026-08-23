@@ -47,16 +47,16 @@ verification = "Focused runtime tests inject a direct TimeoutError into the gene
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_generated_wav_downloads_translate_direct_timeouts",
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_generated_wav_downloads_preserve_success_http_and_url_contracts",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_generated_wav_downloads_translate_direct_timeouts",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_generated_wav_downloads_preserve_success_http_and_url_contracts",
 ]
 
 # --- optional below this line ---

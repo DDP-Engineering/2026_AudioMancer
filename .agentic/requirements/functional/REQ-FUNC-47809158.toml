@@ -10,19 +10,19 @@ The Narrator Voice controller shall manage sample generation with runtime reprob
 verification = "Automated: 8 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_stops_after_probe_when_cancelled",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_preserves_probe_and_capability_errors",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_maps_terminal_runtime_failure",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_shared_runtime_keeps_profile_persistence_and_refresh",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
-  "04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_stops_after_probe_when_cancelled",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_preserves_probe_and_capability_errors",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_maps_terminal_runtime_failure",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_shared_runtime_keeps_profile_persistence_and_refresh",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits",
+  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_generate_sample_failure_preserves_previous_sample",
 ]
 
 priority = "high"

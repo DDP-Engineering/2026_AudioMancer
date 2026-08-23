@@ -14,11 +14,13 @@ This document describes the initial local setup for working on
 
 Current repository structure:
 
-- `0_Planning/`
+- `00_Planning/`
 - `01_Documentation/`
 - `02_Tools/`
-- `04_Software/`
-- `05_SoftwareDocu/`
+- `03_Hardware/`
+- `04_HardwareDocu/`
+- `05_Software/`
+- `06_SoftwareDocu/`
 - `07_Delivery/`
 - `09_Others/`
 - `.agentic/` - engineering workflow contract, task journals, and the
@@ -26,7 +28,7 @@ Current repository structure:
 
 Current application subtree:
 
-- `04_Software/AudioMancer/`
+- `05_Software/AudioMancer/`
 
 Current environment and dependency workflow:
 
@@ -204,19 +206,19 @@ approved for the organization.
 ### Windows PowerShell
 
 ```powershell
-Set-Location 04_Software/AudioMancer
+Set-Location 05_Software/AudioMancer
 ```
 
 ### Windows CMD
 
 ```cmd
-cd 04_Software\AudioMancer
+cd 05_Software\AudioMancer
 ```
 
 ### Linux Bash
 
 ```bash
-cd 04_Software/AudioMancer
+cd 05_Software/AudioMancer
 ```
 
 ## 5. Create And Sync The Environment
@@ -352,7 +354,7 @@ uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
 
 - The project currently uses `uv` as the environment and dependency workflow.
 - `ruff` is installed through the same `uv sync --extra dev` path as the other developer tools.
-- The runnable desktop application lives under `04_Software/AudioMancer/`.
+- The runnable desktop application lives under `05_Software/AudioMancer/`.
 - Windows and Linux packaging scripts and spec files live directly under
   `02_Tools/`.
 - `07_Delivery/` is used for packaged release artifacts.

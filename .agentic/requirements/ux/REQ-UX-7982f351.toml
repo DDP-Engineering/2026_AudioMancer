@@ -47,24 +47,24 @@ verification = "State, controller, and page tests refresh each affected workflow
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_surfaces_corrupt_document_as_reset_only_recovery",
-  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_surfaces_corrupt_document_as_reset_only_recovery",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_rejects_corrupt_document_before_confirmation",
-  "04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_rejects_corrupt_document_before_runtime_probe",
-  "04_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_shows_reset_recovery_without_generation",
-  "04_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_shows_reset_recovery_without_generation",
-  "04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream",
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_surfaces_corrupt_document_as_reset_only_recovery",
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_surfaces_corrupt_document_as_reset_only_recovery",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_rejects_corrupt_document_before_confirmation",
+  "05_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py::test_audio_blocks_ui_controller_rejects_corrupt_document_before_runtime_probe",
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_shows_reset_recovery_without_generation",
+  "05_Software/AudioMancer/tests/test_audio_blocks_page.py::test_audio_blocks_page_shows_reset_recovery_without_generation",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream",
 ]
 
 # --- optional below this line ---

@@ -47,14 +47,14 @@ verification = "A service regression inserts opener and after-block scene ambien
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_insertion_remaps_references_after_opener_renumbering",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_insertion_remaps_references_after_opener_renumbering",
 ]
 
 # --- optional below this line ---

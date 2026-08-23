@@ -7,13 +7,13 @@ requirement = """
 The theme stylesheet shall fill QProgressBar chunks with the theme accent color.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_progress_bar_uses_accent",
 ]
 
 priority = "low"

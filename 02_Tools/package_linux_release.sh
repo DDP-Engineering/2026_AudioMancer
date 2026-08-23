@@ -107,8 +107,8 @@ PY
 # Ship both offline help bundles under the language folders used by the app.
 copy_user_guide() {
     local target_dir="$1"
-    local english_source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide"
-    local romanian_source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide_ro"
+    local english_source_path="${REPO_ROOT}/06_SoftwareDocu/UserGuide"
+    local romanian_source_path="${REPO_ROOT}/06_SoftwareDocu/UserGuide_ro"
     local help_root="${target_dir}/help"
 
     if [[ ! -d "${english_source_path}" ]]; then
@@ -179,7 +179,7 @@ PY
 # from any current working directory.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-APP_ROOT="${REPO_ROOT}/04_Software/AudioMancer"
+APP_ROOT="${REPO_ROOT}/05_Software/AudioMancer"
 DELIVERY_ROOT="${REPO_ROOT}/07_Delivery"
 PYTHON_LAUNCHER_PATH="${SCRIPT_DIR}/audiomancer_windows_entry.py"
 PYPROJECT_PATH="${APP_ROOT}/pyproject.toml"

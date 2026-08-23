@@ -250,24 +250,24 @@ Tests cannot prove voice naturalness, pronunciation, timing, clone fidelity, GPU
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_main_window.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_page.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_service.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_state_service.py`
-- `04_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_blocks_performance_baseline.py`
-- `04_Software/AudioMancer/tests/test_tts_settings_page.py`
-- `04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`
-- `04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_main_window.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_page.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_service.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_single_document_contract.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_state_service.py`
+- `05_Software/AudioMancer/tests/test_audio_blocks_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_blocks_performance_baseline.py`
+- `05_Software/AudioMancer/tests/test_tts_settings_page.py`
+- `05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`
+- `05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py`

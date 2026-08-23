@@ -10,15 +10,15 @@ Same-narrator Speech Blocks shall be segmented deterministically into whole sent
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_narrator_split_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_blocks_never_end_in_the_middle_of_a_sentence",
-  "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_multi_sentence_quotation_is_never_split_open",
-  "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_planned_blocks_reproduce_the_source_chunk_exactly",
-  "04_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_sentence_boundary_inside_an_open_quote_is_not_used",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_same_narrator_without_calling_a_model",
+  "05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_blocks_never_end_in_the_middle_of_a_sentence",
+  "05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_multi_sentence_quotation_is_never_split_open",
+  "05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_planned_blocks_reproduce_the_source_chunk_exactly",
+  "05_Software/AudioMancer/tests/test_speech_blocks_narrator_split_service.py::test_sentence_boundary_inside_an_open_quote_is_not_used",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_same_narrator_without_calling_a_model",
 ]
 
 priority = "high"

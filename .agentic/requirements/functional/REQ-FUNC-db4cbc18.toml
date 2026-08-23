@@ -10,14 +10,14 @@ Speech-block chunk normalization shall support multilingual dialogue delimiters 
 verification = "Automated: 5 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_french_guillemets",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_dash_dialogue",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_block_text_only_strips_wrapping_dialogue_quotes",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_delimiters",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_french_guillemets",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_supports_dash_dialogue",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_block_text_only_strips_wrapping_dialogue_quotes",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_delimiters",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks",
 ]
 
 priority = "high"

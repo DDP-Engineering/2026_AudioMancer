@@ -10,10 +10,10 @@ When AudioMancer reads runtime status, loads a model, unloads a model, or cancel
 verification = "A focused runtime-service contract test exercises status, model-load, model-unload, and cancellation helpers and compares each captured route and model-load payload with the simplified REST contract."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_uses_simplified_status_and_model_routes",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_uses_simplified_status_and_model_routes",
 ]
 
 priority = "high"

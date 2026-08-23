@@ -16,11 +16,11 @@ The two prompt actions in the Character Voices action row shall be labelled with
 verification = "Automated: a constructed Character Voices page shows the two prompt buttons as Edit and Save with the English interface selected and as Editeaza and Salveaza with the Romanian interface selected."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_prompt_buttons_carry_short_edit_and_save_labels",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_prompt_buttons_carry_short_edit_and_save_labels",
 ]
 
 spec = ""

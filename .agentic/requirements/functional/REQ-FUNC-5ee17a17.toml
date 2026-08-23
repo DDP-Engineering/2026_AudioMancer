@@ -49,17 +49,17 @@ verification = "An export-state test writes a Character Discovery document that 
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
-  "04_Software/AudioMancer/tests/test_project_export_service.py",
-  "04_Software/AudioMancer/tests/test_main_window_home_exports.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/tests/test_project_export_service.py",
+  "05_Software/AudioMancer/tests/test_main_window_home_exports.py",
   ".agentic/knowledge/Character_Discovery.md",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_invalid_character_document_is_unavailable",
-  "04_Software/AudioMancer/tests/test_main_window_home_exports.py::test_main_window_opens_project_with_invalid_character_document",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_invalid_character_document_is_unavailable",
+  "05_Software/AudioMancer/tests/test_main_window_home_exports.py::test_main_window_opens_project_with_invalid_character_document",
 ]
 
 # --- optional below this line ---

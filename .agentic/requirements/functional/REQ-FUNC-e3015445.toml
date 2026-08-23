@@ -12,12 +12,12 @@ or identity-equivalent canonical name or alias using Unicode-aware comparison.
 verification = "Public manual CRUD tests add and edit representative non-Latin names, preserve their display spelling in characters.json, reject Unicode canonical and alias duplicates including composed/decomposed and accent-folded forms, retain distinct base spellings, reject non-name input, and preserve self-edit exclusion."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_manual_add_update_delete_and_reset",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_validate_manual_character_name_rejects_duplicates_and_invalid_names",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_manual_character_names_use_unicode_identity_keys",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_manual_add_update_delete_and_reset",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_validate_manual_character_name_rejects_duplicates_and_invalid_names",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_manual_character_names_use_unicode_identity_keys",
 ]
 
 spec = "specs/REQ-FUNC-f5fc5dd8.md"

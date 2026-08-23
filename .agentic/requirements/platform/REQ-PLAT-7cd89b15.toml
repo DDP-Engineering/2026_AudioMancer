@@ -47,15 +47,15 @@ verification = "Focused configuration tests exercise Help-path initialization wi
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/tests/test_config_contract.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/tests/test_config_contract.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_module_initializes_from_one_level_frozen_runtime_root",
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_preserves_source_tree_help_paths",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_module_initializes_from_one_level_frozen_runtime_root",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_preserves_source_tree_help_paths",
 ]
 
 # --- optional below this line ---

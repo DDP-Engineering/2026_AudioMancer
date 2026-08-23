@@ -10,12 +10,12 @@ Audio-block state shall surface progress, current block, full source text, resum
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states",
-  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_measures_generated_audio_duration",
-  "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_surfaces_progress_current_block_and_full_source_text",
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states",
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_measures_generated_audio_duration",
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_surfaces_progress_current_block_and_full_source_text",
 ]
 
 spec = "specs/audio_blocks_document.spec.md"

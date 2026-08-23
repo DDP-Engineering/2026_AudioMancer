@@ -10,16 +10,16 @@ Translation, Character Discovery, narrator generation, Speech Blocks, Audio Bloc
 verification = "All required downstream modules route through the shared reader."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_downstream_consumers_use_shared_document_reader",
+  "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py::test_downstream_consumers_use_shared_document_reader",
 ]
 
 priority = "high"

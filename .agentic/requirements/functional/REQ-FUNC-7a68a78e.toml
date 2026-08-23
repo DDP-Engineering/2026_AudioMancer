@@ -10,18 +10,18 @@ The Character Voices controller shall preserve the existing sample on cancelled 
 verification = "Automated: 7 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_stops_after_probe_when_cancelled",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_preserves_probe_and_capability_errors",
-  "04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_maps_terminal_runtime_failure",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_shared_runtime_keeps_target_persistence_and_refresh",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_sample_generation_cancel_during_model_load",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_failed_character_sample_generation_preserves_existing_sample",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_stops_after_probe_when_cancelled",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_preserves_probe_and_capability_errors",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_maps_terminal_runtime_failure",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_shared_runtime_keeps_target_persistence_and_refresh",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_sample_generation_cancel_during_model_load",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_failed_character_sample_generation_preserves_existing_sample",
 ]
 
 priority = "high"

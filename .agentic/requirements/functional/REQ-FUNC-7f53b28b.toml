@@ -10,10 +10,10 @@ Workflow impact shall preserve stable identities during resequencing.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_stable_identity_policy_preserves_ids_when_resequencing",
+  "05_Software/AudioMancer/tests/test_workflow_impact_service.py::test_workflow_impact_stable_identity_policy_preserves_ids_when_resequencing",
 ]
 
 priority = "high"

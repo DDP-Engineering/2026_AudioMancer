@@ -11,10 +11,10 @@ generation shall preserve its ordered source slices and spoken dialogue text.
 verification = "Automated: one focused end-to-end direct-generation selector."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_dialogue",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_dialogue",
 ]
 
 priority = "high"

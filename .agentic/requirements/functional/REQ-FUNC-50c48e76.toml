@@ -10,14 +10,14 @@ Cleanup shall use cleanup.json as its single durable metadata artifact.
 verification = "The exact Cleanup artifact contract test passes."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/config.py",
-  "04_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/config.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_persists_exactly_one_metadata_file_and_one_text_file",
-  "04_Software/AudioMancer/tests/test_config_contract.py::test_config_exposes_expected_identity_and_window_defaults",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_persists_exactly_one_metadata_file_and_one_text_file",
+  "05_Software/AudioMancer/tests/test_config_contract.py::test_config_exposes_expected_identity_and_window_defaults",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

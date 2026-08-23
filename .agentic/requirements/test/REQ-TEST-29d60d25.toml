@@ -10,10 +10,10 @@ The PCM codec differential parity test shall skip rather than fail when the audi
 verification = "Automated: parity guard asserted to track interpreter version so the suite stays green on 3.13."
 
 affected_paths = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_parity_suite_skips_when_reference_is_unavailable",
+  "05_Software/AudioMancer/tests/test_pcm_codec.py::test_pcm_codec_parity_suite_skips_when_reference_is_unavailable",
 ]
 
 spec = "specs/pcm_codec.spec.md"

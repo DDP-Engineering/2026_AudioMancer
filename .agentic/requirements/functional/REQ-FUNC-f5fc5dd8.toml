@@ -49,14 +49,14 @@ verification = "Service tests prove non-Latin, composed/decomposed, accent-folde
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_group_character_candidates_uses_unicode_identity_keys",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_synthesizes_repeated_unicode_identity_once",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_group_character_candidates_uses_unicode_identity_keys",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_synthesizes_repeated_unicode_identity_once",
 ]
 
 # --- optional below this line ---

@@ -47,13 +47,13 @@ verification = "Focused page tests apply successful and failed probe results, in
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_persists_only_probe_results_from_current_loaded_session",
+  "05_Software/AudioMancer/tests/test_tts_settings_page.py::test_tts_settings_page_persists_only_probe_results_from_current_loaded_session",
 ]
 
 # --- optional below this line ---

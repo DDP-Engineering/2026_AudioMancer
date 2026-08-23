@@ -10,10 +10,10 @@ Theme lookup shall return the default theme for a missing theme ID.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_theme_by_id_returns_default_for_missing_theme_id",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_theme_by_id_returns_default_for_missing_theme_id",
 ]
 
 priority = "high"

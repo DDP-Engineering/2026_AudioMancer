@@ -47,13 +47,13 @@ verification = "An automated UI test selects a non-first chunk, rebuilds and reo
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_state_rebuild_preserves_selected_chunk_by_id",
+  "05_Software/AudioMancer/tests/test_ai_translation_page.py::test_translation_state_rebuild_preserves_selected_chunk_by_id",
 ]
 
 # --- optional below this line ---

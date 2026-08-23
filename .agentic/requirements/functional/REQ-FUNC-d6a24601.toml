@@ -10,11 +10,11 @@ The Text Chunking page shall enable the AI button when profiles exist and enable
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_ai_button_when_profiles_exist",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_initial_manual_insert",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_ai_button_when_profiles_exist",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_enables_initial_manual_insert",
 ]
 
 priority = "high"

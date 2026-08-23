@@ -10,12 +10,12 @@ The Character Voices controller shall expose an explicit edit/save flow that cle
 verification = "Automated: three linked pytest selectors cover the explicit edit/save flow."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked",
-  "04_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
 ]
 
 priority = "high"

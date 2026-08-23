@@ -10,12 +10,12 @@ Speech-block generation shall split oversized chunks by AI context and output-sa
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_oversized_chunk_by_ai_context_budget",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap",
-  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_direct_malformed_json_falls_back_for_segment_only",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_oversized_chunk_by_ai_context_budget",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_direct_malformed_json_falls_back_for_segment_only",
 ]
 
 priority = "high"

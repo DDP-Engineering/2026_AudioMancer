@@ -10,10 +10,10 @@ AI translation shall use a stable prompt with minimal user contract.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_prompt_has_stable_rules_and_minimal_user_contract",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_prompt_has_stable_rules_and_minimal_user_contract",
 ]
 
 priority = "high"

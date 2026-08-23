@@ -51,23 +51,23 @@ verification = "Service, state, manifest, and export tests interrupt and repeate
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py",
-  "04_Software/AudioMancer/tests/test_project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py",
+  "05_Software/AudioMancer/tests/test_project_export_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_rejected_candidate_diagnostics_survive_repeated_synthesis_resume",
-  "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_projects_rejected_candidate_warning_count",
-  "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_resumable_character_state_projects_persisted_rejection_notes",
-  "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_character_rejection_warning_count",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_rejected_candidate_diagnostics_survive_repeated_synthesis_resume",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_strictly_rejects_new_profile_and_window_contract_fields",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_character_state_projects_rejected_candidate_warning_count",
+  "05_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_resumable_character_state_projects_persisted_rejection_notes",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_character_rejection_warning_count",
 ]
 
 # --- optional below this line ---

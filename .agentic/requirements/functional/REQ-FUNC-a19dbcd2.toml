@@ -10,10 +10,10 @@ The Text Chunking controller shall require confirmation to rerun completed chunk
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_completed_rerun_requires_confirmation",
+  "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py::test_text_chunking_ui_controller_completed_rerun_requires_confirmation",
 ]
 
 priority = "high"

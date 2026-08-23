@@ -23,7 +23,7 @@ inventory through the stable profile projection.
 
 ## 3. Implementation Overview
 
-`04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
+`05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
 owns source resolution, strict persistence, discovery, synthesis, resume, and
 manual CRUD. `load_character_document()` validates the authoritative document;
 `load_character_profiles()` exposes the flat projection expected by existing
@@ -179,9 +179,9 @@ behavior.
 
 Primary coverage is in:
 
-- `04_Software/AudioMancer/tests/test_character_discovery_service.py`
-- `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
-- `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_character_discovery_service.py`
+- `05_Software/AudioMancer/tests/test_character_discovery_state_service.py`
+- `05_Software/AudioMancer/tests/test_characters_ui_controller.py`
 - translation, runtime, export, and text-state consumer tests
 
 The service regressions cover discovery and synthesis cancellation/resume,
@@ -222,19 +222,19 @@ synthesis is not implemented.
 
 From the adopted component map:
 
-- `04_Software/AudioMancer/prompts/character_discovery_*.txt`
-- `04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt`
-- `04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py`
-- `04_Software/AudioMancer/tests/test_character_discovery_service.py`
-- `04_Software/AudioMancer/tests/test_character_discovery_state_service.py`
-- `04_Software/AudioMancer/tests/test_characters_page.py`
-- `04_Software/AudioMancer/tests/test_characters_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_project_export_service.py`
+- `05_Software/AudioMancer/prompts/character_discovery_*.txt`
+- `05_Software/AudioMancer/prompts/character_profile_synthesis_user.txt`
+- `05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/character_discovery_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py`
+- `05_Software/AudioMancer/tests/test_character_discovery_service.py`
+- `05_Software/AudioMancer/tests/test_character_discovery_state_service.py`
+- `05_Software/AudioMancer/tests/test_characters_page.py`
+- `05_Software/AudioMancer/tests/test_characters_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_project_export_service.py`
 - `.agentic/requirements/functional/REQ-FUNC-57acf8bd.toml`
 - `.agentic/requirements/functional/REQ-FUNC-df901739.toml`
 - `.agentic/requirements/functional/REQ-FUNC-e3015445.toml`

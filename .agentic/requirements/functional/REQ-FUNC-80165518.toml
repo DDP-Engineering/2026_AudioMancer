@@ -10,11 +10,11 @@ Text Cleanup state shall require structural extraction and expose terminal warni
 verification = "Cleanup state readiness, runtime quality, and manual-save tests pass."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_exposes_runtime_quality_and_manual_save",
-  "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_requires_structural_extraction",
+  "05_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_exposes_runtime_quality_and_manual_save",
+  "05_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_cleanup_state_requires_structural_extraction",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

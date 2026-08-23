@@ -15,10 +15,10 @@ logging initialization can never abort application startup.
   log placement; bundled default settings seeding) and the `non_functional` set
   (non-fatal logging initialization).
 - Affected files:
-  - `04_Software/AudioMancer/src/audiomancer/config.py`
-  - `04_Software/AudioMancer/src/audiomancer/services/logging_service.py`
-  - `04_Software/AudioMancer/src/audiomancer/services/settings_service.py`
-  - `04_Software/AudioMancer/src/audiomancer/app.py`
+  - `05_Software/AudioMancer/src/audiomancer/config.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/logging_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/services/settings_service.py`
+  - `05_Software/AudioMancer/src/audiomancer/app.py`
 
 ## Behavior
 

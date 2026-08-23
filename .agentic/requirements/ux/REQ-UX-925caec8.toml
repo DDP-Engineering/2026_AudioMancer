@@ -10,11 +10,11 @@ Theme duplicate and export shall produce custom payloads, and an exported built-
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_duplicate_and_export_theme_payloads_are_custom_payloads",
-  "04_Software/AudioMancer/tests/test_ui_theme_service.py::test_exported_built_in_theme_imports_as_custom_copy_with_unique_id",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_duplicate_and_export_theme_payloads_are_custom_payloads",
+  "05_Software/AudioMancer/tests/test_ui_theme_service.py::test_exported_built_in_theme_imports_as_custom_copy_with_unique_id",
 ]
 
 priority = "high"

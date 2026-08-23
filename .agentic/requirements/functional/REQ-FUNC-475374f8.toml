@@ -10,10 +10,10 @@ The Home presenter shall mark cleanup as in-progress in the derived stage status
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_cleanup_as_in_progress",
+  "05_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_cleanup_as_in_progress",
 ]
 
 priority = "high"

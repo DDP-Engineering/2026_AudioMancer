@@ -10,12 +10,12 @@ Audio assembly shall require a reset when settings change or state lacks a finge
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_when_settings_change",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_for_state_without_fingerprint",
-  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_when_settings_change",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_requires_reset_for_state_without_fingerprint",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_reset_deletes_report_state_and_audiobook_folder",
 ]
 
 priority = "high"

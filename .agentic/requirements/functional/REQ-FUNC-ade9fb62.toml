@@ -10,10 +10,10 @@ The Characters controller shall confirm and remove a character on delete.
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_delete_flow_confirms_and_removes",
+  "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_delete_flow_confirms_and_removes",
 ]
 
 priority = "high"

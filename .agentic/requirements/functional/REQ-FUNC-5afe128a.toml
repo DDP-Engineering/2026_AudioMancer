@@ -10,10 +10,10 @@ Deterministic chunking shall persist exactly one completed terminal document bef
 verification = "Automated focused pytest: captured persistence sequence contains exactly one completed terminal document with next_paragraph null after bounded running checkpoints."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_batches_checkpoints_without_full_chapter_rescans",
+  "05_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_batches_checkpoints_without_full_chapter_rescans",
 ]
 
 spec = "specs/cleanup_chunking.spec.md"

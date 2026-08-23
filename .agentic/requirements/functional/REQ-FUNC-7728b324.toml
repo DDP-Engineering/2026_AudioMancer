@@ -10,11 +10,11 @@ The Characters page evidence panel shall keep its minimum split layout and suppo
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_splitter_keeps_twenty_percent_minimums",
-  "04_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_preview_supports_find_next_wraparound",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_splitter_keeps_twenty_percent_minimums",
+  "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_evidence_preview_supports_find_next_wraparound",
 ]
 
 priority = "high"

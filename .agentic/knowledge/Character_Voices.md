@@ -101,10 +101,10 @@ the existing downstream Audio Blocks invalidation paths.
 
 Primary coverage:
 
-- `04_Software/AudioMancer/tests/test_character_voices_service.py`
-- `04_Software/AudioMancer/tests/test_character_voices_state_service.py`
-- `04_Software/AudioMancer/tests/test_character_voices_page.py`
-- `04_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_character_voices_service.py`
+- `05_Software/AudioMancer/tests/test_character_voices_state_service.py`
+- `05_Software/AudioMancer/tests/test_character_voices_page.py`
+- `05_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
 
 The controller suite includes the real `MainWindow.set_current_page` first-entry
 ordering, injected import failure, partial cancellation refresh, and persisted
@@ -112,15 +112,15 @@ ready-promotion regressions.
 
 ## Files
 
-- `04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py`
-- `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
-- `04_Software/AudioMancer/tests/test_character_voices_service.py`
-- `04_Software/AudioMancer/tests/test_character_voices_state_service.py`
-- `04_Software/AudioMancer/tests/test_character_voices_page.py`
-- `04_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
-- `04_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`
+- `05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
+- `05_Software/AudioMancer/tests/test_character_voices_service.py`
+- `05_Software/AudioMancer/tests/test_character_voices_state_service.py`
+- `05_Software/AudioMancer/tests/test_character_voices_page.py`
+- `05_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py`

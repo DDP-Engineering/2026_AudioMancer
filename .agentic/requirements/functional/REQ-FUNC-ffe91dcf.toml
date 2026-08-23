@@ -10,10 +10,10 @@ The narrator definition service shall simplify the TTS plan to voice-assignment 
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only",
 ]
 
 priority = "high"

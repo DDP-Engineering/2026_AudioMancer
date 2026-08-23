@@ -33,16 +33,16 @@ verification = "Automated: malformed and syntactically valid first-choice length
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_malformed_json",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_valid_json",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_accepts_stop_and_omitted_finish_reasons",
-  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_malformed_json",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_output_length_limited_valid_json",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_accepts_stop_and_omitted_finish_reasons",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_repairs_non_json_output_with_followup_request",
 ]
 
 # --- optional below this line ---

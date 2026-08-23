@@ -10,12 +10,12 @@ AI translation budgeting shall reserve output, reject insufficient input budget,
 verification = "Automated service tests cover reserved output, insufficient budget rejection, true paragraph breaks across requests, oversized-paragraph continuation joins, and a mixed continuation/paragraph request segment."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_reserves_output_and_rejects_insufficient_input",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_preserves_paragraph_breaks_across_requests",
-  "04_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_rejoins_oversized_paragraph_continuations",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_budget_reserves_output_and_rejects_insufficient_input",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_preserves_paragraph_breaks_across_requests",
+  "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_budgeted_translation_rejoins_oversized_paragraph_continuations",
 ]
 
 priority = "high"

@@ -398,7 +398,7 @@ def test_help_index_falls_back_to_english_for_missing_language(monkeypatch) -> N
     @return     None.
     @exception  None
     """
-    missing_path = config.APP_ROOT.parents[1] / "05_SoftwareDocu" / "MissingUserGuide" / "index.html"
+    missing_path = config.APP_ROOT.parents[1] / "06_SoftwareDocu" / "MissingUserGuide" / "index.html"
     monkeypatch.setattr(
         config,
         "APP_HELP_SOURCE_INDEX_PATHS",

@@ -7,13 +7,13 @@ requirement = """
 In the theme stylesheet built by build_theme_stylesheet, QGroupBox shall render as a rounded card with a border-radius of at least 8px and its background filled with the theme panel_background color.
 """
 
-verification = "uv run pytest -q 04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards (passed)"
+verification = "uv run pytest -q 05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards (passed)"
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards",
+  "05_Software/AudioMancer/tests/test_ui_state_service.py::test_theme_stylesheet_group_boxes_are_rounded_cards",
 ]
 
 priority = "normal"

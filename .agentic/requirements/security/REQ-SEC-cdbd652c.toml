@@ -52,11 +52,11 @@ When archive export resolves inside the active project, Project Export shall rej
 verification = "A focused service test requests an archive inside the project and observes ValueError with no archive or temporary file."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/project_export_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_export_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_rejects_destination_inside_project"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_project_archive_export_rejects_destination_inside_project"]
 
 # --- optional below this line ---
 

@@ -21,14 +21,14 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _HYGIENE_PATHS = (
-    "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
-    "04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
-    "04_Software/AudioMancer/src/audiomancer/services/__init__.py",
-    "04_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
-    "04_Software/AudioMancer/src/audiomancer/ui/__init__.py",
-    "04_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py",
-    "04_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
-    "04_Software/AudioMancer/tests/test_logging_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/__init__.py",
+    "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/__init__.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/controllers/__init__.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/pages/__init__.py",
+    "05_Software/AudioMancer/tests/test_logging_service.py",
 )
 
 

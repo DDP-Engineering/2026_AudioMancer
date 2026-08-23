@@ -10,10 +10,10 @@ Speech-block operation state shall shape paths, metadata, and the resume checkpo
 verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint",
+  "05_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint",
 ]
 
 priority = "high"

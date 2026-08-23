@@ -10,12 +10,12 @@ The operation runtime shall build progress payloads that clamp percent, use the 
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_progress_percent_clamps_to_zero_and_hundred",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_uses_standard_payload_shape",
-  "04_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_can_omit_token_usage_payload",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_progress_percent_clamps_to_zero_and_hundred",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_uses_standard_payload_shape",
+  "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_emit_progress_update_can_omit_token_usage_payload",
 ]
 
 priority = "high"

@@ -7,7 +7,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # AudioMancer
 
 <p align="center">
-  <img src="04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png" alt="AudioMancer app icon" width="96">
+  <img src="05_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png" alt="AudioMancer app icon" width="96">
 </p>
 
 <p align="center">
@@ -50,11 +50,13 @@ Each platform is packaged on its own host; there is no cross-compilation step.
 
 ## Repository Layout
 
-- `0_Planning/` - planning notes and design drafts.
+- `00_Planning/` - planning notes and design drafts.
 - `01_Documentation/` - project-level documentation and media.
 - `02_Tools/` - packaging, audit, and repository utility scripts.
-- `04_Software/` - application source code.
-- `05_SoftwareDocu/` - offline user help and model-selection guidance.
+- `03_Hardware/` - hardware design material.
+- `04_HardwareDocu/` - hardware documentation.
+- `05_Software/` - application source code.
+- `06_SoftwareDocu/` - offline user help and model-selection guidance.
 - `07_Delivery/` - delivery metadata and release packaging notes.
 - `09_Others/` - runtime projects, samples, and local support material.
 - `.agentic/` - engineering workflow contract, task journals, and the
@@ -62,13 +64,13 @@ Each platform is packaged on its own host; there is no cross-compilation step.
 
 ## Where To Start
 
-- `04_Software/AudioMancer/` contains the runnable desktop application.
-- `04_Software/AudioMancer/README.MD` contains application development,
+- `05_Software/AudioMancer/` contains the runnable desktop application.
+- `05_Software/AudioMancer/README.MD` contains application development,
   runtime, and validation notes.
 - `.agentic/knowledge/` contains focused per-component implementation
   documentation.
-- `05_SoftwareDocu/UserGuide/` contains the English offline help bundle.
-- `05_SoftwareDocu/UserGuide_ro/` contains the Romanian offline help bundle.
+- `06_SoftwareDocu/UserGuide/` contains the English offline help bundle.
+- `06_SoftwareDocu/UserGuide_ro/` contains the Romanian offline help bundle.
 - `CHANGELOG.md` contains detailed version history.
 - Current release metadata is maintained in the application package metadata
   and package `__version__`; README files intentionally avoid embedding the

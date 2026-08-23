@@ -52,11 +52,11 @@ When Speech Blocks projects a completed operation without a persisted completion
 verification = "A focused projection test loads the same completed document twice and observes a stable absent timestamp."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_projected_completed_state_does_not_fabricate_timestamp"]
+linked_tests = ["05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_projected_completed_state_does_not_fabricate_timestamp"]
 
 # --- optional below this line ---
 

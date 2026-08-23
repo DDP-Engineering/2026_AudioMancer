@@ -10,12 +10,12 @@ The Audio Assembly page shall render outputs, progress, playback state, and scen
 verification = "Automated: 3 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_outputs_progress_and_playback_state",
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_scene_mix_previews",
-  "04_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_localizes_mode_and_output_rows",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_outputs_progress_and_playback_state",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_renders_scene_mix_previews",
+  "05_Software/AudioMancer/tests/test_audio_assembly_page.py::test_audio_assembly_page_localizes_mode_and_output_rows",
 ]
 
 priority = "high"

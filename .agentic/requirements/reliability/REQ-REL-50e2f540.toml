@@ -52,11 +52,11 @@ When a scroll viewport is destroyed, the scroll-step filter shall discard its ac
 verification = "A focused filter test records a partial remainder, sends Destroy, and observes the viewport entry removed."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = ["04_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py"]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
-linked_tests = ["04_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_discards_destroyed_viewport_remainder"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ui_scroll_service.py::test_scroll_step_filter_discards_destroyed_viewport_remainder"]
 
 # --- optional below this line ---
 

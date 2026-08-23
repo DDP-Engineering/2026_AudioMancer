@@ -10,11 +10,11 @@ The Text Chunking page shall provide preview find with context menus and find-ne
 verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
-  "04_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
 ]
 linked_tests = [
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_installs_preview_find_context_menus",
-  "04_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_find_next_uses_last_preview_search",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_installs_preview_find_context_menus",
+  "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_find_next_uses_last_preview_search",
 ]
 
 priority = "high"
