@@ -28,6 +28,9 @@ use the stable names recorded in `07_Delivery/SHA256SUMS.txt`.
 - `REQ-PLAT-03c3187a` - Linux validation checks archive contents, AppImage shared libraries, offscreen startup, and SHA-256 checksums.
 - `REQ-PLAT-03c3187a` - The Linux build omits PySide6's optional TIFF image plugin because its retired `libtiff.so.5` ABI is unavailable on the supported Ubuntu 24.04 packaging host and AudioMancer does not use TIFF assets.
 - `REQ-PLAT-e9388a76` - The active release section in `CHANGELOG.md` is the release note source embedded in both portable archives.
+- `REQ-PLAT-c9c8f2b1` - The Windows packager removes Codex host-runtime
+  directories from `PATH` while PyInstaller collects binaries, preventing
+  foreign Poppler ICU DLLs from shadowing the bundled Qt runtime.
 
 ## Files
 

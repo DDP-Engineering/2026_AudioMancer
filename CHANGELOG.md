@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Windows portable packager now prevents host-injected runtime DLLs from
+  entering the bundle, avoiding a Qt startup error on affected Windows hosts.
+
+## [2.1.0] - 2026-08-31
+
 ### Added
 
 - AI profiles now use an Output Reserve only for local context planning. Every

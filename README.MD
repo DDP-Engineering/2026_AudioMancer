@@ -7,6 +7,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # AudioMancer
 
 <p align="center">
+  <img src="07_Delivery/AudioMancer_Hero_A4_Landscape.png" alt="AudioMancer: transform written words into a real audio experience" width="900">
+</p>
+
+<p align="center">
   <img src="05_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png" alt="AudioMancer app icon" width="96">
 </p>
 

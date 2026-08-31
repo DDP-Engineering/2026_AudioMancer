@@ -22,6 +22,19 @@ function Invoke-Step {
     & $Action
 }
 
+# Remove host-injected native-library directories from the PyInstaller process.
+# Otherwise PyInstaller can collect DLLs from the Codex runtime, which are not
+# AudioMancer dependencies and can shadow the Qt runtime in the portable ZIP.
+function Get-ReleasePackagingPath {
+    $hostRuntimePathPattern = '[\\/]\.cache[\\/]codex-runtimes[\\/]'
+    $packagingPathEntries = $env:PATH -split ';' |
+        Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_) -and
+            $_ -notmatch $hostRuntimePathPattern
+        }
+    return $packagingPathEntries -join ';'
+}
+
 # Recreate the stable delivery zip from a prepared staging directory.
 function New-ZipArchiveFromDirectory {
     param(
@@ -219,7 +232,14 @@ try {
         if (Test-Path $distPath) {
             Remove-Item -LiteralPath $distPath -Recurse -Force
         }
-        & uv run --no-sync pyinstaller --noconfirm --clean $specPath
+        $originalPath = $env:PATH
+        try {
+            $env:PATH = Get-ReleasePackagingPath
+            & uv run --no-sync pyinstaller --noconfirm --clean $specPath
+        }
+        finally {
+            $env:PATH = $originalPath
+        }
     }
 }
 finally {

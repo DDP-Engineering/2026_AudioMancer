@@ -40,7 +40,7 @@ Refresh after work or decisions even if current has not changed.
 
 # TASK-dc67b4dc — Provider-managed AI output limits
 
-stage: build
+stage: done
 type: change
 path: full
 requirements: REQ-PLAT-75d29093, REQ-NFR-414888ee, REQ-UX-34b436ff
@@ -50,14 +50,10 @@ opened: 2026-08-30
 
 ## Done checklist (current stage)
 
-- [ ] each automated requirement has a pre-implementation red record with exact selector or command, non-zero exit, and expected failure reason; each manual requirement has a post-implementation observation
-- [ ] repository anchor recorded after red and evolution reviewed after implementation
-- [ ] implementation makes those tests pass
-- [ ] `test --impacted` green
-- [ ] `affected_paths` and `linked_tests` updated on every requirement
-- [ ] `status = "active"` on every requirement this task delivers - or `"retired"`, with the reason in its prose, where this task deliberately removed the behavior
-- [ ] `check` clean, or each remaining warning explained in the log
-- [ ] `stage: validate`
+- [x] Red/green focused tests, anchor/evolution review, requirement updates, and static AEGIS check are recorded.
+- [x] The operator explicitly excluded the full suite and live-provider execution.
+- [x] The operator approved delivery closure; no agent commit or push was performed.
+- [x] `stage: done`
 
 ## Log
 
@@ -77,6 +73,7 @@ opened: 2026-08-30
 - 2026-08-30 build: Focused offline tests passed: 300 passed, 3 retired provider-token-compatibility tests skipped; focused ruff passed after retaining Cleanup's preflight reservation validation without serializing an override.
 - 2026-08-30 build: Evolution reviewed 43 files: provider, settings, budget/workflow, UI, tests, guides, knowledge, and changelog changes match the design; concurrent Book Analysis files are pre-existing and excluded.
 - 2026-08-30 build: AEGIS check exited zero with 21 accepted pre-existing layout, unrelated-journal, and Book Analysis coverage warnings.
+- 2026-08-31 deliver: The operator approved closure and requested staging for a user-owned commit; the delivered implementation is in b7cefcf and no agent commit or push was performed.
 
 ## Design
 
@@ -91,11 +88,11 @@ opened: 2026-08-30
 
 ## Stage report
 
-stage: design
+stage: done
 result: completed
-current: build
-changed: Recorded and checked the provider-boundary, local-reserve, settings-migration, and UI wording decisions.
-evidence: `py -3.12 .agentic/aegis.py check --task TASK-dc67b4dc` exited zero; both affected knowledge pages have no architecture diagram to revise.
-issues: Existing dirty Book Analysis feature paths remain outside this task; full-suite validation is explicitly excluded by the user.
-next: Add focused failing tests before implementation and then anchor the task.
-needs_user: no - the user approved the full-path scope and requested continuation.
+current: done
+changed: Generic AI request payloads now leave completion length to the provider, while the renamed Output Reserve remains local planning data; settings, UI, guides, knowledge, and focused tests were updated.
+evidence: Focused offline tests passed 300 passed and 3 retired compatibility tests skipped; focused Ruff, evolution review, and static AEGIS check passed.
+issues: The full suite and live-provider execution remain explicitly excluded by the operator.
+next: None.
+needs_user: The staged delivery record awaits the operator's user-owned commit; no agent commit or push was performed.

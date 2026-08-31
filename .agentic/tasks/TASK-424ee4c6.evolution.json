@@ -1,0 +1,133 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-31T14:31:52.954869Z",
+      "anchor_head": "b7cefcf3600af33ca0c4f0f6992911c2d6e3dfe0",
+      "anchor_id": "773646c008facf6f",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f85f57d908b6629e321dee9dc711098bd6feda33ea3ea023ac7b1d940722e3aa"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "6ece4aa76d14a04b5afebbda4b2dabc46d3687ea8f3d90dbb1d554ad58149c3c"
+          },
+          "path": "02_Tools/.diagnostic_windows_bundle/AudioMancer_Windows_x64/AudioMancer.exe",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "877ea748e38754e604e6f9f7e978745c61bf832c76409e4df5e2cfe4e18f4a6e"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "6c55cab027bb4789097ee3920ef02f051cbf69e132182cf9cf4d360b772c8c98"
+          },
+          "path": "02_Tools/.diagnostic_windows_bundle/AudioMancer_Windows_x64/_internal/base_library.zip",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "987623638d991d948abd16c814bbb8e5ba7f64ffce7d2019d3896068c8888184"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "3d8dd26e8933d58a6714560e37e7d26e6078531ad4c2759c79fd559d64efd05a"
+          },
+          "path": "02_Tools/audiomancer_windows.spec",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "082f27b8a62e4ad3e92192a6ad529f4d4f33ed08657899ed1b45a8417d025c5d"
+          },
+          "area": "other",
+          "before": null,
+          "path": "02_Tools/audiomancer_windows_runtime_hook.py",
+          "status": "added"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0fcbe886d52600f5886555886a43ba635712a8d158d382f57b4603ea77051445"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "02f523d118473db907829b2172b05db93d41fb9c569d0269530d687d6277f1fc"
+          },
+          "path": "05_Software/AudioMancer/tests/test_windows_runtime_hook.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "af1d11085197bc61f6f10daa7d4451e9f2b9caab06f6322b7da22dba18b5ccbc"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "e36657dd3309a34268b67939156034ad9d2e36fc2c005a7e912e01d2f185917c"
+          },
+          "path": "07_Delivery/AudioMancer_Windows_x64.zip",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "06eda0c395717d92db4f354ad3e097b09820729207cdac23283397e92a8a549e"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "958baf60ec489880ae9daa8e8e3daf1eb364da12bb52eeb1749bb0909bcf357b"
+          },
+          "path": "07_Delivery/SHA256SUMS.txt",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 1,
+            "modified": 5,
+            "removed": 0,
+            "unchanged": 483
+          },
+          "source": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 109
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 127
+          }
+        },
+        "status": {
+          "added": 1,
+          "modified": 6,
+          "removed": 0,
+          "unchanged": 719
+        }
+      },
+      "current_head": "b7cefcf3600af33ca0c4f0f6992911c2d6e3dfe0",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-31T14:37:56.540242Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-424ee4c6"
+}
