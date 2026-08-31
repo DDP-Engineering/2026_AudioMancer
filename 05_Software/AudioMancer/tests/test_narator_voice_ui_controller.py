@@ -1997,7 +1997,7 @@ def _ai_profile_payload(profile_id: str) -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 8192,
-        "max_output_tokens": 1024,
+        "output_reserve_tokens": 1024,
         "request_timeout_seconds": 90,
         "temperature": 0.2,
         "supports_structured_output": True,

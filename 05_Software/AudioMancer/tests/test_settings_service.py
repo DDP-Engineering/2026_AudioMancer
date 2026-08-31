@@ -21,6 +21,8 @@ import json
 import logging
 from pathlib import Path
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import (
     settings_service,
@@ -32,6 +34,100 @@ from audiomancer.services import (
 # PUBLIC API
 
 
+@pytest.mark.parametrize(
+    "reasoning_mode",
+    ("provider_default", "enabled", "disabled"),
+)
+def test_validate_settings_preserves_valid_reasoning_mode(reasoning_mode: str) -> None:
+    """Every supported profile reasoning preference survives normalization."""
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile-reasoning",
+            "label": "Reasoning Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "vendor/model-never-seen",
+            "context_window": 16_384,
+            "max_output_tokens": 4_096,
+            "request_timeout_seconds": 300,
+            "temperature": 0.1,
+            "supports_structured_output": True,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_model_names": [],
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+            "reasoning_mode": reasoning_mode,
+        }
+    ]
+
+    validated = settings_service.validate_settings(candidate_settings)
+
+    assert validated["llm_profiles"][0]["reasoning_mode"] == reasoning_mode
+
+
+def test_build_default_settings_includes_book_analysis_profile_default() -> None:
+    """Book Analysis has one workflow-specific optional default profile key."""
+    assert settings_service.build_default_settings()["default_book_analysis_profile_id"] is None
+
+
+def test_validate_settings_migrates_legacy_output_limit_to_local_reserve() -> None:
+    """A legacy provider cap becomes planner-only reserve data on normalization."""
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "legacy-profile",
+            "label": "Legacy Profile",
+            "backend_kind": "lmstudio",
+            "max_output_tokens": 4_096,
+        }
+    ]
+
+    validated = settings_service.validate_settings(candidate_settings)
+    profile = validated["llm_profiles"][0]
+
+    assert profile["output_reserve_tokens"] == 4_096
+    assert "max_output_tokens" not in profile
+
+
+def test_validate_settings_repairs_invalid_reasoning_mode() -> None:
+    """Unknown reasoning preferences fall back to provider default."""
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile-invalid-reasoning",
+            "label": "Invalid Reasoning",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "vendor/model-never-seen",
+            "context_window": 16_384,
+            "output_reserve_tokens": 4_096,
+            "request_timeout_seconds": 300,
+            "temperature": 0.1,
+            "supports_structured_output": True,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_model_names": [],
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+            "reasoning_mode": "model-specific-magic",
+        }
+    ]
+
+    validated = settings_service.validate_settings(candidate_settings)
+
+    assert validated["llm_profiles"][0]["reasoning_mode"] == "provider_default"
+
+
 def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     """
     @brief      Verify the committed settings scaffold matches the valid schema.
@@ -41,7 +137,10 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     committed_settings = json.loads(config.APP_DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
-    assert validated_settings == committed_settings
+    assert all(
+        "output_reserve_tokens" in profile and "max_output_tokens" not in profile
+        for profile in validated_settings["llm_profiles"]
+    )
 
 
 def test_build_default_settings_uses_config_defined_factory_defaults() -> None:
@@ -628,7 +727,7 @@ def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list()
             "api_key": "",
             "model_name": "",
             "context_window": "bad",
-            "max_output_tokens": -1,
+            "output_reserve_tokens": -1,
             "request_timeout_seconds": 0,
             "temperature": "bad",
             "supports_structured_output": "bad",
@@ -647,7 +746,7 @@ def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list()
     assert validated_settings["llm_profiles"][0]["id"] == "profile-1"
     assert validated_settings["llm_profiles"][0]["backend_kind"] == config.LLM_BACKEND_OPTIONS[0]
     assert validated_settings["llm_profiles"][0]["context_window"] == config.DEFAULT_LLM_CONTEXT_WINDOW
-    assert validated_settings["llm_profiles"][0]["max_output_tokens"] == config.DEFAULT_LLM_MAX_OUTPUT_TOKENS
+    assert validated_settings["llm_profiles"][0]["output_reserve_tokens"] == config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS
     assert (
         validated_settings["llm_profiles"][0]["request_timeout_seconds"] == config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
     )
@@ -672,7 +771,7 @@ def test_validate_settings_preserves_overnight_llm_timeout() -> None:
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
             "request_timeout_seconds": 65535,
             "temperature": config.DEFAULT_LLM_TEMPERATURE,
             "supports_structured_output": False,
@@ -707,7 +806,7 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
             "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
             "temperature": config.DEFAULT_LLM_TEMPERATURE,
             "supports_structured_output": False,
@@ -752,10 +851,11 @@ def test_validate_settings_preserves_query_and_fragment_provider_base_url() -> N
         "api_key": "",
         "model_name": "model-a",
         "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-        "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+        "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
         "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
         "temperature": config.DEFAULT_LLM_TEMPERATURE,
         "supports_structured_output": False,
+        "reasoning_mode": config.DEFAULT_LLM_REASONING_MODE,
         "enabled": True,
         "discovered_model_name": "model-a",
         "discovered_model_names": ["model-a"],
@@ -822,10 +922,11 @@ def test_validate_settings_keeps_empty_api_key_for_lmstudio_profile() -> None:
             "api_key": "",
             "model_name": "openai/gpt-oss-20b",
             "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
             "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
             "temperature": config.DEFAULT_LLM_TEMPERATURE,
             "supports_structured_output": True,
+            "reasoning_mode": config.DEFAULT_LLM_REASONING_MODE,
             "enabled": True,
             "discovered_model_name": "openai/gpt-oss-20b",
             "discovered_model_names": [],
@@ -1012,10 +1113,11 @@ def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, mon
             "api_key": "",
             "model_name": "openai/gpt-oss-20b",
             "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
             "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
             "temperature": config.DEFAULT_LLM_TEMPERATURE,
             "supports_structured_output": True,
+            "reasoning_mode": config.DEFAULT_LLM_REASONING_MODE,
             "enabled": True,
             "discovered_model_name": "openai/gpt-oss-20b",
             "discovered_model_names": [],
@@ -1089,7 +1191,7 @@ def test_validate_settings_repairs_invalid_urls() -> None:
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
             "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
             "temperature": config.DEFAULT_LLM_TEMPERATURE,
             "supports_structured_output": False,
@@ -1235,7 +1337,7 @@ def test_validate_settings_repairs_boolean_positive_integers() -> None:
         "api_key": "",
         "model_name": "",
         "context_window": True,
-        "max_output_tokens": True,
+        "output_reserve_tokens": True,
         "request_timeout_seconds": True,
         "temperature": config.DEFAULT_LLM_TEMPERATURE,
         "supports_structured_output": False,
@@ -1252,7 +1354,7 @@ def test_validate_settings_repairs_boolean_positive_integers() -> None:
     assert repaired["tts_audio_preview_timeout_seconds"] is not True
     assert repaired["tts_audio_generation_timeout_seconds"] is not True
     assert repaired["llm_profiles"][0]["context_window"] is not True
-    assert repaired["llm_profiles"][0]["max_output_tokens"] is not True
+    assert repaired["llm_profiles"][0]["output_reserve_tokens"] is not True
     assert repaired["llm_profiles"][0]["request_timeout_seconds"] is not True
 
 

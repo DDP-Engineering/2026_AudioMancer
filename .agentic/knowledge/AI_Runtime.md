@@ -106,9 +106,8 @@ Prompt rendering requires exact named placeholders. Chat responses must parse
 to JSON objects. Null scalar or multipart text is empty; a refusal explanation
 becomes a clear safe ValueError, while reasoning-only output remains empty and
 never triggers model repair. A provider that explicitly rejects `response_format` is
-retried once without it, and one that explicitly rejects `max_tokens` is
-retried with `max_completion_tokens`; each adapted payload remains active for
-later outer retries in that invocation only. Transient outer retries wait 0.5,
+retried once without it; AudioMancer omits provider output-token limit fields
+from every initial, fallback, retry, and repair payload. Transient outer retries wait 0.5,
 1.0, 2.0, then at most 4.0 seconds, polling cancellation every 0.05 seconds.
 Logging redacts sensitive field names before persistence.
 
@@ -122,19 +121,17 @@ shared helper preserves query and fragment data identically for both paths
 Callers may opt into a strict schema path. Strict calls require a profile that
 advertises structured output plus a supplied JSON Schema, may disable the
 unconstrained `response_format` fallback and model-based JSON repair, and may
-override retry/output-token limits. Cleanup uses this path; existing AI
+override retry limits. Cleanup uses this path; existing AI
 operations retain the default compatibility behavior.
 
 For the first OpenAI-compatible chat-completion choice, an explicit
 `finish_reason` of `"length"` is a hard provider failure: `chat_json` raises a
-`RuntimeError` that identifies the provider output-token limit before it
+`RuntimeError` that identifies provider-side output truncation before it
 reads message content, parses JSON, performs local repair, or issues a
 model-repair request. Providers that omit the field remain compatible, and
-other finish reasons keep their existing behavior. `REQ-FUNC-3875ac3b` also has
-that message name the limit the request carried, read from whichever of
-`max_tokens` or `max_completion_tokens` the active payload ended up using, so a
-truncated response says which budget it exhausted without quoting prompts or
-response content.
+other finish reasons keep their existing behavior. The diagnostic deliberately
+does not name a numeric application limit because the provider owns the
+completion length.
 
 `REQ-NFR-8d83d955` makes a failure record keep the response it failed on. When
 the provider answered and the exchange failed afterwards, the transaction log
@@ -216,6 +213,21 @@ validate output schemas beyond JSON-object parsing.
 
 Explicit output-length termination is a hard provider failure and is never
 repairable JSON.
+
+## Book Analysis Integration
+
+Book Analysis adds a profile-level `reasoning_mode` preference with
+`provider_default`, `enabled`, and `disabled` values. The shared provider maps
+explicit preferences to a request field without inspecting model names and
+retries once at provider default only when the backend explicitly rejects that
+field. AI Settings is the sole UI location for context and reasoning controls
+and also owns `default_book_analysis_profile_id`.
+
+The domain applies its own minimum 16K context and conservative local/online
+source fractions on top of shared token estimation. It uses the normal
+structured-output compatibility boundary and validates domain payloads before
+checkpointing. Automated Book Analysis tests replace provider calls in process
+and install a failing network transport guard.
 
 ## Files
 

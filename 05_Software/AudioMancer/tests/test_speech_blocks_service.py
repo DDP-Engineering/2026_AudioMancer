@@ -344,7 +344,7 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     assert report["approved_block_count"] == 0
     assert report["total_block_count"] == 4
     assert report["budget_metadata"]["context_window"] == 4096
-    assert report["budget_metadata"]["max_output_tokens"] == 512
+    assert report["budget_metadata"]["output_reserve_tokens"] == 512
     state = speech_blocks_service.load_operation_state(project_root)
     assert state is not None
     assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
@@ -807,7 +807,7 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
         }
 
     monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
-    profile_payload = {**_profile_payload(), "context_window": 2048, "max_output_tokens": 512}
+    profile_payload = {**_profile_payload(), "context_window": 2048, "output_reserve_tokens": 512}
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
 
@@ -868,7 +868,7 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
         }
 
     monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
-    profile_payload = {**_profile_payload(), "context_window": 32768, "max_output_tokens": 512}
+    profile_payload = {**_profile_payload(), "context_window": 32768, "output_reserve_tokens": 512}
 
     speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
 
@@ -1223,7 +1223,7 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
-    profile_payload = {**_profile_payload(), "context_window": 1024, "max_output_tokens": 900}
+    profile_payload = {**_profile_payload(), "context_window": 1024, "output_reserve_tokens": 900}
 
     with pytest.raises(ValueError, match="too little room for source chunk input"):
         speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
@@ -1245,7 +1245,7 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
         **_profile_payload(),
         "backend_kind": config.ONLINE_AI_BACKEND_KIND,
         "context_window": 10000,
-        "max_output_tokens": 9900,
+        "output_reserve_tokens": 9900,
     }
 
     budget_metadata = speech_blocks_service._build_budget_metadata(
@@ -1274,7 +1274,7 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
     input_fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
     previous_budget = {
         "context_window": 4096,
-        "max_output_tokens": 1024,
+        "output_reserve_tokens": 1024,
         "prompt_budget_tokens": 40,
         "text_budget_tokens": 2000,
         "safety_margin_tokens": 409,
@@ -3959,7 +3959,7 @@ def _profile_payload() -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
         "supports_structured_output": False,

@@ -317,6 +317,15 @@ plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
   transient file creation per process start. `os.access` is not usable here
   because on Windows it ignores directory ACLs.
 
+## Book Analysis Profile Controls
+
+Each AI profile now stores a reasoning preference: provider default, enabled,
+or disabled. The AI Settings profile editor is the only place this preference
+and the profile context size are displayed. Workflow defaults include a Book
+Analysis profile selector. The Book Analysis page itself shows only its profile
+selector plus Analyze and Reset, keeping provider-tuning controls out of the
+reader-facing report page.
+
 ## Files
 
 From the adopted component map:

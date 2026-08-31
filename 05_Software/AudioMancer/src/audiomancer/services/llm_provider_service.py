@@ -72,11 +72,12 @@ class _UnsupportedResponseFormatError(RuntimeError):
     """
 
 
-class _UnsupportedMaxTokensError(RuntimeError):
+class _UnsupportedReasoningModeError(RuntimeError):
     """
-    @brief Private marker for providers that require max_completion_tokens.
-    @details Allows chat_json to retain the compatible token parameter across
-             later outer attempts in the same invocation.
+    @brief      Signal an explicitly rejected reasoning compatibility field.
+    @details    Allows one call to fall back to provider-default reasoning
+                without remembering a capability decision across profiles.
+    @exception  None
     """
 
 
@@ -105,7 +106,6 @@ def chat_json(
     allow_unconstrained_fallback: bool = True,
     allow_model_json_repair: bool = True,
     retry_count_override: int | None = None,
-    max_output_tokens_override: int | None = None,
 ) -> dict[str, object]:
     """
     @brief      Run one chat-completion request and parse JSON content.
@@ -134,12 +134,15 @@ def chat_json(
             {"role": "user", "content": user_prompt},
         ],
         "temperature": float(profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
-        "max_tokens": int(
-            max_output_tokens_override
-            if max_output_tokens_override is not None
-            else profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)
-        ),
     }
+    reasoning_effort = _reasoning_effort_for_profile(profile_payload)
+    effective_reasoning_mode = str(
+        profile_payload.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE)
+    )
+    if reasoning_effort is not None:
+        request_payload["reasoning_effort"] = reasoning_effort
+    else:
+        effective_reasoning_mode = config.DEFAULT_LLM_REASONING_MODE
     if structured_output and bool(profile_payload.get("supports_structured_output", False)):
         request_payload["response_format"] = _build_response_format(
             profile_payload,
@@ -206,12 +209,25 @@ def chat_json(
                             **dict(log_context or {}),
                         },
                     )
-                except _UnsupportedMaxTokensError:
-                    active_request_payload = _build_max_completion_tokens_payload(active_request_payload)
-            raw_content = _extract_message_content(
-                raw_payload,
-                _resolved_output_limit(active_request_payload),
-            )
+                except _UnsupportedReasoningModeError as error_object:
+                    if "reasoning_effort" not in active_request_payload:
+                        raise
+                    active_request_payload = _build_without_reasoning_mode_payload(
+                        active_request_payload
+                    )
+                    effective_reasoning_mode = config.DEFAULT_LLM_REASONING_MODE
+                    _append_ai_log(
+                        log_path,
+                        {
+                            "exchange_event": "request_fallback",
+                            "parsed_status": "reasoning_mode_unsupported_retry_provider_default",
+                            "attempt_index": attempt_index,
+                            "error_text": str(error_object),
+                            "request_payload": active_request_payload,
+                            **dict(log_context or {}),
+                        },
+                    )
+            raw_content = _extract_message_content(raw_payload)
             try:
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
@@ -252,6 +268,9 @@ def chat_json(
                 return {
                     "payload": parsed_payload,
                     "usage": normalized_usage,
+                    "request_metadata": {
+                        "reasoning_mode_effective": effective_reasoning_mode,
+                    },
                 }
             _append_ai_log(
                 log_path,
@@ -268,6 +287,9 @@ def chat_json(
             return {
                 "payload": parsed_payload,
                 "usage": normalized_usage,
+                "request_metadata": {
+                    "reasoning_mode_effective": effective_reasoning_mode,
+                },
             }
         except OperationCancelledError:
             raise
@@ -276,9 +298,9 @@ def chat_json(
                 error_object = RuntimeError(
                     "AI provider does not support required structured JSON output."
                 )
-            elif isinstance(error_object, _UnsupportedMaxTokensError):
+            elif isinstance(error_object, _UnsupportedReasoningModeError):
                 error_object = RuntimeError(
-                    "AI provider rejected the supported output-token limit fields."
+                    "AI provider rejected the reasoning compatibility field."
                 )
             last_error = error_object
             failure_record: dict[str, object] = {
@@ -428,13 +450,14 @@ def _request_chat_completion(
         if "response_format" in request_payload and _supports_response_format_retry(http_error.code, error_body):
             _LLM_PROVIDER_LOGGER.info("Retrying AI provider request without response_format compatibility field.")
             raise _UnsupportedResponseFormatError(error_body) from http_error
-        if _supports_max_completion_tokens_retry(http_error.code, error_body):
-            compatibility_payload = _build_max_completion_tokens_payload(request_payload)
-            if compatibility_payload != request_payload:
-                _LLM_PROVIDER_LOGGER.info(
-                    "Retrying AI provider request with max_completion_tokens compatibility payload."
-                )
-                raise _UnsupportedMaxTokensError(error_body) from http_error
+        if "reasoning_effort" in request_payload and _supports_reasoning_mode_retry(
+            http_error.code,
+            error_body,
+        ):
+            _LLM_PROVIDER_LOGGER.info(
+                "Retrying AI provider request with provider-default reasoning."
+            )
+            raise _UnsupportedReasoningModeError(error_body) from http_error
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
             _LLM_PROVIDER_LOGGER.warning("Transient AI provider HTTP failure: status=%s", http_error.code)
             raise _TransientProviderError(
@@ -509,22 +532,6 @@ def _build_response_format(
     }
 
 
-def _supports_max_completion_tokens_retry(status_code: int, error_body: str) -> bool:
-    """
-    @brief      Decide whether one provider failure should retry with max_completion_tokens.
-    @param[in]  status_code HTTP status code returned by the provider.
-    @param[in]  error_body Provider error response body.
-    @return     True when the provider explicitly rejected the max_tokens field.
-    @exception  None
-    """
-    if status_code != 400:
-        return False
-    normalized_body = (error_body or "").lower()
-    return (
-        '"param":"max_tokens"' in normalized_body or '"param": "max_tokens"' in normalized_body
-    ) and "max_completion_tokens" in normalized_body
-
-
 def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
     """
     @brief      Decide whether one provider failure should retry without response_format.
@@ -549,19 +556,53 @@ def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
     return any(marker in normalized_body for marker in unsupported_markers)
 
 
-def _build_max_completion_tokens_payload(
-    request_payload: dict[str, object],
-) -> dict[str, object]:
+def _supports_reasoning_mode_retry(status_code: int, error_body: str) -> bool:
     """
-    @brief      Convert one request payload to use max_completion_tokens.
-    @param[in]  request_payload Original request payload.
-    @return     Compatibility payload for providers that reject max_tokens.
+    @brief      Decide whether one failure explicitly rejects reasoning_effort.
+    @param[in]  status_code HTTP status code returned by the provider.
+    @param[in]  error_body Provider error response body.
+    @return     True when a 400 response names an unsupported reasoning field.
     @exception  None
     """
+    if status_code != 400:
+        return False
+    normalized_body = (error_body or "").lower()
+    if "reasoning_effort" not in normalized_body:
+        return False
+    return any(
+        marker in normalized_body
+        for marker in (
+            "unsupported",
+            "not supported",
+            "unknown parameter",
+            "unrecognized",
+            "invalid parameter",
+        )
+    )
+
+
+def _reasoning_effort_for_profile(profile_payload: dict[str, object]) -> str | None:
+    """
+    @brief      Translate one normalized reasoning preference to OpenAI shape.
+    @param[in]  profile_payload Normalized profile payload.
+    @return     `medium`, `none`, or `None` for provider default.
+    @exception  None
+    """
+    reasoning_mode = str(
+        profile_payload.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE)
+    )
+    return {
+        "enabled": "medium",
+        "disabled": "none",
+    }.get(reasoning_mode)
+
+
+def _build_without_reasoning_mode_payload(
+    request_payload: dict[str, object],
+) -> dict[str, object]:
+    """Return one call-local compatibility payload without reasoning_effort."""
     compatibility_payload = dict(request_payload)
-    if "max_tokens" not in compatibility_payload:
-        return compatibility_payload
-    compatibility_payload["max_completion_tokens"] = compatibility_payload.pop("max_tokens")
+    compatibility_payload.pop("reasoning_effort", None)
     return compatibility_payload
 
 
@@ -579,29 +620,12 @@ def _build_without_response_format_payload(
     return compatibility_payload
 
 
-def _resolved_output_limit(request_payload: dict[str, object]) -> int:
-    """
-    @brief      Report the output-token limit one request payload carries.
-    @details    Providers that reject max_tokens are retried with
-                max_completion_tokens, so the limit named in a failure has to
-                follow whichever field the active payload ended up using.
-    @param[in]  request_payload Serialized provider request payload.
-    @return     Output-token limit carried by the request.
-    @exception  None
-    """
-    if "max_completion_tokens" in request_payload:
-        return int(request_payload["max_completion_tokens"])
-    return int(request_payload.get("max_tokens", 0))
-
-
 def _extract_message_content(
     payload: dict[str, object],
-    output_token_limit: int,
 ) -> str:
     """
     @brief      Extract one provider response's message content.
     @param[in]  payload Parsed provider response payload.
-    @param[in]  output_token_limit Output-token limit the request carried.
     @return     Message content as one string.
     @exception  RuntimeError Raised when the response stopped at the output limit.
     @exception  ValueError Raised on an invalid choice or message payload, or a refusal.
@@ -615,8 +639,7 @@ def _extract_message_content(
     finish_reason = first_choice.get("finish_reason")
     if isinstance(finish_reason, str) and finish_reason.strip().lower() == "length":
         raise RuntimeError(
-            "AI provider response reached the provider output-token limit of "
-            f"{output_token_limit} tokens."
+            "AI provider response stopped because it reached the provider output limit."
         )
     message = first_choice.get("message", {})
     if not isinstance(message, dict):
@@ -802,24 +825,13 @@ def _repair_json_response_with_model(
             },
         ],
         "temperature": 0.0,
-        "max_tokens": int(
-            profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
-        ),
     }
-    if "max_completion_tokens" in active_request_payload:
-        repair_request_payload = _build_max_completion_tokens_payload(repair_request_payload)
     repair_payload, repair_body = _request_chat_completion_with_cancellation(
         profile_payload,
         repair_request_payload,
         cancel_requested=cancel_requested,
     )
-    repaired_content = _extract_message_content(
-        repair_payload,
-        _resolved_output_limit(repair_request_payload),
-    )
+    repaired_content = _extract_message_content(repair_payload)
     return (
         _parse_json_content(repaired_content),
         repair_body,

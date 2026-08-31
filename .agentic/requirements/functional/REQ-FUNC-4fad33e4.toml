@@ -1,0 +1,88 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-4fad33e4"
+
+title = "Keep book analysis independent from the canonical workflow"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+While Book Analysis is absent, incomplete, failed, stale, or complete,
+AudioMancer shall leave canonical workflow stage availability and downstream
+project artifacts unchanged.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "Workflow and workspace tests compare stage continuity, downstream navigation, manifest stage completion, and characters/narrator/voice artifacts across every book-analysis state and a project with no book-analysis document."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+    "05_Software/AudioMancer/src/audiomancer/config.py",
+    "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+    "05_Software/AudioMancer/tests/test_project_workspace_service.py",
+    "05_Software/AudioMancer/tests/test_operation_runtime_service.py",
+    "05_Software/AudioMancer/tests/test_main_window_project_flow.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+    "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_book_analysis_is_manifest_operation_but_not_workflow_stage",
+    "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_chunking_downstream_reset_preserves_book_analysis_artifact_as_stale",
+    "05_Software/AudioMancer/tests/test_operation_runtime_service.py::test_book_analysis_reset_owns_only_its_document_and_logs",
+    "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_book_analysis_summary_sync_does_not_move_workflow_stage",
+    "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_stage_repair_preserves_supporting_book_analysis_summary",
+    "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_allowed_operations_follow_the_configured_workflow_prefix",
+    "05_Software/AudioMancer/tests/test_main_window_project_flow.py::test_book_analysis_page_follows_text_chunking",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "Book Analysis is an optional reader aid, not a new prerequisite or a source of character, narrator, or voice configuration."
+
+created = 2026-08-29
+updated = 2026-08-29

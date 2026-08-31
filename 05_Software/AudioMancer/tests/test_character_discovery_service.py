@@ -197,7 +197,7 @@ def test_start_discovery_persists_one_authoritative_document(monkeypatch, tmp_pa
     assert '"character_profile_id_last_used": "profile-1"' in serialized_document
     assert "qwen3-8b" not in serialized_document
     assert "temperature" not in serialized_document
-    assert "max_output_tokens" not in serialized_document
+    assert "output_reserve_tokens" not in serialized_document
 
 
 def test_start_discovery_appends_and_persists_operator_character_rules(monkeypatch, tmp_path) -> None:
@@ -369,7 +369,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
             **_profile_payload("profile-2"),
             "model_name": "qwen3-14b",
             "context_window": 8192,
-            "max_output_tokens": 1024,
+            "output_reserve_tokens": 1024,
             "temperature": 0.4,
         },
         progress_callback=lambda *_args: None,
@@ -2059,7 +2059,7 @@ def test_character_discovery_online_profile_uses_direct_context_fraction_without
     profile_payload = {
         "backend_kind": config.ONLINE_AI_BACKEND_KIND,
         "context_window": 10000,
-        "max_output_tokens": 9900,
+        "output_reserve_tokens": 9900,
     }
 
     budget_metadata = character_discovery_service._build_budget_metadata(profile_payload, "system")
@@ -2133,7 +2133,7 @@ def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch
     profile_payload = {
         **_profile_payload("profile-1"),
         "context_window": 1024,
-        "max_output_tokens": 900,
+        "output_reserve_tokens": 900,
     }
 
     with pytest.raises(ValueError, match="too little room for discovery input"):
@@ -2711,7 +2711,7 @@ def _profile_payload(profile_id: str) -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
         "supports_structured_output": False,

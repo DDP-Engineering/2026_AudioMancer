@@ -125,11 +125,48 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["source_document"] is None
     assert "extraction_warning_count" not in manifest
     assert "extraction" not in manifest["operations"]
+    assert manifest["operations"]["book_analysis"]["status"] == "not_started"
     assert "folder_relative_path" not in manifest["operations"]["cleanup"]
     assert manifest["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
     assert "output_paths" not in manifest["operations"]["cleanup"]
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     assert not any(path.is_dir() for path in project_root.iterdir())
+
+
+def test_book_analysis_summary_sync_does_not_move_workflow_stage(tmp_path) -> None:
+    project_root, manifest = project_workspace_service.create_project("Supporting", tmp_path)
+    original_stage = manifest["current_stage"]
+
+    updated = project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "book_analysis",
+        {
+            "status": "running",
+            "progress_current": 2,
+            "progress_total": 8,
+            "mode": "ai_assisted",
+            "warning_count": 0,
+        },
+        current_stage=None,
+    )
+
+    assert updated["current_stage"] == original_stage
+    assert updated["operations"]["book_analysis"]["status"] == "running"
+
+
+def test_stage_repair_preserves_supporting_book_analysis_summary(tmp_path) -> None:
+    _project_root, manifest = project_workspace_service.create_project("Repair", tmp_path)
+    manifest["operations"]["book_analysis"]["status"] = "failed"
+    manifest["operations"]["book_analysis"]["progress_current"] = 2
+    manifest["operations"]["book_analysis"]["progress_total"] = 8
+
+    repaired = project_workspace_service._build_repaired_manifest(
+        manifest,
+        "project_created",
+    )
+
+    assert repaired["operations"]["book_analysis"]["status"] == "failed"
+    assert repaired["operations"]["book_analysis"]["progress_current"] == 2
 
 
 def test_validate_project_name_rejects_unsupported_windows_characters() -> None:
@@ -494,17 +531,22 @@ def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> N
 
 def test_allowed_operations_follow_the_configured_workflow_prefix(monkeypatch) -> None:
     """
-    @brief      Verify every current and future stage preserves exactly its preceding operations.
+    @brief      Verify every stage preserves its workflow prefix and all supporting operations.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     """
     for stage_rank, stage_token in enumerate(config.PROJECT_WORKFLOW_STAGES):
-        assert project_workspace_service._allowed_operations_for_stage(stage_token) == set(  # noqa: SLF001
-            config.WORKFLOW_OPERATION_ORDER[:stage_rank]
+        assert project_workspace_service._allowed_operations_for_stage(stage_token) == (  # noqa: SLF001
+            set(config.WORKFLOW_OPERATION_ORDER[:stage_rank])
+            | set(config.SUPPORTING_OPERATION_KINDS)
         )
-    assert project_workspace_service._allowed_operations_for_stage("") == set()  # noqa: SLF001
-    assert project_workspace_service._allowed_operations_for_stage("unknown_stage") == set()  # noqa: SLF001
+    assert project_workspace_service._allowed_operations_for_stage("") == {  # noqa: SLF001
+        "book_analysis"
+    }
+    assert project_workspace_service._allowed_operations_for_stage("unknown_stage") == {  # noqa: SLF001
+        "book_analysis"
+    }
 
     monkeypatch.setattr(config, "PROJECT_WORKFLOW_STAGES", ("created", "first_ready", "second_ready"))
     monkeypatch.setattr(config, "WORKFLOW_OPERATION_ORDER", ("first", "second"))
@@ -512,6 +554,7 @@ def test_allowed_operations_follow_the_configured_workflow_prefix(monkeypatch) -
     assert project_workspace_service._allowed_operations_for_stage("second_ready") == {  # noqa: SLF001
         "first",
         "second",
+        "book_analysis",
     }
 
 

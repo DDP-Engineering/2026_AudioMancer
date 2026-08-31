@@ -45,7 +45,7 @@ def test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget() 
     @exception  None
     """
     metadata = ai_budget_service.context_budget_metadata(
-        {"context_window": 1000, "max_output_tokens": 200},
+        {"context_window": 1000, "output_reserve_tokens": 200},
         "prompt text",
         min_safety_margin_tokens=50,
         safety_margin_context_fraction=0.01,
@@ -56,7 +56,7 @@ def test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget() 
 
     assert metadata == {
         "context_window": 1000,
-        "max_output_tokens": 200,
+        "output_reserve_tokens": 200,
         "prompt_budget_tokens": 2,
         "text_budget_tokens": 500,
         "safety_margin_tokens": 50,
@@ -64,7 +64,7 @@ def test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget() 
 
     try:
         ai_budget_service.context_budget_metadata(
-            {"context_window": 100, "max_output_tokens": 90},
+            {"context_window": 100, "output_reserve_tokens": 90},
             "prompt text",
             min_safety_margin_tokens=20,
             safety_margin_context_fraction=0.01,
@@ -88,7 +88,7 @@ def test_context_budget_metadata_uses_direct_online_context_fraction() -> None:
         {
             "backend_kind": config.ONLINE_AI_BACKEND_KIND,
             "context_window": 1000,
-            "max_output_tokens": 950,
+            "output_reserve_tokens": 950,
         },
         "prompt text",
         min_safety_margin_tokens=50,

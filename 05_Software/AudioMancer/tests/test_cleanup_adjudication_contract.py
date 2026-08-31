@@ -535,7 +535,7 @@ def test_output_reservation_follows_profile_limit_and_context_ceiling() -> None:
     short_prompt_input_tokens = 109
 
     roomy = cleanup_ai_adjudication_service._resolve_output_reservation(
-        make_profile(context_window=131_072, max_output_tokens=4_096),
+        make_profile(context_window=131_072, output_reserve_tokens=4_096),
         "cleanup-batch-0001",
         [_question(0)],
         system_prompt,
@@ -545,7 +545,7 @@ def test_output_reservation_follows_profile_limit_and_context_ceiling() -> None:
     assert roomy == 4_096
 
     clamped = cleanup_ai_adjudication_service._resolve_output_reservation(
-        make_profile(context_window=16_000, max_output_tokens=65_535),
+        make_profile(context_window=16_000, output_reserve_tokens=65_535),
         "cleanup-batch-0001",
         [_question(0)],
         system_prompt,
@@ -561,7 +561,7 @@ def test_answer_room_below_the_answer_document_is_context_oversized() -> None:
     # too little to hold even a one-question answer document.
     try:
         cleanup_ai_adjudication_service._resolve_output_reservation(
-            make_profile(context_window=16_000, max_output_tokens=65_535),
+            make_profile(context_window=16_000, output_reserve_tokens=65_535),
             "cleanup-batch-0001",
             [_question(0)],
             "S" * 100,
@@ -599,18 +599,18 @@ def test_configured_output_limit_below_the_answer_document_splits_the_batch(monk
     # own output limit - not its 128K context - is what the batch cannot fit.
     cleanup_ai_adjudication_service.adjudicate_questions(
         [_question(index) for index in range(16)],
-        make_profile(context_window=131_072, max_output_tokens=1_024),
+        make_profile(context_window=131_072, output_reserve_tokens=1_024),
     )
 
     assert batch_sizes == [8, 8]
 
 
-def test_adjudication_request_carries_the_resolved_output_reservation(monkeypatch) -> None:
-    """Cover REQ-FUNC-644ff463."""
-    observed_reservations: list[object] = []
+def test_adjudication_request_keeps_output_reservation_local(monkeypatch) -> None:
+    """Cleanup plans its reservation without sending an output-limit override."""
+    observed_kwargs: list[dict[str, object]] = []
 
     def _chat_json(_profile, _system, user_prompt, **kwargs):
-        observed_reservations.append(kwargs.get("max_output_tokens_override"))
+        observed_kwargs.append(dict(kwargs))
         payload = json.loads(user_prompt)
         return {
             "payload": {
@@ -629,10 +629,10 @@ def test_adjudication_request_carries_the_resolved_output_reservation(monkeypatc
     monkeypatch.setattr(cleanup_ai_adjudication_service.llm_provider_service, "chat_json", _chat_json)
     cleanup_ai_adjudication_service.adjudicate_questions(
         [_question(index) for index in range(3)],
-        make_profile(context_window=131_072, max_output_tokens=4_096),
+        make_profile(context_window=131_072, output_reserve_tokens=4_096),
     )
 
-    assert observed_reservations == [4_096]
+    assert all("output_reserve_tokens_override" not in kwargs for kwargs in observed_kwargs)
 
 
 def _question(

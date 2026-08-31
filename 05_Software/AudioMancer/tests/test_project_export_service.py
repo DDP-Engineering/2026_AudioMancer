@@ -317,7 +317,7 @@ def test_project_export_service_exports_ai_request_parameters_without_prompts(tm
 
     assert "Target Language: ro" in content
     assert "Context Window: 4096" in content
-    assert "Maximum Output Tokens: 512" in content
+    assert "Output Reserve Tokens: 512" in content
     assert "Total Tokens: 18" in content
     assert "AI Profile:" not in content
     assert "AI Base URL:" not in content
@@ -585,7 +585,7 @@ def _build_export_project(tmp_path):
             },
             "budget_metadata": {
                 "context_window": 4096,
-                "max_output_tokens": 512,
+                "output_reserve_tokens": 512,
                 "prompt_budget_tokens": 100,
                 "text_budget_tokens": 2048,
                 "safety_margin_tokens": 512,

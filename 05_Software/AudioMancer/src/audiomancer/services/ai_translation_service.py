@@ -881,12 +881,12 @@ def _build_budget_metadata(
         **budget_metadata,
         "text_budget_tokens": _reply_bounded_text_budget(
             int(budget_metadata["text_budget_tokens"]),
-            int(budget_metadata["max_output_tokens"]),
+            int(budget_metadata["output_reserve_tokens"]),
         ),
     }
 
 
-def _reply_bounded_text_budget(text_budget_tokens: int, max_output_tokens: int) -> int:
+def _reply_bounded_text_budget(text_budget_tokens: int, output_reserve_tokens: int) -> int:
     """
     @brief      Bound one source-text budget by the translation its reply can return.
     @details    A translation is as long as its source, so source text the output
@@ -895,11 +895,11 @@ def _reply_bounded_text_budget(text_budget_tokens: int, max_output_tokens: int) 
                 input by them, which leaves a wide context window with a modest
                 output limit asking for far more than it can answer.
     @param[in]  text_budget_tokens Source-text budget the shared helper allowed.
-    @param[in]  max_output_tokens Reserved maximum output tokens for one request.
+    @param[in]  output_reserve_tokens Reserved maximum output tokens for one request.
     @return     Source-text budget the reply can still return.
     @exception  ValueError Raised when that bound leaves less than one request needs.
     """
-    reply_budget_tokens = int(max_output_tokens / config.DEFAULT_AI_TRANSLATION_OUTPUT_EXPANSION_FACTOR)
+    reply_budget_tokens = int(output_reserve_tokens / config.DEFAULT_AI_TRANSLATION_OUTPUT_EXPANSION_FACTOR)
     if reply_budget_tokens >= text_budget_tokens:
         return text_budget_tokens
     if reply_budget_tokens < config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS:

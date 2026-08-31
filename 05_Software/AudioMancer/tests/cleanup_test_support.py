@@ -196,7 +196,7 @@ def make_profile(
     profile_id: str = "local",
     model_name: str = "qwen3.6-27b",
     context_window: int = 32_768,
-    max_output_tokens: int = config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+    output_reserve_tokens: int = config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
     supports_structured_output: bool = True,
 ) -> dict[str, object]:
     """Return one minimal Cleanup adjudication profile."""
@@ -207,7 +207,7 @@ def make_profile(
         "api_key": "",
         "model_name": model_name,
         "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
+        "output_reserve_tokens": output_reserve_tokens,
         "request_timeout_seconds": 90,
         "temperature": 0.0,
         "supports_structured_output": supports_structured_output,

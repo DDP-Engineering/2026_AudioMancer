@@ -469,6 +469,29 @@ def test_theme_stylesheet_marks_active_sidebar_item_with_accent() -> None:
     assert f"3px solid {theme['colors']['accent']}" in selected
 
 
+def test_theme_stylesheet_marks_checked_book_analysis_details_with_accent() -> None:
+    """Make the selected Detailed Analysis indicator visible in every theme."""
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    checked = _qss_block(
+        stylesheet,
+        "QGroupBox#bookAnalysisDetails::indicator:checked",
+    )
+    assert f"background-color: {theme['colors']['accent']};" in checked
+    assert f"border-color: {theme['colors']['accent']};" in checked
+
+
+def test_theme_stylesheet_keeps_navigation_row_horizontal_spacing_compact() -> None:
+    """Leave enough of the fixed sidebar viewport available for full labels."""
+    theme = ui_theme_service.theme_by_id("audiomancer_dark", [])
+    stylesheet = ui_state_service.build_theme_stylesheet(theme, base_point_size=10.0)
+
+    item = _qss_block(stylesheet, "QListWidget#navigationSidebar::item")
+    assert "padding: 7px 2px;" in item
+    assert "margin: 1px 0px;" in item
+
+
 def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbot) -> None:
     """
     @brief      Verify missing selected theme ids fall back to the default built-in theme at runtime.

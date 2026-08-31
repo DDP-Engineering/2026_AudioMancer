@@ -32,7 +32,7 @@ def estimate_text_tokens(text: str) -> int:
 
 def available_text_budget(
     context_window: int,
-    max_output_tokens: int,
+    output_reserve_tokens: int,
     prompt_budget_tokens: int,
     safety_margin_tokens: int,
     text_context_fraction: float,
@@ -40,7 +40,7 @@ def available_text_budget(
     """
     @brief      Compute usable input tokens for one AI request.
     @param[in]  context_window Selected profile context window.
-    @param[in]  max_output_tokens Reserved maximum output tokens.
+    @param[in]  output_reserve_tokens Reserved maximum output tokens.
     @param[in]  prompt_budget_tokens Estimated system and prompt-shell tokens.
     @param[in]  safety_margin_tokens Reserved safety margin tokens.
     @param[in]  text_context_fraction Maximum context fraction available to input text.
@@ -48,7 +48,7 @@ def available_text_budget(
     @exception  None
     """
     available_budget = (
-        int(context_window) - int(max_output_tokens) - int(prompt_budget_tokens) - int(safety_margin_tokens)
+        int(context_window) - int(output_reserve_tokens) - int(prompt_budget_tokens) - int(safety_margin_tokens)
     )
     return min(
         int(int(context_window) * float(text_context_fraction)),
@@ -90,9 +90,9 @@ def context_budget_metadata(
     @exception  ValueError Raised when the selected profile leaves too little input room.
     """
     context_window = max(1, int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)))
-    max_output_tokens = max(
+    output_reserve_tokens = max(
         1,
-        int(ai_profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)),
+        int(ai_profile_payload.get("output_reserve_tokens", config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS)),
     )
     prompt_budget_tokens = estimate_text_tokens(prompt_text)
     safety_margin_tokens = max(
@@ -104,7 +104,7 @@ def context_budget_metadata(
     else:
         text_budget_tokens = available_text_budget(
             context_window,
-            max_output_tokens,
+            output_reserve_tokens,
             prompt_budget_tokens,
             safety_margin_tokens,
             text_context_fraction,
@@ -116,7 +116,7 @@ def context_budget_metadata(
         )
     return {
         "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
+        "output_reserve_tokens": output_reserve_tokens,
         "prompt_budget_tokens": prompt_budget_tokens,
         "text_budget_tokens": text_budget_tokens,
         "safety_margin_tokens": safety_margin_tokens,

@@ -400,6 +400,16 @@ as part of focused validation.
   application, the create and open dialogs start again at the documents root
   rather than wherever their projects actually live.
 
+## Supporting Book Analysis Operation
+
+`book_analysis` is included in project manifest operation summaries but not in
+the workflow operation order or stage map. Manifest repair preserves supporting
+summaries at every stage. Its start, failure, cancellation, completion, and
+reset never promote or lower `current_stage`; explicit reset clears only its
+summary and owned files. Upstream Chunking changes preserve its completed
+report so freshness can be derived and shown as stale instead of deleting useful
+analysis.
+
 ## Files
 
 From the adopted component map:

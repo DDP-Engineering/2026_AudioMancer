@@ -27,6 +27,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <a href="#manual-workflow">Manual Workflow Example</a>
             <a href="#cleanup">Text Cleanup</a>
             <a href="#chunking">Text Chunking</a>
+            <a href="#book-analysis">Book Analysis</a>
             <a href="#translation">AI Translation</a>
             <a href="#characters">Characters</a>
             <a href="#narrator">Narrator Voice</a>
@@ -211,7 +212,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>AI Settings</h2>
                 <p>
                     AI Settings stores the chat-model profiles used for AI-assisted cleanup, chunking, translation,
-                    character discovery, narrator profile generation, and Speech Blocks. These profiles never generate
+                    Book Analysis, character discovery, narrator profile generation, and Speech Blocks. These profiles never generate
                     audio &mdash; that is VoiceWeaver's job, configured in TTS Settings.
                 </p>
                 <h3>Create A Profile</h3>
@@ -223,7 +224,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Enter the <strong>API Key</strong> for online providers. The field is masked and may be left empty for a local provider.</li>
                     <li>Press <strong>Connect</strong>. On success AudioMancer reports how many models it found and fills the <strong>Model Name</strong> list with them; on failure it shows the reason and keeps your last working values.</li>
                     <li>Pick the model in <strong>Model Name</strong>. The field is editable, so you can also type a name the provider did not list.</li>
-                    <li>Set <strong>Context Window</strong>, <strong>Max Output Tokens</strong>, <strong>Timeout (s)</strong> and <strong>Temperature</strong>, then choose the default profile for each operation at the bottom of the dialog.</li>
+                    <li>Set <strong>Context Window</strong>, <strong>Output Reserve (tokens)</strong>, <strong>Timeout (s)</strong> and <strong>Temperature</strong>. The reserve keeps context capacity for a reply while AudioMancer plans source text; it is not sent as a provider output limit, so the provider chooses the response length. <strong>Reasoning Mode</strong> can keep the provider default, enable reasoning, or disable it; AudioMancer does not guess from the model name.</li>
+                    <li>Choose the default profile for each operation at the bottom of the dialog.</li>
                     <li><strong>Cancel</strong> discards the session. <strong>Apply</strong> saves without closing. <strong>OK</strong> saves and closes.</li>
                 </ol>
                 <p>
@@ -245,23 +247,23 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     </thead>
                     <tbody>
                         <tr><td>Context Window</td><td>1 - 1000000</td><td>16384</td></tr>
-                        <tr><td>Max Output Tokens</td><td>1 - 1000000</td><td>8192</td></tr>
+                        <tr><td>Output Reserve (tokens)</td><td>1 - 1000000</td><td>8192</td></tr>
                         <tr><td>Timeout (s)</td><td>1 - 65535</td><td>300</td></tr>
                         <tr><td>Temperature</td><td>0.00 - 2.00, step 0.05</td><td>0.20</td></tr>
                     </tbody>
                 </table>
                 <div class="warning">
-                    <strong>Max Output Tokens matters most for translation.</strong> A translation is about as long as
-                    its source, so AudioMancer sizes each translation request by what the reply can return, not by the
-                    context window alone. A profile with a wide context window but a small output limit is simply
-                    split into more, smaller requests. If the output limit is too small to return even one request's
+                    <strong>Output Reserve matters most for translation planning.</strong> A translation is about as long as
+                    its source, so AudioMancer sizes each translation request using its local reply reserve, not by the
+                    context window alone. A profile with a wide context window but a small reserve is simply
+                    split into more, smaller requests. If the reserve is too small to return even one request's
                     translation, AI Translation refuses to start and names that setting.
                 </div>
                 <h3>Operation Defaults</h3>
                 <p>
                     The lower part of the dialog sets which profile each operation starts with:
                     <strong>Default Cleanup Profile</strong>, <strong>Default Chunking Profile</strong>,
-                    <strong>Default Translation Profile</strong>, <strong>Default Narrator Generation
+                    <strong>Default Book Analysis Profile</strong>, <strong>Default Translation Profile</strong>, <strong>Default Narrator Generation
                     Profile</strong>, <strong>Default Character Extraction Profile</strong> and <strong>Default Speech
                     Blocks Profile</strong>. Each lists <strong>(none)</strong> followed by every enabled profile.
                 </p>
@@ -577,6 +579,32 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">
                     <figcaption>The chunk list is the foundation for translation, Speech Blocks and final audio.</figcaption>
                 </figure>
+            </section>
+
+            <section id="book-analysis">
+                <h2>Book Analysis</h2>
+                <p>
+                    Book Analysis is an optional reader aid available after Text Chunking has completed. Choose an
+                    enabled <strong>AI Profile</strong> and press <strong>Analyze</strong>. The report uses the
+                    project's selected translation target language and shows a short summary first: book type,
+                    genres, subjects, setting/time, main characters and themes. Open <strong>Detailed
+                    Analysis</strong> for the longer summary, supporting characters, narrative perspective and
+                    structure, tone, pacing, diction, emotional range, audiobook guidance, uncertainties and source
+                    evidence.
+                </p>
+                <ul>
+                    <li>The profile must declare at least a 16K context window. AudioMancer uses at most half of local LM Studio/Ollama context or 30% of online context for source text, with additional prompt, output, reasoning and safety reserves.</li>
+                    <li>AudioMancer accepts compatible models by capability, not by model name. Context and reasoning settings remain in <strong>AI Settings</strong>, not on this page.</li>
+                    <li>Long books are summarized in whole-chunk windows and then consolidated. A canonical chunk is never split; if one cannot fit, make the Text Chunking result smaller or select a wider-context profile.</li>
+                    <li>An interrupted, cancelled or failed run is resumed by pressing <strong>Analyze</strong> again when the chunks, target language, profile and safe request settings still match.</li>
+                    <li>Selecting a different profile starts a new candidate and preserves any completed report. A completed report also stays visible as <em>stale</em> if the chunks or target language change, and Analyze becomes available for a replacement.</li>
+                    <li>After a fresh completion, Analyze is disabled. Press <strong>Reset</strong> to remove Book Analysis data and start again. Reset does not delete translation, character, voice, speech or audio work.</li>
+                </ul>
+                <div class="note">
+                    Book Analysis never advances or blocks the audiobook workflow. While it runs, use the usual
+                    <strong>Operation Status</strong> control and progress dialog. Reset during a run first cancels
+                    the worker safely, then clears its analysis.
+                </div>
             </section>
 
             <section id="translation">
@@ -1013,7 +1041,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>No audio is generated</h3>
                 <p>Start VoiceWeaver, check the base URL in TTS Settings, press <strong>Test Connection</strong>, and confirm the required models appear under Discovered Models.</p>
                 <h3>A translation stops in the middle of a chunk</h3>
-                <p>Raise <strong>Max Output Tokens</strong> on the translation profile. A translation is as long as its source, so the output limit, not the context window, is what bounds one request.</p>
+                <p>Raise <strong>Output Reserve (tokens)</strong> on the translation profile. A translation is as long as its source, so the reserve, not the context window, is what bounds AudioMancer's local request planning.</p>
                 <h3>AI text operations fail or return bad JSON</h3>
                 <p>Lower the temperature, raise the timeout, use a larger context window, or choose a model that follows JSON more reliably. Local models are usually slower than hosted ones.</p>
                 <h3>The app says data is stale</h3>

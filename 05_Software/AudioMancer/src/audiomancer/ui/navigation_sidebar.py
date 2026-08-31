@@ -40,6 +40,10 @@ _PAGE_ICON_PATHS: dict[str, str] = {
         '<rect x="4" y="10" width="16" height="4" rx="1"/>'
         '<rect x="4" y="16" width="10" height="4" rx="1"/>'
     ),
+    "book_analysis": (
+        '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/>'
+        '<path d="M8 8h7M8 11h5M8 15h3"/><path d="m15 14 1 2 2 .5-1.5 1.5.5 2-2-1-2 1 .5-2L12 16.5l2-.5z"/>'
+    ),
     "ai_translation": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
     "characters": (
         '<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/>'
@@ -103,6 +107,7 @@ class NavigationSidebar(QListWidget):
         self.setObjectName("navigationSidebar")
         self.setAlternatingRowColors(False)
         self.setFixedWidth(160)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setIconSize(QSize(_ICON_PIXELS, _ICON_PIXELS))
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.itemSelectionChanged.connect(self._emit_selected_page)

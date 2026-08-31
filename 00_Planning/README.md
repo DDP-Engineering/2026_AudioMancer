@@ -14,6 +14,8 @@ Planning notes, architecture drafts, and project decisions.
   links to automated tests or manual verification.
 - `Overview.md` summarizes the intended product workflow and the current
   implementation direction.
+- `Book_Analysis_Agentic_Implementation_Plan.md` defines the agent-ready design,
+  TDD sequence, 16K local-model constraints, and AEGIS validation path for the
+  standalone Book Analysis workflow.
 - `OpenAI TTS Provider Integration.md` tracks the planned online TTS provider
   integration.
-

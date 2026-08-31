@@ -1,0 +1,96 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-UX-7a9404e3"
+
+title = "Present the optional layered book analysis experience"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+Where completed canonical chunks are available, AudioMancer shall present an
+optional Book Analysis page after Text Chunking with an AI-profile selector,
+Analyze and Reset controls, standard operation progress/status, and a layered
+report in the project's selected translation language.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "Qt tests verify page order, English and Romanian interface labels, the exact controls, Analyze/Reset enablement for idle/running/interrupted/current/stale/completed states, standard status/progress integration, and concise plus expandable report sections rendered from target-language fixture data."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+    "05_Software/AudioMancer/src/audiomancer/services/book_analysis_state_service.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/pages/book_analysis_page.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/controllers/book_analysis_ui_controller.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+    "05_Software/AudioMancer/src/audiomancer/ui/navigation_sidebar.py",
+    "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+    "05_Software/AudioMancer/tests/test_book_analysis_page.py",
+    "05_Software/AudioMancer/tests/test_book_analysis_ui_controller.py",
+    "05_Software/AudioMancer/tests/test_main_window_project_flow.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+    "05_Software/AudioMancer/tests/test_book_analysis_state_service.py::test_book_analysis_control_state",
+    "05_Software/AudioMancer/tests/test_book_analysis_state_service.py::test_book_analysis_without_completed_chunks_is_unavailable",
+    "05_Software/AudioMancer/tests/test_book_analysis_state_service.py::test_started_operation_enables_reset_before_first_checkpoint",
+    "05_Software/AudioMancer/tests/test_book_analysis_page.py::test_book_analysis_page_has_exactly_two_actions_and_emits_signals",
+    "05_Software/AudioMancer/tests/test_book_analysis_page.py::test_book_analysis_page_preserves_stale_report_and_expands_details",
+    "05_Software/AudioMancer/tests/test_book_analysis_page.py::test_book_analysis_page_localizes_actions_without_context_controls",
+    "05_Software/AudioMancer/tests/test_book_analysis_ui_controller.py::test_analyze_dispatches_standard_threaded_operation",
+    "05_Software/AudioMancer/tests/test_book_analysis_ui_controller.py::test_running_reset_requests_cancellation_before_deleting",
+    "05_Software/AudioMancer/tests/test_book_analysis_ui_controller.py::test_cancel_terminal_path_performs_pending_reset_and_clears_manifest",
+    "05_Software/AudioMancer/tests/test_main_window_project_flow.py::test_book_analysis_page_follows_text_chunking",
+    "05_Software/AudioMancer/tests/test_main_window_ai_profiles.py::test_main_window_book_analysis_uses_its_configured_default_profile",
+    "05_Software/AudioMancer/tests/test_operation_status_button.py::test_book_analysis_started_summary_enables_operation_status",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = ""
+
+priority = "high"   # low | normal | high
+rationale = "The feature must feel like the existing project operations while keeping advanced analysis details available without overwhelming the primary summary."
+
+created = 2026-08-29
+updated = 2026-08-29

@@ -34,6 +34,12 @@ from audiomancer.ui.controllers import (
 import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
+
+def test_book_analysis_page_follows_text_chunking() -> None:
+    page_ids = [page_id for page_id, _label in MainWindow.PAGE_ORDER]
+
+    assert page_ids.index("book_analysis") == page_ids.index("text_chunking") + 1
+
 # PUBLIC API
 
 

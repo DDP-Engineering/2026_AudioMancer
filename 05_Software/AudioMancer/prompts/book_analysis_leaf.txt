@@ -1,0 +1,8 @@
+Analyze the following ordered, whole book chunks.
+
+Write every natural-language value in the project target language: {target_language}.
+Preserve uncertainty, distinguish observation from inference, and never invent facts or evidence.
+Return only the requested intermediate Book Analysis JSON object.
+
+SOURCE_JSON:
+{source_json}

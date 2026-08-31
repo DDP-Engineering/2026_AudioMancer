@@ -69,6 +69,164 @@ class _FakeResponse:
         return self._body.encode("utf-8")
 
 
+def test_chat_json_omits_provider_output_limits(monkeypatch) -> None:
+    """Provider-managed completion length never serializes either limit field."""
+    request_bodies: list[dict[str, object]] = []
+
+    def fake_urlopen(http_request, timeout):
+        _ = timeout
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        if len(request_bodies) == 1:
+            return _FakeResponse(
+                '{"choices":[{"message":{"content":"not valid json"}}]}'
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"result\\":\\"ok\\"}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", fake_urlopen)
+
+    llm_provider_service.chat_json(
+        {
+            "id": "provider-managed-output",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_name": "local-model",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "output_reserve_tokens": 256,
+        },
+        "system",
+        "user",
+        structured_output=False,
+    )
+
+    assert len(request_bodies) == 2
+    assert all("max_tokens" not in body for body in request_bodies)
+    assert all("max_completion_tokens" not in body for body in request_bodies)
+
+
+@pytest.mark.parametrize(
+    ("backend_kind", "reasoning_mode", "expected_effort"),
+    (
+        ("lmstudio", "enabled", "medium"),
+        ("lmstudio", "disabled", "none"),
+        ("ollama", "enabled", "medium"),
+        ("openai_compatible", "disabled", "none"),
+    ),
+)
+def test_chat_json_applies_reasoning_mode_without_model_name_gating(
+    monkeypatch,
+    backend_kind: str,
+    reasoning_mode: str,
+    expected_effort: str,
+) -> None:
+    """Known backends receive profile reasoning controls for an unknown model ID."""
+    request_bodies: list[dict[str, object]] = []
+
+    def fake_urlopen(http_request, timeout):
+        _ = timeout
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"result\\":\\"ok\\"}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", fake_urlopen)
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile-reasoning",
+            "backend_kind": backend_kind,
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_name": "vendor/model-never-seen",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "output_reserve_tokens": 256,
+            "reasoning_mode": reasoning_mode,
+        },
+        "system",
+        "user",
+        structured_output=False,
+    )
+
+    assert request_bodies[0]["reasoning_effort"] == expected_effort
+    assert result["request_metadata"]["reasoning_mode_effective"] == reasoning_mode
+
+
+def test_chat_json_provider_default_omits_reasoning_control(monkeypatch) -> None:
+    """Provider-default profiles send no reasoning compatibility field."""
+    request_bodies: list[dict[str, object]] = []
+
+    def fake_urlopen(http_request, timeout):
+        _ = timeout
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"result\\":\\"ok\\"}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", fake_urlopen)
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile-default",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_name": "vendor/model-never-seen",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "output_reserve_tokens": 256,
+            "reasoning_mode": "provider_default",
+        },
+        "system",
+        "user",
+        structured_output=False,
+    )
+
+    assert "reasoning_effort" not in request_bodies[0]
+    assert result["request_metadata"]["reasoning_mode_effective"] == "provider_default"
+
+
+def test_chat_json_retries_provider_default_when_reasoning_control_is_rejected(
+    monkeypatch,
+) -> None:
+    """An explicit unsupported-field response retries once without reasoning control."""
+    request_bodies: list[dict[str, object]] = []
+
+    def fake_urlopen(http_request, timeout):
+        _ = timeout
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                {},
+                io.BytesIO(b'{"error":{"message":"unknown parameter reasoning_effort"}}'),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"result\\":\\"ok\\"}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", fake_urlopen)
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile-reasoning",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_name": "vendor/model-never-seen",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "output_reserve_tokens": 256,
+            "reasoning_mode": "enabled",
+        },
+        "system",
+        "user",
+        structured_output=False,
+    )
+
+    assert request_bodies[0]["reasoning_effort"] == "medium"
+    assert "reasoning_effort" not in request_bodies[1]
+    assert result["request_metadata"]["reasoning_mode_effective"] == "provider_default"
+
+
 def test_chat_json_parses_fenced_json(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify fenced JSON model output is normalized into one JSON object.
@@ -93,7 +251,7 @@ def test_chat_json_parses_fenced_json(monkeypatch, tmp_path) -> None:
             "model_name": "qwen3-8b",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -145,7 +303,7 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
             "model_name": "qwen3-8b",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -200,7 +358,7 @@ def test_chat_json_uses_bounded_exponential_retry_delays(monkeypatch) -> None:
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -257,7 +415,7 @@ def test_chat_json_cancels_before_retry_backoff_without_another_request(monkeypa
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -333,7 +491,7 @@ def test_chat_json_cancels_during_sliced_retry_backoff(monkeypatch) -> None:
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -377,7 +535,7 @@ def test_chat_json_sends_response_format_when_structured_output_is_supported(mon
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -430,7 +588,7 @@ def test_chat_json_sends_json_schema_response_format_for_local_backends(monkeypa
                 "model_name": "google/gemma-4-26b-a4b",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
                 "supports_structured_output": True,
             },
             "system",
@@ -496,7 +654,7 @@ def test_chat_json_sends_operation_schema_response_format_for_local_backends(mon
             "model_name": "google/gemma-4-26b-a4b",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -546,7 +704,7 @@ def test_chat_json_omits_response_format_when_structured_output_is_not_supported
             "model_name": "qwen3-8b",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": False,
         },
         "system",
@@ -609,7 +767,7 @@ def test_chat_json_retries_without_response_format_when_provider_rejects_it(monk
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -691,7 +849,7 @@ def test_chat_json_retains_response_format_fallback_across_outer_retries(
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -753,7 +911,7 @@ def test_chat_json_resets_response_format_compatibility_for_separate_calls(monke
         "model_name": "gpt-5.4-mini",
         "request_timeout_seconds": 30,
         "temperature": 0.1,
-        "max_output_tokens": 256,
+        "output_reserve_tokens": 256,
         "supports_structured_output": True,
     }
 
@@ -803,7 +961,7 @@ def test_chat_json_does_not_fallback_when_unconstrained_output_is_disabled(monke
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
                 "supports_structured_output": True,
             },
             "system",
@@ -852,7 +1010,7 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
                 "model_name": "qwen3-8b",
                 "request_timeout_seconds": 30,
                 "temperature": 0.2,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -864,6 +1022,7 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
         raise AssertionError("Expected AI request cancellation while waiting for the model response.")
 
 
+@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
 def test_chat_json_retries_with_max_completion_tokens_when_required(
     monkeypatch,
 ) -> None:
@@ -919,7 +1078,7 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
             "model_name": "gpt-5-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -933,6 +1092,7 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
 
 
+@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
 def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatch) -> None:
     """
     @brief      Verify learned max-token compatibility survives a transient failure.
@@ -992,7 +1152,7 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
             "model_name": "gpt-5-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1010,6 +1170,7 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
     assert result["payload"]["results"][0]["unit_id"] == "retained-token"
 
 
+@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
 def test_chat_json_retains_max_completion_tokens_for_json_repair(monkeypatch) -> None:
     """
     @brief      Verify a JSON repair request retains the learned provider token field.
@@ -1056,7 +1217,7 @@ def test_chat_json_retains_max_completion_tokens_for_json_repair(monkeypatch) ->
             "model_name": "gpt-5-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1093,7 +1254,7 @@ def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1140,7 +1301,7 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -1198,7 +1359,7 @@ def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
                 "model_name": "qwen3.6-35b-a3b",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
                 "supports_structured_output": True,
             },
             "system",
@@ -1267,7 +1428,7 @@ def test_chat_json_rejects_null_or_refused_content_without_repair(
                 "model_name": "qwen3.6-35b-a3b",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
                 "supports_structured_output": True,
             },
             "system",
@@ -1319,7 +1480,7 @@ def test_chat_json_joins_multipart_content_with_null_text_parts(monkeypatch) -> 
             "model_name": "qwen3.6-35b-a3b",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
             "supports_structured_output": True,
         },
         "system",
@@ -1375,7 +1536,7 @@ def test_chat_json_rejects_output_length_limited_malformed_json(monkeypatch, tmp
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -1383,8 +1544,7 @@ def test_chat_json_rejects_output_length_limited_malformed_json(monkeypatch, tmp
         )
     except RuntimeError as error_object:
         error_text = str(error_object)
-        assert "output-token limit" in error_text
-        assert "256" in error_text
+        assert error_text == "AI provider response stopped because it reached the provider output limit."
         assert truncated_content not in error_text
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected output-length-limited response to fail.")
@@ -1443,14 +1603,14 @@ def test_chat_json_rejects_output_length_limited_valid_json(monkeypatch) -> None
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
         )
     except RuntimeError as error_object:
         assert str(error_object) == (
-            "AI provider response reached the provider output-token limit of 256 tokens."
+            "AI provider response stopped because it reached the provider output limit."
         )
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected output-length-limited response to fail.")
@@ -1500,7 +1660,7 @@ def test_chat_json_accepts_stop_and_omitted_finish_reasons(monkeypatch) -> None:
         "model_name": "qwen3-8b",
         "request_timeout_seconds": 30,
         "temperature": 0.2,
-        "max_output_tokens": 256,
+        "output_reserve_tokens": 256,
     }
     stopped_result = llm_provider_service.chat_json(profile_payload, "system", "user")
     legacy_result = llm_provider_service.chat_json(profile_payload, "system", "user")
@@ -1541,7 +1701,7 @@ def test_chat_json_normalizes_provider_usage(monkeypatch) -> None:
             "model_name": "gpt-5.4-mini",
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1592,7 +1752,7 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -1634,7 +1794,7 @@ def test_chat_json_redacts_sensitive_values_from_transaction_log(monkeypatch, tm
             "api_key": secret_value,
             "request_timeout_seconds": 30,
             "temperature": 0.1,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1700,7 +1860,7 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
                 "model_name": "gpt-5.4-mini",
                 "request_timeout_seconds": 30,
                 "temperature": 0.1,
-                "max_output_tokens": 256,
+                "output_reserve_tokens": 256,
             },
             "system",
             "user",
@@ -1784,7 +1944,7 @@ def test_chat_json_requests_the_shared_versioned_endpoint(monkeypatch) -> None:
             "model_name": "model-a",
             "request_timeout_seconds": 30,
             "temperature": 0.2,
-            "max_output_tokens": 256,
+            "output_reserve_tokens": 256,
         },
         "system",
         "user",
@@ -1911,7 +2071,7 @@ def _length_limited_profile() -> dict[str, object]:
         "model_name": "gpt-5.4-mini",
         "request_timeout_seconds": 30,
         "temperature": 0.1,
-        "max_output_tokens": 256,
+        "output_reserve_tokens": 256,
     }
 
 

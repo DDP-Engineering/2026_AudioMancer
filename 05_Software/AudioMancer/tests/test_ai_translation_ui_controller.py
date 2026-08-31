@@ -337,7 +337,7 @@ def _build_window(qtbot, project_root):
                     "api_key": "",
                     "model_name": "qwen3-8b",
                     "context_window": 4096,
-                    "max_output_tokens": 512,
+                    "output_reserve_tokens": 512,
                     "enabled": True,
                 }
             ],
@@ -356,7 +356,7 @@ def _document(status: str) -> dict[str, object]:
         "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
         "budget_metadata": {
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "prompt_budget_tokens": 100,
             "text_budget_tokens": 2048,
             "safety_margin_tokens": 512,

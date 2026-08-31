@@ -1527,7 +1527,7 @@ def _build_budget_metadata(
         online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
     context_window = int(discovery_budget_metadata["context_window"])
-    max_output_tokens = int(discovery_budget_metadata["max_output_tokens"])
+    output_reserve_tokens = int(discovery_budget_metadata["output_reserve_tokens"])
     safety_margin_tokens = int(discovery_budget_metadata["safety_margin_tokens"])
     synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
     if ai_budget_service.uses_online_text_budget(ai_profile_payload):
@@ -1535,7 +1535,7 @@ def _build_budget_metadata(
     else:
         synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
             context_window,
-            max_output_tokens,
+            output_reserve_tokens,
             synthesis_prompt_budget_tokens,
             safety_margin_tokens,
             config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,

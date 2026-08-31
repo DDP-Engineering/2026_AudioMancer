@@ -246,6 +246,16 @@ fallback and may still produce a larger window chunk when no explicit
 structure exists. Token budgeting is estimated by AI Runtime. Operator review
 remains available for semantic corrections.
 
+## Book Analysis Consumer
+
+The optional Book Analysis page follows Text Chunking and consumes only the
+completed canonical `chunks_text.json`. It hashes ordered chunk IDs, sequence
+indices, and text for freshness/resume decisions. Book Analysis never mutates
+chunks and is deliberately excluded from Chunking downstream reset ownership;
+chunk edits leave an older completed report visible but stale. A whole chunk
+that exceeds the selected model's safe Book Analysis source budget must be made
+smaller here or analyzed with a wider-context profile.
+
 ## Files
 
 From the adopted component map:

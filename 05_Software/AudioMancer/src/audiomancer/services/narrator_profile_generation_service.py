@@ -1000,7 +1000,7 @@ def _build_model_settings(
         "backend_kind": str(ai_profile_payload.get("backend_kind", "")).strip(),
         "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
         "context_window": int(budget_metadata.get("context_window", 0)),
-        "max_output_tokens": int(budget_metadata.get("max_output_tokens", 0)),
+        "output_reserve_tokens": int(budget_metadata.get("output_reserve_tokens", 0)),
         "temperature": float(ai_profile_payload.get("temperature", 0.0) or 0.0),
     }
 
@@ -1224,7 +1224,7 @@ def _build_resume_fingerprint(
         "backend_kind": model_settings.get("backend_kind"),
         "model_name": model_settings.get("model_name"),
         "context_window": model_settings.get("context_window"),
-        "max_output_tokens": model_settings.get("max_output_tokens"),
+        "output_reserve_tokens": model_settings.get("output_reserve_tokens"),
         "temperature": model_settings.get("temperature"),
         "budget_metadata": dict(budget_metadata),
         "requested_count": requested_count,

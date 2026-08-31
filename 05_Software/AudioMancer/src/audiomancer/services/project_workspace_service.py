@@ -532,7 +532,8 @@ def build_manifest_after_operation_reset(
     @exception  ValueError Raised when the reset operation kind is unsupported.
     @note       Artifact deletion remains owned by operation_runtime_service.
     """
-    if operation_kind not in _RESET_STAGE_BY_OPERATION_KIND:
+    is_supporting_operation = operation_kind in config.SUPPORTING_OPERATION_KINDS
+    if operation_kind not in _RESET_STAGE_BY_OPERATION_KIND and not is_supporting_operation:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
     updated = dict(manifest)
     operations = _normalize_operations(updated.get("operations"))
@@ -554,6 +555,8 @@ def build_manifest_after_operation_reset(
         if selected_kind in default_operations and selected_kind not in preserved:
             operations[selected_kind] = default_operations[selected_kind]
     updated["operations"] = operations
+    if is_supporting_operation:
+        return updated
     updated["current_stage"] = _RESET_STAGE_BY_OPERATION_KIND[operation_kind]
     if "narrator_definition" not in preserved and updated["current_stage"] not in {
         "narrator_definition_ready",
@@ -1651,17 +1654,8 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
     """
     return {
         operation_kind: _default_operation_state(operation_kind)
-        for operation_kind in (
-            "cleanup",
-            "chunking",
-            "translation",
-            "character_discovery",
-            "narrator_definition",
-            "character_voices",
-            "speech_blocks",
-            "audio_blocks",
-            "audio_assembly",
-        )
+        for operation_kind in config.PROJECT_OPERATION_KINDS
+        if operation_kind != "extraction"
     }
 
 
@@ -1738,7 +1732,10 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
     @return     Set of operation kinds that should be preserved.
     @exception  None
     """
-    return set(config.WORKFLOW_OPERATION_ORDER[: max(_stage_rank(current_stage), 0)])
+    workflow_prefix = set(
+        config.WORKFLOW_OPERATION_ORDER[: max(_stage_rank(current_stage), 0)]
+    )
+    return workflow_prefix | set(config.SUPPORTING_OPERATION_KINDS)
 
 
 # END OF FILE

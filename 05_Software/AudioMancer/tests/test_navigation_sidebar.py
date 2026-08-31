@@ -14,6 +14,8 @@
 
 # IMPORTS
 
+from PySide6.QtCore import Qt
+
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 
 # CONSTANTS
@@ -71,6 +73,18 @@ def test_navigation_sidebar_sets_full_label_tooltip(qtbot) -> None:
 
     for index, (_page_id, label) in enumerate(_WORKFLOW_PAGES):
         assert sidebar.item(index).toolTip() == label
+
+
+def test_navigation_sidebar_keeps_its_width_without_horizontal_scrolling(qtbot) -> None:
+    """Keep navigation compact while reserving horizontal space for page content."""
+    sidebar = NavigationSidebar()
+    qtbot.addWidget(sidebar)
+
+    for page_id, label in _WORKFLOW_PAGES:
+        sidebar.add_page(page_id, label, enabled=True)
+
+    assert sidebar.width() == 160
+    assert sidebar.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
 
 
 # END OF FILE

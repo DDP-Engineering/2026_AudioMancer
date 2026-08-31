@@ -1,0 +1,92 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+# One requirement = one independently verifiable behavior.
+# Lives at .agentic/requirements/<category>/<id>.toml
+# Required fields: schema, id, title, status, requirement, verification.
+
+schema = 1
+
+# REQ-<CAT>-<8 hex>. CAT is FUNC, UX, NFR, SEC, DATA, PLAT, REL or TEST,
+# and must match the category folder this file sits in.
+id = "REQ-FUNC-e73cba08"
+
+title = "Generate a resumable hierarchical book analysis"
+
+# draft while being written, active once it is built and tested,
+# retired when the behavior is deliberately removed.
+status = "active"
+
+# Self-contained prose: a reader with no other context must be able to
+# understand and check it. No ticket numbers, no run IDs, no references
+# to other requirements.
+#
+# Recommended shape - EARS. Pick the one pattern that fits; a stated
+# trigger or condition is what the test has to arrange, so surfacing it
+# here is what makes the behavior testable:
+#
+#   ubiquitous  The <system> shall <response>.
+#   event       When <trigger>, the <system> shall <response>.
+#   state       While <state>, the <system> shall <response>.
+#   unwanted    If <condition>, then the <system> shall <response>.
+#   optional    Where <feature is included>, the <system> shall <response>.
+#
+# Two "shall" clauses means two behaviors: split it into two requirements.
+# Do not contort prose to fit a pattern - a constraint that reads better
+# plainly is better plainly.
+requirement = """
+When a user analyzes a project with completed canonical text chunks, AudioMancer
+shall produce the book report by checkpointing validated whole-chunk summaries,
+recursively consolidating them, and synthesizing the final structured result so
+an interrupted run can continue from its last validated checkpoint.
+"""
+
+# The observation that settles whether the behavior holds — not a
+# restatement of the requirement.
+#
+# Some behaviors no test can settle: a look-and-see judgement, an install
+# on clean hardware, a printed page. Start this field with "Manual:" or
+# "Inspection:" and name the method, and `check` records the requirement
+# as verified by hand instead of counting it among the tests still owed.
+# The prefix alone is not enough — it has to say what someone does.
+verification = "Automated service tests use deterministic provider responses to prove ordered whole-chunk coverage, recursive consolidation, structured synthesis, cancellation checkpoints, and continuation without repeating validated work."
+
+# Repo-relative, forward slashes. The source files this behavior lives in.
+affected_paths = [
+    "05_Software/AudioMancer/prompts/book_analysis_leaf.txt",
+    "05_Software/AudioMancer/prompts/book_analysis_consolidate.txt",
+    "05_Software/AudioMancer/prompts/book_analysis_report.txt",
+    "05_Software/AudioMancer/src/audiomancer/services/book_analysis_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/book_analysis_document_service.py",
+    "05_Software/AudioMancer/src/audiomancer/services/book_analysis_state_service.py",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py",
+]
+
+# "tests/path/test_file.py::test_name" entries. Kept current during build;
+# these select the impacted regression set.
+linked_tests = [
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_analyze_book_resumes_after_validated_leaf_without_repeating_it",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_analyze_book_covers_every_chunk_once_in_order",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_ai_requests_share_candidate_transaction_log",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_analyze_book_builds_recursive_consolidation_levels",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_invalid_leaf_response_is_checkpointed_as_failure_not_success",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_different_profile_replaces_candidate_but_preserves_completed_report",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_context_overflow_repacks_once_with_smaller_budget",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_oversized_single_chunk_sends_no_provider_request",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_completed_report_uses_project_target_language",
+    "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_final_report_has_every_concise_and_detail_field",
+]
+
+# --- optional below this line ---
+
+# "specs/REQ-FUNC-00000000.md" when the requirement alone is not buildable.
+spec = "specs/REQ-FUNC-e73cba08.md"
+
+priority = "high"   # low | normal | high
+rationale = "Long books cannot fit safely in one model request, and book analysis must survive normal interruption without discarding expensive completed work."
+
+created = 2026-08-29
+updated = 2026-08-29

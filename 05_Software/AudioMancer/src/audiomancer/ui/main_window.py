@@ -40,6 +40,7 @@ from audiomancer.services import (
     ai_translation_state_service,
     audio_assembly_state_service,
     audio_blocks_state_service,
+    book_analysis_state_service,
     character_discovery_state_service,
     character_voices_state_service,
     home_presenter_service,
@@ -57,6 +58,7 @@ from audiomancer.ui.controllers import (
     ai_translation_ui_controller,
     audio_assembly_ui_controller,
     audio_blocks_ui_controller,
+    book_analysis_ui_controller,
     character_voices_ui_controller,
     characters_ui_controller,
     home_ui_controller,
@@ -76,6 +78,7 @@ from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.audio_assembly_page import AudioAssemblyPage
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
+from audiomancer.ui.pages.book_analysis_page import BookAnalysisPage
 from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
@@ -101,6 +104,7 @@ WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 _PAGE_OPERATION_STATE_KINDS = {
     "text_cleanup": ("extraction",),
     "text_chunking": ("chunking",),
+    "book_analysis": ("book_analysis",),
     "ai_translation": ("translation",),
     "characters": ("character_discovery",),
     "speech_blocks": ("speech_blocks",),
@@ -125,6 +129,7 @@ class MainWindow(QMainWindow):
         ("home", "Home / Project"),
         ("text_cleanup", "Text Cleanup"),
         ("text_chunking", "Text Chunking"),
+        ("book_analysis", "Book Analysis"),
         ("ai_translation", "AI Translation"),
         ("characters", "Characters"),
         ("narator_voice", "Narrator Voice"),
@@ -139,6 +144,7 @@ class MainWindow(QMainWindow):
     PAGE_OPERATION_KIND = {
         "text_cleanup": "cleanup",
         "text_chunking": "chunking",
+        "book_analysis": "book_analysis",
         "ai_translation": "translation",
         "characters": "character_discovery",
         "narator_voice": "narrator_definition",
@@ -178,6 +184,7 @@ class MainWindow(QMainWindow):
         self._active_operation_worker = None
         self._active_operation_ui_bridge = None
         self._operation_cancel_event = None
+        self._book_analysis_reset_pending = False
         self._operation_shutdown_wait_timeout_ms = 3000
         self._narator_voice_preview_generation = 0
         self._narator_voice_inspected_profile_id: str | None = None
@@ -437,6 +444,9 @@ class MainWindow(QMainWindow):
         if self._current_page_id == "text_chunking":
             self._refresh_text_chunking_page_state(project_root, manifest, current_language)
             return
+        if self._current_page_id == "book_analysis":
+            self._refresh_book_analysis_page_state(project_root, manifest, current_language)
+            return
         if self._current_page_id == "ai_translation":
             self._refresh_ai_translation_page_state(project_root, manifest, current_language)
             return
@@ -484,6 +494,29 @@ class MainWindow(QMainWindow):
                 self._settings_payload,
             )
         )
+
+    def _refresh_book_analysis_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """Refresh the optional Book Analysis page from chunks and its durable document."""
+        selected_profile_id = self._book_analysis_page.current_profile_id()
+        self._book_analysis_page.set_project_active(project_root is not None)
+        state = book_analysis_state_service.build_book_analysis_state(
+            project_root,
+            manifest,
+            current_language,
+            self._settings_payload,
+            selected_profile_id,
+            operation_is_active=self._active_operation_kind == "book_analysis",
+        )
+        self._book_analysis_page.set_ai_profiles(
+            state.pop("profiles"),
+            state.pop("selected_profile_id"),
+        )
+        self._book_analysis_page.set_analysis_state(**state)
 
     def _refresh_ai_translation_page_state(
         self,
@@ -906,6 +939,19 @@ class MainWindow(QMainWindow):
         self._text_chunking_page.delete_chunk_requested.connect(
             lambda chunk_id: text_chunking_ui_controller.handle_delete_chunk_requested(self, chunk_id)
         )
+        self._book_analysis_page = BookAnalysisPage(self)
+        self._book_analysis_page.analyze_requested.connect(
+            lambda profile_id: book_analysis_ui_controller.handle_analyze_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._book_analysis_page.reset_requested.connect(
+            lambda: book_analysis_ui_controller.handle_reset_requested(self)
+        )
+        self._book_analysis_page.profile_selection_changed.connect(
+            lambda _profile_id: self.refresh_current_page_state()
+        )
         self._ai_translation_page = AiTranslationPage(self)
         self._ai_translation_page.start_translation_requested.connect(
             lambda profile_id: ai_translation_ui_controller.handle_start_translation_requested(
@@ -1191,6 +1237,7 @@ class MainWindow(QMainWindow):
             "home": home_page,
             "text_cleanup": self._text_cleanup_page,
             "text_chunking": self._text_chunking_page,
+            "book_analysis": self._book_analysis_page,
             "ai_translation": self._ai_translation_page,
             "characters": self._characters_page,
             "narator_voice": self._narator_voice_page,

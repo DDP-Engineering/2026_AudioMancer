@@ -72,7 +72,7 @@ _FORBIDDEN_PERSISTED_FIELDS = {
     "model_name",
     "temperature",
     "context_window",
-    "max_output_tokens",
+    "output_reserve_tokens",
     "transaction_log_path",
 }
 
@@ -661,7 +661,7 @@ def _profile(profile_id: str, *, context_window: int) -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": context_window,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
     }

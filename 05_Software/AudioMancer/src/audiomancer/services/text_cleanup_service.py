@@ -1229,8 +1229,8 @@ def _profile_fingerprint(
             profile.get("request_timeout_seconds", 0) or 0
         ),
         "temperature": float(profile.get("temperature", 0.0) or 0.0),
-        "max_output_tokens": int(
-            profile.get("max_output_tokens", 0) or 0
+        "output_reserve_tokens": int(
+            profile.get("output_reserve_tokens", 0) or 0
         ),
     }
 

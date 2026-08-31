@@ -59,10 +59,11 @@ _DEFAULT_PROFILE_TEMPLATE = {
     "api_key": "",
     "model_name": "",
     "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-    "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+    "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
     "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
     "temperature": config.DEFAULT_LLM_TEMPERATURE,
     "supports_structured_output": False,
+    "reasoning_mode": config.DEFAULT_LLM_REASONING_MODE,
     "enabled": True,
     "discovered_model_name": "",
     "discovered_model_names": [],
@@ -176,8 +177,8 @@ class AiSettingsPage(QWidget):
         self._context_window_spin = QSpinBox(self)
         self._context_window_spin.setRange(1, 1_000_000)
 
-        self._max_output_spin = QSpinBox(self)
-        self._max_output_spin.setRange(1, 1_000_000)
+        self._output_reserve_spin = QSpinBox(self)
+        self._output_reserve_spin.setRange(1, 1_000_000)
 
         self._timeout_spin = QSpinBox(self)
         self._timeout_spin.setRange(1, 65535)
@@ -188,6 +189,8 @@ class AiSettingsPage(QWidget):
         self._temperature_spin.setSingleStep(0.05)
 
         self._supports_structured_checkbox = QCheckBox("Structured output")
+        self._reasoning_mode_combo = QComboBox(self)
+        self._reload_reasoning_mode_combo(config.DEFAULT_LANGUAGE)
 
         self._profile_name_label = QLabel("Profile Name", self)
         self._backend_kind_label = QLabel("Backend Kind", self)
@@ -195,9 +198,10 @@ class AiSettingsPage(QWidget):
         self._api_key_label = QLabel("API Key", self)
         self._model_name_label = QLabel("Model Name", self)
         self._context_window_label = QLabel("Context Window", self)
-        self._max_output_label = QLabel("Max Output Tokens", self)
+        self._output_reserve_label = QLabel("Max Output Tokens", self)
         self._timeout_label = QLabel("Timeout (s)", self)
         self._temperature_label = QLabel("Temperature", self)
+        self._reasoning_mode_label = QLabel("Reasoning Mode", self)
 
         model_name_row = QHBoxLayout()
         model_name_row.addWidget(self._model_combo, 1)
@@ -209,8 +213,8 @@ class AiSettingsPage(QWidget):
         numeric_settings_grid.setVerticalSpacing(6)
         numeric_settings_grid.addWidget(self._context_window_label, 0, 0)
         numeric_settings_grid.addWidget(self._context_window_spin, 0, 1)
-        numeric_settings_grid.addWidget(self._max_output_label, 0, 2)
-        numeric_settings_grid.addWidget(self._max_output_spin, 0, 3)
+        numeric_settings_grid.addWidget(self._output_reserve_label, 0, 2)
+        numeric_settings_grid.addWidget(self._output_reserve_spin, 0, 3)
         numeric_settings_grid.addWidget(self._timeout_label, 1, 0)
         numeric_settings_grid.addWidget(self._timeout_spin, 1, 1)
         numeric_settings_grid.addWidget(self._temperature_label, 1, 2)
@@ -224,6 +228,7 @@ class AiSettingsPage(QWidget):
         top_form_layout.addRow(self._api_key_label, self._api_key_edit)
         top_form_layout.addRow(self._model_name_label, model_name_row)
         bottom_form_layout.addRow(numeric_settings_grid)
+        bottom_form_layout.addRow(self._reasoning_mode_label, self._reasoning_mode_combo)
 
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
@@ -234,6 +239,7 @@ class AiSettingsPage(QWidget):
         self._reload_context_mode_combo(config.DEFAULT_LANGUAGE)
 
         self._default_translation_combo = QComboBox(self)
+        self._default_book_analysis_combo = QComboBox(self)
         self._default_narrator_generation_combo = QComboBox(self)
         self._default_character_combo = QComboBox(self)
         self._default_speech_blocks_combo = QComboBox(self)
@@ -243,6 +249,7 @@ class AiSettingsPage(QWidget):
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
         self._default_context_mode_label = QLabel("Chunking Context Mode", self)
         self._default_translation_label = QLabel("Default Translation Profile", self)
+        self._default_book_analysis_label = QLabel("Default Book Analysis Profile", self)
         self._default_narrator_generation_label = QLabel("Default Narrator Generation Profile", self)
         self._default_character_label = QLabel(
             "Default Character Extraction Profile",
@@ -254,6 +261,10 @@ class AiSettingsPage(QWidget):
         bottom_form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
         bottom_form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
         bottom_form_layout.addRow(self._default_context_mode_label, self._default_context_mode_combo)
+        bottom_form_layout.addRow(
+            self._default_book_analysis_label,
+            self._default_book_analysis_combo,
+        )
         bottom_form_layout.addRow(self._default_translation_label, self._default_translation_combo)
         bottom_form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
         bottom_form_layout.addRow(
@@ -287,6 +298,7 @@ class AiSettingsPage(QWidget):
                 "default_ai_cleanup_profile_id": None,
                 "default_ai_chunking_profile_id": None,
                 "default_ai_translation_profile_id": None,
+                "default_book_analysis_profile_id": None,
                 "default_narrator_profile_generation_profile_id": None,
                 "default_speech_blocks_profile_id": None,
                 "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
@@ -335,6 +347,10 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_ai_translation_profile_id"),
         )
         self._set_optional_combo(
+            self._default_book_analysis_combo,
+            settings_payload.get("default_book_analysis_profile_id"),
+        )
+        self._set_optional_combo(
             self._default_narrator_generation_combo,
             settings_payload.get("default_narrator_profile_generation_profile_id"),
         )
@@ -375,6 +391,9 @@ class AiSettingsPage(QWidget):
         merged_settings["default_ai_chunking_profile_id"] = self._optional_combo_value(self._default_chunking_combo)
         merged_settings["default_ai_translation_profile_id"] = self._optional_combo_value(
             self._default_translation_combo
+        )
+        merged_settings["default_book_analysis_profile_id"] = self._optional_combo_value(
+            self._default_book_analysis_combo
         )
         merged_settings["default_narrator_profile_generation_profile_id"] = self._optional_combo_value(
             self._default_narrator_generation_combo
@@ -559,6 +578,7 @@ class AiSettingsPage(QWidget):
         current_cleanup = self._optional_combo_value(self._default_cleanup_combo)
         current_chunking = self._optional_combo_value(self._default_chunking_combo)
         current_translation = self._optional_combo_value(self._default_translation_combo)
+        current_book_analysis = self._optional_combo_value(self._default_book_analysis_combo)
         current_narrator_generation = self._optional_combo_value(self._default_narrator_generation_combo)
         current_speech_blocks = self._optional_combo_value(self._default_speech_blocks_combo)
         current_character = self._optional_combo_value(self._default_character_combo)
@@ -567,6 +587,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_book_analysis_combo,
             self._default_narrator_generation_combo,
             self._default_speech_blocks_combo,
             self._default_character_combo,
@@ -582,6 +603,7 @@ class AiSettingsPage(QWidget):
         self._set_optional_combo(self._default_cleanup_combo, current_cleanup)
         self._set_optional_combo(self._default_chunking_combo, current_chunking)
         self._set_optional_combo(self._default_translation_combo, current_translation)
+        self._set_optional_combo(self._default_book_analysis_combo, current_book_analysis)
         self._set_optional_combo(self._default_narrator_generation_combo, current_narrator_generation)
         self._set_optional_combo(self._default_speech_blocks_combo, current_speech_blocks)
         self._set_optional_combo(self._default_character_combo, current_character)
@@ -617,10 +639,14 @@ class AiSettingsPage(QWidget):
         self._api_key_edit.setText(str(profile["api_key"]))
         self._model_combo.setCurrentText(str(profile["model_name"]))
         self._context_window_spin.setValue(int(profile["context_window"]))
-        self._max_output_spin.setValue(int(profile["max_output_tokens"]))
+        self._output_reserve_spin.setValue(int(profile["output_reserve_tokens"]))
         self._timeout_spin.setValue(int(profile["request_timeout_seconds"]))
         self._temperature_spin.setValue(float(profile["temperature"]))
         self._supports_structured_checkbox.setChecked(bool(profile["supports_structured_output"]))
+        self._set_optional_combo(
+            self._reasoning_mode_combo,
+            profile.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE),
+        )
         self._loading_profile = False
 
     def _sync_editor_to_owner_profile(self) -> None:
@@ -639,10 +665,14 @@ class AiSettingsPage(QWidget):
         owner_profile["api_key"] = self._api_key_edit.text()
         owner_profile["model_name"] = self._model_combo.currentText().strip()
         owner_profile["context_window"] = self._context_window_spin.value()
-        owner_profile["max_output_tokens"] = self._max_output_spin.value()
+        owner_profile["output_reserve_tokens"] = self._output_reserve_spin.value()
         owner_profile["request_timeout_seconds"] = self._timeout_spin.value()
         owner_profile["temperature"] = self._temperature_spin.value()
         owner_profile["supports_structured_output"] = self._supports_structured_checkbox.isChecked()
+        owner_profile["reasoning_mode"] = (
+            self._optional_combo_value(self._reasoning_mode_combo)
+            or config.DEFAULT_LLM_REASONING_MODE
+        )
         self._reload_profile_list()
         self._reload_default_profile_combos()
 
@@ -757,6 +787,30 @@ class AiSettingsPage(QWidget):
             current_mode or config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
         )
 
+    def _reload_reasoning_mode_combo(self, language: str) -> None:
+        """
+        @brief      Rebuild reasoning-mode labels while preserving the stable value.
+        @param[in]  language Active UI language code.
+        @return     None.
+        @exception  None
+        """
+        current_mode = self._optional_combo_value(self._reasoning_mode_combo)
+        self._reasoning_mode_combo.blockSignals(True)
+        self._reasoning_mode_combo.clear()
+        for reasoning_mode in config.LLM_REASONING_MODE_OPTIONS:
+            self._reasoning_mode_combo.addItem(
+                ui_state_service.translate(
+                    f"ai_settings.reasoning_mode.{reasoning_mode}",
+                    language,
+                ),
+                reasoning_mode,
+            )
+        self._reasoning_mode_combo.blockSignals(False)
+        self._set_optional_combo(
+            self._reasoning_mode_combo,
+            current_mode or config.DEFAULT_LLM_REASONING_MODE,
+        )
+
     def _add_profile(self) -> None:
         """
         @brief      Append one new editable profile to the in-memory list.
@@ -848,15 +902,22 @@ class AiSettingsPage(QWidget):
         self._api_key_edit.setPlaceholderText(ui_state_service.translate("ai_settings.api_key_placeholder", language))
         self._model_name_label.setText(ui_state_service.translate("ai_settings.model_name", language))
         self._context_window_label.setText(ui_state_service.translate("ai_settings.context_window", language))
-        self._max_output_label.setText(ui_state_service.translate("ai_settings.max_output_tokens", language))
+        self._output_reserve_label.setText(ui_state_service.translate("ai_settings.output_reserve_tokens", language))
         self._timeout_label.setText(ui_state_service.translate("ai_settings.timeout", language))
         self._temperature_label.setText(ui_state_service.translate("ai_settings.temperature", language))
         self._supports_structured_checkbox.setText(
             ui_state_service.translate("ai_settings.structured_output", language)
         )
+        self._reasoning_mode_label.setText(
+            ui_state_service.translate("ai_settings.reasoning_mode", language)
+        )
+        self._reload_reasoning_mode_combo(language)
         self._default_cleanup_label.setText(ui_state_service.translate("ai_settings.default_cleanup", language))
         self._default_chunking_label.setText(ui_state_service.translate("ai_settings.default_chunking", language))
         self._default_translation_label.setText(ui_state_service.translate("ai_settings.default_translation", language))
+        self._default_book_analysis_label.setText(
+            ui_state_service.translate("ai_settings.default_book_analysis", language)
+        )
         self._default_narrator_generation_label.setText(
             ui_state_service.translate("ai_settings.default_narrator_generation", language)
         )
@@ -885,6 +946,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_book_analysis_combo,
             self._default_narrator_generation_combo,
             self._default_speech_blocks_combo,
             self._default_character_combo,

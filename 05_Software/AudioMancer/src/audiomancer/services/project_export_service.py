@@ -475,7 +475,7 @@ def _build_ai_translation_document(project_root: Path, manifest: dict[str, objec
             ("Target Language", document["target_language"]),
             ("Status", summary["status"]),
             ("Context Window", budget_metadata.get("context_window")),
-            ("Maximum Output Tokens", budget_metadata.get("max_output_tokens")),
+            ("Output Reserve Tokens", budget_metadata.get("output_reserve_tokens")),
             ("Total Chunks", summary["total_count"]),
             ("Translated Count", summary["translated_count"]),
             ("Approved Count", summary["approved_count"]),
@@ -1095,8 +1095,6 @@ def _ai_parameter_fields(
             ),
         ),
         ("AI Temperature", request_payload.get("temperature")),
-        ("AI Max Tokens", request_payload.get("max_tokens")),
-        ("AI Max Completion Tokens", request_payload.get("max_completion_tokens")),
     ]
 
 

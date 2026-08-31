@@ -155,6 +155,24 @@ def test_main_window_character_refresh_preserves_live_profile_selection(qtbot, d
     assert page.current_profile_id() == "profile_a"
 
 
+def test_main_window_book_analysis_uses_its_configured_default_profile(
+    qtbot,
+    default_settings_payload,
+) -> None:
+    settings_payload = dict(default_settings_payload)
+    base_profile = dict(settings_payload["llm_profiles"][0])
+    profile_a = dict(base_profile, id="profile_a", label="Profile A")
+    profile_b = dict(base_profile, id="profile_b", label="Profile B")
+    settings_payload["llm_profiles"] = [profile_a, profile_b]
+    settings_payload["default_book_analysis_profile_id"] = "profile_b"
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+
+    window._refresh_book_analysis_page_state(None, None, "en")
+
+    assert window._book_analysis_page.current_profile_id() == "profile_b"
+
+
 def test_main_window_narrator_refresh_preserves_live_profile_selection(qtbot, default_settings_payload) -> None:
     """
     @brief      Verify Narrator Voice refresh keeps an enabled live AI profile and applies safe fallbacks.

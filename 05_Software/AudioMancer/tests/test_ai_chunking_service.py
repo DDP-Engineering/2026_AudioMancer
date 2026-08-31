@@ -46,7 +46,7 @@ def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
         paragraph_records,
         {
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "prompt_budget_tokens": 20,
             "text_budget_tokens": 2000,
             "safety_margin_tokens": 409,
@@ -79,7 +79,7 @@ def test_ai_chunking_large_context_allows_larger_scene_windows(tmp_path, monkeyp
     budget_metadata = ai_chunking_service._build_budget_metadata(
         {
             "context_window": 16384,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
         },
         "scene",
         "scene",
@@ -108,7 +108,7 @@ def test_ai_chunking_small_context_limits_paragraph_windows(tmp_path, monkeypatc
     budget_metadata = ai_chunking_service._build_budget_metadata(
         {
             "context_window": 2048,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
         },
         "scene",
         "scene",
@@ -138,7 +138,7 @@ def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch
         ai_chunking_service._build_budget_metadata(
             {
                 "context_window": 1024,
-                "max_output_tokens": 900,
+                "output_reserve_tokens": 900,
             },
             "scene",
             "scene",
@@ -165,7 +165,7 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
         {
             "backend_kind": config.ONLINE_AI_BACKEND_KIND,
             "context_window": 10000,
-            "max_output_tokens": 9900,
+            "output_reserve_tokens": 9900,
         },
         "scene",
         "scene",
@@ -196,7 +196,7 @@ def test_ai_chunking_context_modes_control_paragraph_caps(tmp_path, monkeypatch)
     ]
     profile_payload = {
         "context_window": 262144,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
     }
 
     balanced_metadata = ai_chunking_service._build_budget_metadata(
@@ -246,7 +246,7 @@ def test_ai_chunking_keeps_oversized_paragraphs_whole() -> None:
         paragraph_records,
         {
             "context_window": 2048,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "prompt_budget_tokens": 20,
             "text_budget_tokens": 512,
             "safety_margin_tokens": 256,
@@ -322,7 +322,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "request_timeout_seconds": 30,
             "temperature": 0.2,
         },
@@ -408,7 +408,7 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "request_timeout_seconds": 30,
             "temperature": 0.2,
         },
@@ -483,7 +483,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "request_timeout_seconds": 30,
             "temperature": 0.2,
         },
@@ -579,7 +579,7 @@ def test_ai_chunking_uses_absolute_numbers_and_preserves_cleanup_metadata(tmp_pa
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "request_timeout_seconds": 30,
             "temperature": 0.2,
         },
@@ -691,7 +691,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
                 "api_key": "",
                 "model_name": "qwen3-8b",
                 "context_window": 4096,
-                "max_output_tokens": 512,
+                "output_reserve_tokens": 512,
                 "request_timeout_seconds": 30,
                 "temperature": 0.2,
             },
@@ -736,7 +736,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
             "api_key": "",
             "model_name": "qwen3-8b",
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "request_timeout_seconds": 30,
             "temperature": 0.2,
         },
@@ -830,7 +830,7 @@ def test_ai_chunking_rejects_checkpoint_with_unknown_fields(tmp_path, monkeypatc
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
     }
@@ -940,7 +940,7 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
     }
@@ -1006,7 +1006,7 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
         "id": "profile_2",
         "model_name": "qwen3-14b",
         "context_window": 8192,
-        "max_output_tokens": 768,
+        "output_reserve_tokens": 768,
         "temperature": 0.4,
     }
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)

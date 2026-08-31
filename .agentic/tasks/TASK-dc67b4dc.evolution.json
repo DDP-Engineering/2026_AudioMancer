@@ -1,0 +1,604 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-08-30T07:39:36.323359Z",
+      "anchor_head": "2ec1d9d7a913def398e97ebaa2f6361413b37951",
+      "anchor_id": "dcce251cef7a4815",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b38fafd88884132462d3d3b79d1274075f6b0fe6908abfa41af14e50769116ad"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "3238eb97c759733e88e2a8963060db1ad1c91aa200cbcd78de85a05260d16774"
+          },
+          "path": "05_Software/AudioMancer/settings.example.json",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6e48e95eb024e6094b7b65d30369624a3f8e850792aae80624b69c8cba35016e"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "98e914e1666b1e541b88d3926c363fab7dfcc4c03e87fdc6709c663247c03741"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/config.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b8fae09e4ce653033178b967258da62c56ed230ba22db143ba3a4154fe676a31"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "cb5858647a848bd1c8c916aa9fff5340e24b5144a7a3922981b8b220574f5d50"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "feeec803378a935c88b1cd9881260da7f7c80202ac5399ba23cb697bcd871086"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "cb08b343032700e59a9002931d68104e856a7e4885c980f11851ae8fe3bea902"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1498a587ff9da76bce520f7094055d1d50b9cf32d77e71b4ac3137dc101ea87d"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "9a6588bd9e4b252c8ea152c281b3de1a35fdb00ad1f9df3c26ce8652b72f56dc"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/book_analysis_budget_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "77bcd5e09ba9e7cfff65bd8483797437932067ae93d54b6f2039e2e5fd8e2ccc"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "7c7d418589338c6a3102ae6b5befc5aea894f344298cbc02a403b022bb29a06c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/book_analysis_document_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c93c3d5e4eed694b463e98b4dbdf2ecee80db06a7d4e1354ab9b3cf562007c02"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f66b74d5a80ef63085e09d69d1c8861889d6111c81e5db0f3d4ebc517c90c268"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e3a5278d18118069651fec9bb0f277cca046b2cd66194e118545451595c5e9a6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "25d0d125b44b759d34eafb27be02146b66eb8c28e4c84c8cd9e464ede5bff47f"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1c680cf30fe9686599e61884742dd04665031ed2f68f54ed24dc46abc3349467"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "ce4cd537f0b158ab4a9b613f54b6d13d4af646f181a7759224a151b604da55a1"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f3179a6a2c9674a07d6cb53881417c5960a890d89708fb200bbb89dd5fed608f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "df61e48c5829814bd7a7610372abbbb3e99200bc85f39b7e2074c70849cadac8"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e462591f4def3279db402d449ad77ce2e73e29189bc0ff13dea2c8961bd0ab24"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "bdbbe3fabdf31e002f54ad0d22744b64b075bd03f7ab5269095b54ca9913ba5c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4f68e81844e19bad5468f9113b791678087829dfba5bff4d3fcf30e9d4e7fe1b"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8285b79ee1c4b7b7615da2e1cb7e57500268058750ab71fdf15aafff83dac7ce"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1e269deec04b5cc3f5753f891b228da5d73f6588628ecb5764ab4114e96d1e8f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "c6c0771d61a8f344673d8463f53dd9b12c29becd4ea3a6d73d675a8658a476ce"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5c4e5568b94d36cdcf335d346e3a18293b2266d1c2f739d0009924457ce8cf2e"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "d2a6574b87f0d90e8ceee036a8cd75affc24803dba8f0253b5f50c4f257032d6"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0b3e6c15dc19e2136f74b0d5dd125034ed22cfd1f9c511a92c7b16f99de43919"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "6d433b709f93f21a0d827ae716a725b4373a9045ac792c392a1d8adde6c81201"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "080c5ec6d94092e066332b44076fd77bbf1aea9785a80391c28c569db4184102"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "1f4861a873dc845d1c5667d5880ee05a990a804d3c4a5c294c559495e354fbea"
+          },
+          "path": "05_Software/AudioMancer/tests/cleanup_test_support.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "964c643845926443f19c04b864237a97034dcb4debc3c0cfa18f64eeccfe5ccf"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "c544d1faeb148200f9da7977bff3298b6fe6b443015a10b43a2b9995e8368bf5"
+          },
+          "path": "05_Software/AudioMancer/tests/conftest.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3b9fdf14d064c448d9761ebdeb61c3ea7383311c6e579616830b5c6410821c59"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "263149c6086aa76d98ba2a5c19155cafb938fd4a8cc4398502b249050ad6db0b"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_budget_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "bdafc620106f68618f7ea4a78507958d126c94b26e87de7091d607c6d948393a"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "3a75c236bf99f5c8049a9a1f363f8b0c20d1a12c0cb18748e38bca3d28581624"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_chunking_descriptor_contract.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "31328ebaa25b1613caac783899997fc01aa7905daa26103736115bc19abf0e4d"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "7c61f24f3584a8a444bb75592a80814507d11170d37bfd9e5f6c32d040a5dd2a"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_chunking_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "627fa9c6fc277985b700bffeefafbc68c4d8d6ec7e329fe91db5fcab0041da25"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "d568d425bc1e6b1cd3c6ed58e714e5fdc5da5d326d9107c3b9457d9635cfb66b"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3851827e27c7bf43fe9770aae3b3ce26a00e7d01e2d377334912cb71d593ea18"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "a213ff2c223ed95825db5c826a72c93c9b9f23cf9f0dee90256482a9dba6236f"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_translation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "867f0cdb9f34b5ba244e87b90ea243a1e7ad4a96f8c6fbd4906c6961702a06e3"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "1ea853b0a3dbe6bc0a0ba779345c84616e2e00c7969462aef867e6992ea0acdb"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_translation_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "063394debaba5b7a56e4467d5ab69a32aa9311aad6b017ba3b0e2477894c4992"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "20094f9b9b0c14feaffd377446057a27c7b45a4fd3c9374c29221c98e3ca2fbe"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_translation_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4de20928741674b0ba461d2372bb0e37c0112436cb02a9e599ab9c79611fb852"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "0837dc25d436b2d25bdf919d4737221472b03cd8d3114d1e8e427d17f11c6778"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_budget_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b9d7f47ee61804dd7ee94c41236d4b434e395c4e434dedcb1d970e684155a959"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "fdb2b392afbf731c4fcb10662aae79d328bda30989ef7b4d598a9e14fb129a75"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_document_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5fb77f419c724b28e5fb7eadaee469d72794d883f4faad084e71e8c90499f026"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "709649f420ac9cda96cd5e10a540f3ed3a83fde577e3af4c91ae9b3356fe067f"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6c1db95bd38cbb7bd38c622a962eebe2916af9a23cc4a9e3bcd67bb14d2ed171"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "9faa9c5becca02d281232820fa340bcac944c5aa15e7539df958690993818510"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "dde3aa139e431d6b92bce8dbf75a4802d85b888125e8540ed5ede374d7c490fe"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "c0a8157fbe5d35db9925848356517200bd7336b3812912f7dc3df14c164d8bdf"
+          },
+          "path": "05_Software/AudioMancer/tests/test_character_discovery_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a524f1384f4d7387be51c827efe63e07d8376e2dad423fa101fa27bfe1cb9812"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "3d713f665d8f31c86d14c7c72200d8c0eee5e80e5e40485c6553e8c2d021ae62"
+          },
+          "path": "05_Software/AudioMancer/tests/test_characters_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8c64b9ce9584e7bdcb1507dd23ec84ab7aeaeb2fee40646d69d2a7b03ddd9450"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "a12a21b3a23427e851985ab4dffaa0920f27a6f1e2eade5ddc18392b710f5dfd"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chunking_single_document_contract.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "07a59a6ab41a5768f449682976f82b0be82f600ccfb7f4822e0d225dbcdc1104"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "0f1021bdfaecff50c5bfd85499d80b38f5b0b446be6ec5f4621e24ade2c9c74e"
+          },
+          "path": "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "4e5063ce09269d0f839ffc0a060f48f40b663e79f040b5e16b372dbd56fb7208"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "d0b5fbddfada8293db134b745764fbb391f791121974b578598a544a08954dc0"
+          },
+          "path": "05_Software/AudioMancer/tests/test_llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a1267283b2479cf9a4688bbe3b8584689cd521ac19bb080b41bfc0bec2ba0fd4"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "a0dfd06230a963c7a176e83a71912c484c719aee00c42a16298e9a2ff4faf51b"
+          },
+          "path": "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "80ed08cb4766809aca128c501a61cf075079da44d1fb62f1045d873be6c8617e"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "500c7069a98444c12b303e833be769f413a8999d1e12678aa21ce3451b401467"
+          },
+          "path": "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "abbdd9b593250abd668520b560d498b0a19987a44b3c6d269f54866ade8061cf"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "e26a1039566334ceb9ed361a6430708bb20b6d5ad719fa95bb8e25a8dabadc65"
+          },
+          "path": "05_Software/AudioMancer/tests/test_project_export_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3817124e64bc91199ec1fa2c1901ab8bedd8f304421cb39ec7aea949f4098f5d"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "b0ddcf0c2200a7bab8e0af710001f88da4e6fba2e241a9472d34f57139223b64"
+          },
+          "path": "05_Software/AudioMancer/tests/test_settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "255e91591a809654bfe76f09127ac5e8e7339a518bcfad7016bbb9b4313695e7"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "e8e87cfd433ea7afe94dcb0de1401428c1f94b0cc26370b2d85008b9432a01fe"
+          },
+          "path": "05_Software/AudioMancer/tests/test_speech_blocks_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3a12fd3f08c7d742206cc95b05fdfca73ee1d33490abfb85a04ee33fc715aa91"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "1900d13704360649521f3d9d7601f801654ecfc4178ce2e79ef037e18d6d8096"
+          },
+          "path": "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "18bb1dcc5c637113e5b737b21283812edd78fd04f1019ae7ea5877def4f0a8a5"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "ef1818be86780c748153efa2cb6dc4e25fb505ca60ccbc4d9a72a81a44476e86"
+          },
+          "path": "05_Software/AudioMancer/tests/test_text_chunking_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8d654cdf89fd67b1a48eab59dfa6d26d4094a4c7ffc82446ab443a080c24b1bd"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "d0cb4ec96d0aae37c7179b8ced9f658cf8946e5f4f44e3289461fb6e5811f55e"
+          },
+          "path": "06_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "80bae9c69ee65450d8d4143264f4534aba43c7951f87f559a3d142036ce6561d"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "1dd2092819588dfb5071cf169d02baacb80696be275cff24c60d74aadbe8b94d"
+          },
+          "path": "06_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "019876e18d38d64226eff9b3b03d781bc08f9916d3d9d5fed05d93d0d08d3ceb"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "53fe5158c6e727bca9f9d99b48c9b583dc8ecb6cbfd8dfa55ac03169ee746973"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "source": {
+            "added": 0,
+            "modified": 14,
+            "removed": 0,
+            "unchanged": 95
+          },
+          "tests": {
+            "added": 0,
+            "modified": 25,
+            "removed": 0,
+            "unchanged": 102
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 43,
+          "removed": 0,
+          "unchanged": 299
+        }
+      },
+      "current_head": "2ec1d9d7a913def398e97ebaa2f6361413b37951",
+      "evolution_stage": "build",
+      "evolved_at": "2026-08-30T07:46:04.164429Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-dc67b4dc"
+}

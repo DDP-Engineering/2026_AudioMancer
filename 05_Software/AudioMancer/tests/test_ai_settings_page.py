@@ -41,14 +41,37 @@ def _test_profile(profile_id: str, label: str, **overrides: object) -> dict[str,
         "api_key": f"key-{profile_id}",
         "model_name": f"model-{profile_id}",
         "context_window": 8192,
-        "max_output_tokens": 1024,
+        "output_reserve_tokens": 1024,
         "request_timeout_seconds": 90,
         "temperature": 0.2,
         "supports_structured_output": False,
         "enabled": True,
+        "reasoning_mode": "provider_default",
     }
     profile.update(overrides)
     return profile
+
+
+def test_ai_settings_page_round_trips_reasoning_and_book_analysis_default(qtbot) -> None:
+    """Reasoning mode and Book Analysis default live only in AI Settings."""
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    payload = settings_service.build_default_settings()
+    payload["llm_profiles"] = [
+        _test_profile("profile-a", "Profile A", reasoning_mode="enabled")
+    ]
+    payload["default_book_analysis_profile_id"] = "profile-a"
+
+    page.load_settings(payload)
+
+    assert page._reasoning_mode_combo.currentData() == "enabled"
+    assert page._default_book_analysis_combo.currentData() == "profile-a"
+    page._reasoning_mode_combo.setCurrentIndex(
+        page._reasoning_mode_combo.findData("disabled")
+    )
+    rebuilt = page.build_settings({"language": "en"})
+    assert rebuilt["llm_profiles"][0]["reasoning_mode"] == "disabled"
+    assert rebuilt["default_book_analysis_profile_id"] == "profile-a"
 
 
 def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot) -> None:
@@ -126,12 +149,22 @@ def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> 
     assert numeric_layout is not None
     assert numeric_layout.itemAtPosition(0, 0).widget() is page._context_window_label
     assert numeric_layout.itemAtPosition(0, 1).widget() is page._context_window_spin
-    assert numeric_layout.itemAtPosition(0, 2).widget() is page._max_output_label
-    assert numeric_layout.itemAtPosition(0, 3).widget() is page._max_output_spin
+    assert numeric_layout.itemAtPosition(0, 2).widget() is page._output_reserve_label
+    assert numeric_layout.itemAtPosition(0, 3).widget() is page._output_reserve_spin
     assert numeric_layout.itemAtPosition(1, 0).widget() is page._timeout_label
     assert numeric_layout.itemAtPosition(1, 1).widget() is page._timeout_spin
     assert numeric_layout.itemAtPosition(1, 2).widget() is page._temperature_label
     assert numeric_layout.itemAtPosition(1, 3).widget() is page._temperature_spin
+
+
+def test_ai_settings_page_presents_output_reserve_not_provider_cap(qtbot) -> None:
+    """The profile editor names the local reservation independently of the provider."""
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.apply_language("en")
+
+    assert page._output_reserve_label.text() == "Output Reserve (tokens)"
 
 
 def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
@@ -182,7 +215,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
                 "api_key": "secret",
                 "model_name": "qwen3-8b",
                 "context_window": 16384,
-                "max_output_tokens": 2048,
+                "output_reserve_tokens": 2048,
                 "request_timeout_seconds": 120,
                 "temperature": 0.45,
                 "supports_structured_output": True,
@@ -246,7 +279,7 @@ def test_ai_settings_page_timeout_accepts_65535_seconds(qtbot) -> None:
                     "api_key": "",
                     "model_name": "qwen3-8b",
                     "context_window": 16384,
-                    "max_output_tokens": 8192,
+                    "output_reserve_tokens": 8192,
                     "request_timeout_seconds": 65535,
                     "temperature": 0.2,
                     "supports_structured_output": True,
@@ -342,7 +375,7 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
         "api_key": "edited-secret",
         "model_name": "edited-model",
         "context_window": 65536,
-        "max_output_tokens": 4096,
+        "output_reserve_tokens": 4096,
         "request_timeout_seconds": 321,
         "temperature": 0.75,
         "supports_structured_output": True,
@@ -354,7 +387,7 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
     page._api_key_edit.setText(str(expected_a["api_key"]))
     page._model_combo.setCurrentText(str(expected_a["model_name"]))
     page._context_window_spin.setValue(int(expected_a["context_window"]))
-    page._max_output_spin.setValue(int(expected_a["max_output_tokens"]))
+    page._output_reserve_spin.setValue(int(expected_a["output_reserve_tokens"]))
     page._timeout_spin.setValue(int(expected_a["request_timeout_seconds"]))
     page._temperature_spin.setValue(float(expected_a["temperature"]))
     page._supports_structured_checkbox.setChecked(bool(expected_a["supports_structured_output"]))
@@ -373,7 +406,7 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
     assert page._api_key_edit.text() == expected_a["api_key"]
     assert page._model_combo.currentText() == expected_a["model_name"]
     assert page._context_window_spin.value() == expected_a["context_window"]
-    assert page._max_output_spin.value() == expected_a["max_output_tokens"]
+    assert page._output_reserve_spin.value() == expected_a["output_reserve_tokens"]
     assert page._timeout_spin.value() == expected_a["request_timeout_seconds"]
     assert page._temperature_spin.value() == expected_a["temperature"]
     assert page._supports_structured_checkbox.isChecked() is expected_a["supports_structured_output"]
@@ -440,7 +473,7 @@ def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None
                     "api_key": "",
                     "model_name": "missing-model",
                     "context_window": 8192,
-                    "max_output_tokens": 1024,
+                    "output_reserve_tokens": 1024,
                     "request_timeout_seconds": 90,
                     "temperature": 0.2,
                     "supports_structured_output": True,
@@ -489,7 +522,7 @@ def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
                     "api_key": "",
                     "model_name": "qwen3-8b",
                     "context_window": 8192,
-                    "max_output_tokens": 1024,
+                    "output_reserve_tokens": 1024,
                     "request_timeout_seconds": 90,
                     "temperature": 0.2,
                     "supports_structured_output": False,

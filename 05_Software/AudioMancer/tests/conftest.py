@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service
+from audiomancer.services import llm_provider_service, project_workspace_service
 
 # CONSTANTS
 
@@ -60,6 +60,18 @@ def _is_ui_test_item(item) -> bool:
         return True
     file_name = Path(str(item.fspath)).name
     return any(token in file_name for token in _UI_TEST_FILE_TOKENS)
+
+
+@pytest.fixture(autouse=True)
+def block_live_provider_for_book_analysis_tests(request, monkeypatch):
+    """Fail immediately if any Book Analysis test reaches a real provider transport."""
+    if not Path(str(request.fspath)).name.startswith("test_book_analysis"):
+        return
+
+    def fail_network(*_args, **_kwargs):
+        raise AssertionError("Book Analysis tests must not open network connections")
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", fail_network)
 
 
 @pytest.fixture
@@ -116,15 +128,17 @@ def default_settings_payload():
                 "api_key": "",
                 "model_name": "qwen3-8b",
                 "context_window": 8192,
-                "max_output_tokens": 1024,
+                "output_reserve_tokens": 1024,
                 "request_timeout_seconds": 90,
                 "temperature": 0.2,
                 "supports_structured_output": False,
+                "reasoning_mode": "provider_default",
                 "enabled": True,
             }
         ],
         "default_ai_cleanup_profile_id": "profile_1",
         "default_ai_chunking_profile_id": "profile_1",
+        "default_book_analysis_profile_id": "profile_1",
         "default_ai_translation_profile_id": "profile_1",
         "default_narrator_profile_generation_profile_id": "profile_1",
         "default_speech_blocks_profile_id": "profile_1",

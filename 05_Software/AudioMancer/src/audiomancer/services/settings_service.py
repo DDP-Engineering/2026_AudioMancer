@@ -46,10 +46,11 @@ _LLM_PROFILE_DEFAULTS = {
     "api_key": "",
     "model_name": "",
     "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-    "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+    "output_reserve_tokens": config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
     "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
     "temperature": config.DEFAULT_LLM_TEMPERATURE,
     "supports_structured_output": False,
+    "reasoning_mode": config.DEFAULT_LLM_REASONING_MODE,
     "enabled": True,
     "discovered_model_name": "",
     "discovered_model_names": [],
@@ -219,6 +220,13 @@ def _validate_llm_profile(
         return copy.deepcopy(default_profile)
 
     normalized_profile = dict(candidate_profile)
+    if (
+        "output_reserve_tokens" not in normalized_profile
+        and type(normalized_profile.get("max_output_tokens")) is int
+        and normalized_profile["max_output_tokens"] > 0
+    ):
+        normalized_profile["output_reserve_tokens"] = normalized_profile["max_output_tokens"]
+    normalized_profile.pop("max_output_tokens", None)
 
     required_string_fields = (
         "id",
@@ -234,7 +242,7 @@ def _validate_llm_profile(
     )
     integer_fields = (
         "context_window",
-        "max_output_tokens",
+        "output_reserve_tokens",
         "request_timeout_seconds",
     )
     boolean_fields = (
@@ -289,6 +297,15 @@ def _validate_llm_profile(
             repair_tracker=repair_tracker,
         )
         normalized_profile["backend_kind"] = default_profile["backend_kind"]
+
+    if normalized_profile.get("reasoning_mode") not in config.LLM_REASONING_MODE_OPTIONS:
+        _log_settings_repair(
+            f"Repaired llm_profiles[{profile_index}].reasoning_mode using the default value.",
+            f"llm_profiles[{profile_index}].reasoning_mode",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
+        )
+        normalized_profile["reasoning_mode"] = default_profile["reasoning_mode"]
 
     if normalized_profile["base_url"] and not _is_valid_http_url(normalized_profile["base_url"]):
         _log_settings_repair(
@@ -655,6 +672,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         "default_ai_cleanup_profile_id",
         "default_ai_chunking_profile_id",
         "default_ai_translation_profile_id",
+        "default_book_analysis_profile_id",
         "default_narrator_profile_generation_profile_id",
         "default_speech_blocks_profile_id",
         "default_character_extraction_profile_id",
@@ -705,6 +723,7 @@ def build_default_settings() -> dict[str, Any]:
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
         "default_ai_translation_profile_id": None,
+        "default_book_analysis_profile_id": None,
         "default_narrator_profile_generation_profile_id": None,
         "default_speech_blocks_profile_id": None,
         "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,

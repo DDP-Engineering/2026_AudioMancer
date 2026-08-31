@@ -39,7 +39,7 @@ def _profile() -> dict[str, object]:
         "api_key": "",
         "model_name": "qwen3-8b",
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "output_reserve_tokens": 512,
         "request_timeout_seconds": 30,
         "temperature": 0.2,
     }

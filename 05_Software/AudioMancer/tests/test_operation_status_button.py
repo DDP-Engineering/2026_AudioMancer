@@ -127,4 +127,21 @@ def test_operation_status_button_label_localizes(qtbot, default_settings_payload
     )
 
 
+def test_book_analysis_started_summary_enables_operation_status(
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    project_root, manifest = project_workspace_service.create_project("AnalysisStatus", tmp_path)
+    manifest["operations"]["book_analysis"]["status"] = "running"
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, manifest)
+
+    window.set_current_page("book_analysis")
+
+    assert window._operation_status_button.isEnabled() is True
+    assert window._book_analysis_page.operation_status_text()
+
+
 # END OF FILE

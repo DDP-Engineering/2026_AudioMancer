@@ -1,0 +1,9 @@
+Create the final layered Book Analysis report from the following consolidated evidence.
+
+Write every natural-language value in the project target language: {target_language}.
+Keep the concise layer short and useful. Put deeper literary and audiobook analysis in the detailed layer.
+Preserve uncertainty, cite only supplied chunk identifiers, and never invent facts or evidence.
+Return only the requested final Book Analysis JSON object.
+
+SOURCE_JSON:
+{source_json}

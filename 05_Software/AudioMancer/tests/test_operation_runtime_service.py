@@ -23,6 +23,44 @@ from audiomancer.services import narrator_definition_service, operation_runtime_
 from audiomancer.services.time_service import utc_now_iso
 
 
+def test_book_analysis_is_manifest_operation_but_not_workflow_stage() -> None:
+    assert "book_analysis" in config.PROJECT_OPERATION_KINDS
+    assert "book_analysis" not in config.WORKFLOW_OPERATION_ORDER
+    assert "book_analysis" not in config.OPERATION_STAGE_BY_KIND
+
+
+def test_chunking_downstream_reset_preserves_book_analysis_artifact_as_stale(tmp_path) -> None:
+    analysis_path = tmp_path / config.BOOK_ANALYSIS_DOCUMENT_FILE_NAME
+    analysis_path.write_text('{"preserved":true}', encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(
+        tmp_path,
+        "chunking",
+        include_current=False,
+    )
+
+    assert analysis_path.is_file()
+
+
+def test_book_analysis_reset_owns_only_its_document_and_logs(tmp_path) -> None:
+    analysis_path = tmp_path / config.BOOK_ANALYSIS_DOCUMENT_FILE_NAME
+    analysis_log = tmp_path / "log_ai_book_analysis_20260829T120000Z.log"
+    downstream_path = tmp_path / config.CHARACTERS_DOCUMENT_FILE_NAME
+    analysis_path.write_text("analysis", encoding="utf-8")
+    analysis_log.write_text("log", encoding="utf-8")
+    downstream_path.write_text("characters", encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(tmp_path, "book_analysis")
+
+    assert not analysis_path.exists()
+    assert not analysis_log.exists()
+    assert downstream_path.read_text(encoding="utf-8") == "characters"
+    assert operation_runtime_service.downstream_operation_kinds(
+        "book_analysis", include_current=True
+    ) == ("book_analysis",)
+    assert operation_runtime_service.downstream_operation_kinds("book_analysis") == ()
+
+
 def test_progress_percent_clamps_to_zero_and_hundred() -> None:
     """
     @brief      Verify shared unit-progress conversion stays inside the UI range.

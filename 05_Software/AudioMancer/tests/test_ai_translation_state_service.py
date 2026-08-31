@@ -259,7 +259,7 @@ def _document(status: str) -> dict[str, object]:
         },
         "budget_metadata": {
             "context_window": 4096,
-            "max_output_tokens": 512,
+            "output_reserve_tokens": 512,
             "prompt_budget_tokens": 100,
             "text_budget_tokens": 2048,
             "safety_margin_tokens": 512,

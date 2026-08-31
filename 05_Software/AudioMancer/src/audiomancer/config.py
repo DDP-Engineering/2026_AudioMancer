@@ -403,6 +403,12 @@ WORKFLOW_OPERATION_ORDER = (
     "audio_assembly",
 )
 
+# @brief Optional project operations that never advance or block the canonical workflow.
+SUPPORTING_OPERATION_KINDS = ("book_analysis",)
+
+# @brief Every operation summary supported by the project manifest.
+PROJECT_OPERATION_KINDS = WORKFLOW_OPERATION_ORDER + SUPPORTING_OPERATION_KINDS
+
 # @brief Workflow stage milestone promoted by each completed operation.
 OPERATION_STAGE_BY_KIND = {
     "cleanup": "text_cleanup_ready",
@@ -487,6 +493,9 @@ CLEANUP_SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", 
 
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
+
+# @brief File name used for the optional resumable Book Analysis document.
+BOOK_ANALYSIS_DOCUMENT_FILE_NAME = "book_analysis.json"
 
 # @brief File name used for persisted translated chunk records.
 TRANSLATED_CHUNKS_FILE_NAME = "translated_text.json"
@@ -622,7 +631,7 @@ DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION = 0.30
 DEFAULT_LLM_CONTEXT_WINDOW = 16384
 
 # @brief Default configured maximum output tokens for AI profiles.
-DEFAULT_LLM_MAX_OUTPUT_TOKENS = 8192
+DEFAULT_LLM_OUTPUT_RESERVE_TOKENS = 8192
 
 # @brief Default timeout in seconds for AI provider requests.
 DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 300
@@ -635,6 +644,39 @@ DEFAULT_AI_CONNECT_TIMEOUT_SECONDS = 3
 
 # @brief Default temperature for AI cleanup and chunking requests.
 DEFAULT_LLM_TEMPERATURE = 0.2
+
+# @brief Supported profile-level reasoning preferences for compatible providers.
+LLM_REASONING_MODE_OPTIONS = ("provider_default", "enabled", "disabled")
+
+# @brief Reasoning preference used when a profile omits or has an invalid value.
+DEFAULT_LLM_REASONING_MODE = "provider_default"
+
+# @brief Minimum context window accepted for Book Analysis AI profiles.
+BOOK_ANALYSIS_MIN_CONTEXT_TOKENS = 16_384
+
+# @brief Maximum local-model context fraction supplied as Book Analysis source text.
+BOOK_ANALYSIS_LOCAL_SOURCE_CONTEXT_FRACTION = 0.50
+
+# @brief Maximum online-model context fraction supplied as Book Analysis source text.
+BOOK_ANALYSIS_ONLINE_SOURCE_CONTEXT_FRACTION = 0.30
+
+# @brief Maximum context fraction reserved for one Book Analysis response.
+BOOK_ANALYSIS_OUTPUT_CONTEXT_FRACTION = 0.20
+
+# @brief Context fraction reserved when provider reasoning may be enabled.
+BOOK_ANALYSIS_REASONING_CONTEXT_FRACTION = 0.10
+
+# @brief Context fraction reserved as the Book Analysis safety margin.
+BOOK_ANALYSIS_SAFETY_CONTEXT_FRACTION = 0.05
+
+# @brief Minimum Book Analysis safety reserve in estimated tokens.
+BOOK_ANALYSIS_MIN_SAFETY_TOKENS = 512
+
+# @brief Minimum useful Book Analysis source-text budget in estimated tokens.
+BOOK_ANALYSIS_MIN_SOURCE_TOKENS = 512
+
+# @brief Source-budget fraction used for one provider-confirmed overflow retry.
+BOOK_ANALYSIS_OVERFLOW_RETRY_FRACTION = 0.75
 
 
 # TTS Runtime Defaults

@@ -525,7 +525,7 @@ def _ask(
         ensure_ascii=False,
         separators=(",", ":"),
     )
-    output_reservation = _resolve_output_reservation(
+    _resolve_output_reservation(
         profile,
         batch_id,
         questions,
@@ -556,7 +556,6 @@ def _ask(
         allow_unconstrained_fallback=False,
         allow_model_json_repair=False,
         retry_count_override=0,
-        max_output_tokens_override=output_reservation,
     )
     answers = _validate_answers(response.get("payload"), batch_id, questions)
     return answers, token_usage_service.coerce_token_usage(response.get("usage"))
@@ -730,7 +729,7 @@ def _resolve_output_reservation(
     ) // 2
     ceiling = int(int(profile["context_window"]) * _SAFE_CONTEXT_FRACTION)
     reservation = min(
-        int(profile.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)),
+        int(profile.get("output_reserve_tokens", config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS)),
         ceiling - estimated_input,
     )
     if reservation < _answer_token_floor(batch_id, questions):

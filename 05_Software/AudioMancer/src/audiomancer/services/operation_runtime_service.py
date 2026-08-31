@@ -71,6 +71,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         "chunking_report.json",
         "chunking_state.json",
     ),
+    "book_analysis": (config.BOOK_ANALYSIS_DOCUMENT_FILE_NAME,),
     "translation": (
         config.TRANSLATED_CHUNKS_FILE_NAME,
         # Reset-only legacy names; Translation never reads or writes them.
@@ -110,6 +111,7 @@ _OPERATION_ARTIFACT_GLOBS = {
 
 # @brief AI log tokens that differ from their owning operation kind.
 _OPERATION_AI_LOG_TOKENS = {
+    "book_analysis": ("book_analysis",),
     "character_discovery": ("character_discovery", "characters"),
     "narrator_definition": ("narrator_profiles",),
 }
@@ -147,6 +149,8 @@ def downstream_operation_kinds(
     @return     Ordered operation-kind tuple.
     @exception  None
     """
+    if operation_kind in config.SUPPORTING_OPERATION_KINDS:
+        return (operation_kind,) if include_current else ()
     if operation_kind not in _OPERATION_ORDER:
         return ()
     start_index = _OPERATION_ORDER.index(operation_kind)
@@ -212,7 +216,7 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
     @return     Default operation-state payload.
     @exception  ValueError Raised when the operation kind is unsupported.
     """
-    if operation_kind not in _OPERATION_ORDER:
+    if operation_kind not in config.PROJECT_OPERATION_KINDS:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
     return {
         "status": "not_started",
@@ -275,7 +279,7 @@ def ensure_default_operation_state(project_root: str | Path, operation_kind: str
     @return     Created or existing state path, or `None` when the operation has no state file.
     @exception  ValueError Raised when the operation kind is unsupported.
     """
-    if operation_kind not in _OPERATION_ORDER:
+    if operation_kind not in config.PROJECT_OPERATION_KINDS:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
     state_file_name = _OPERATION_STATE_FILE_NAMES.get(operation_kind)
     if state_file_name is None:
