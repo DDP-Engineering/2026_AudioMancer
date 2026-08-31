@@ -10,6 +10,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- AI profiles now use an Output Reserve only for local context planning. Every
+  AI workflow leaves completion length to its selected provider instead of
+  sending an output-token cap; existing profile limits migrate automatically.
+- Added an optional Book Analysis page immediately after Text Chunking. It can
+  analyze long books through resumable whole-chunk checkpoints and recursive
+  consolidation, then presents a short summary with expandable character,
+  narrative, theme, emotional and audiobook details in the project's selected
+  translation language.
+- Book Analysis preserves the last completed report while another candidate is
+  interrupted or uses a different AI profile. Reports whose source chunks or
+  target language changed remain visible as stale and can be replaced with
+  Analyze; a fresh completed report requires Reset before another run.
+- AI profiles now include provider-default, enabled or disabled reasoning
+  preferences and a Book Analysis workflow default. The runtime applies these
+  by provider capability rather than model-name rules and falls back to the
+  provider default when an OpenAI-compatible backend explicitly rejects the
+  control.
+- Book Analysis requires at least a 16K context profile and uses conservative
+  local/online source fractions plus output, reasoning, prompt and safety
+  reserves. Its automated coverage uses scripted provider responses and blocks
+  live network access.
+
 ### Fixed
 
 - Scene Ambience no longer stops the whole Audio Blocks run when the configured
