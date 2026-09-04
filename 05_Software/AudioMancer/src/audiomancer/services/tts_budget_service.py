@@ -92,6 +92,56 @@ def resolve_generation_token_limit(settings_payload: dict[str, object] | None) -
     )
 
 
+def resolve_clone_sampling_parameters(settings_payload: dict[str, object] | None) -> dict[str, float | int]:
+    """
+    @brief      Resolve the operator sampling parameters sent with every clone-from-prompt request.
+    @param[in]  settings_payload Optional application settings payload.
+    @return     Talker temperature plus sub-talker temperature, top-k and top-p, clamped to their ranges.
+    @exception  None
+    """
+    settings = settings_payload if isinstance(settings_payload, dict) else {}
+    return {
+        "temperature": _clamped_float(
+            settings.get("speech_block_clone_temperature"),
+            config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE,
+            config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE,
+        ),
+        "subtalker_temperature": _clamped_float(
+            settings.get("speech_block_clone_subtalker_temperature"),
+            config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE,
+            config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE,
+        ),
+        "subtalker_top_k": int(
+            _clamped_float(
+                settings.get("speech_block_clone_subtalker_top_k"),
+                config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K,
+                config.SPEECH_BLOCK_CLONE_TOP_K_RANGE,
+            )
+        ),
+        "subtalker_top_p": _clamped_float(
+            settings.get("speech_block_clone_subtalker_top_p"),
+            config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P,
+            config.SPEECH_BLOCK_CLONE_TOP_P_RANGE,
+        ),
+    }
+
+
+def _clamped_float(value: object, default: float | int, value_range: tuple[float, float]) -> float:
+    """
+    @brief      Coerce one setting to a float inside its range, falling back to the default when malformed.
+    @param[in]  value Candidate setting value.
+    @param[in]  default Value used when the candidate is missing or not numeric.
+    @param[in]  value_range Inclusive minimum and maximum.
+    @return     Clamped float value.
+    @exception  None
+    """
+    try:
+        resolved = float(default) if value is None or isinstance(value, bool) else float(value)
+    except (TypeError, ValueError):
+        resolved = float(default)
+    return min(max(resolved, float(value_range[0])), float(value_range[1]))
+
+
 def model_generation_limits(model_payload: object) -> tuple[int | None, float | None]:
     """
     @brief      Extract the runtime-reported generation limits from one discovered-model payload.

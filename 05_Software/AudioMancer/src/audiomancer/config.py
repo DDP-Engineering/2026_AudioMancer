@@ -746,6 +746,27 @@ SPEECH_BLOCK_MAX_GENERATION_TOKENS_MINIMUM = 128
 # @brief Largest operator-selectable generation-token ceiling, matching the VoiceWeaver hard maximum.
 SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM = 8192
 
+# @brief Default talker sampling temperature sent with every clone-from-prompt request.
+DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE = 0.9
+
+# @brief Default sub-talker sampling temperature sent with every clone-from-prompt request.
+DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE = 0.9
+
+# @brief Default sub-talker top-k sent with every clone-from-prompt request.
+DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K = 50
+
+# @brief Default sub-talker top-p sent with every clone-from-prompt request.
+DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P = 1.0
+
+# @brief Operator-selectable range for the clone talker and sub-talker temperatures.
+SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE = (0.05, 2.0)
+
+# @brief Operator-selectable range for the clone sub-talker top-k.
+SPEECH_BLOCK_CLONE_TOP_K_RANGE = (1, 200)
+
+# @brief Operator-selectable range for the clone sub-talker top-p.
+SPEECH_BLOCK_CLONE_TOP_P_RANGE = (0.05, 1.0)
+
 # @brief Scene Ambience placement options used by Speech Blocks generation.
 SCENE_AMBIENCE_PLACEMENT_OPTIONS = (
     "none",

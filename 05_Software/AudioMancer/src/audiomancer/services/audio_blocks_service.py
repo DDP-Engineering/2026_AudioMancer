@@ -1420,6 +1420,7 @@ def _resolve_generation_context(
         "scene_ambience_duration_seconds": scene_ambience_duration_seconds,
         "voice_assignment_mode": voice_assignment_mode,
         "original_language": str(manifest.get("original_language", "")).strip(),
+        "clone_model_parameters": _clone_model_parameters(runtime_settings),
         **model_budget,
         "base_url": base_url,
         "timeout_seconds": timeout_seconds,
@@ -1949,7 +1950,10 @@ def _generate_audio_block(
             voice_clone_prompt,
             str(generation_context.get("voice_language", "")),
             part_text,
-            model_parameters={"max_new_tokens": _part_generation_token_budget(part_text, generation_context)},
+            model_parameters={
+                **_clone_model_parameters(generation_context),
+                "max_new_tokens": _part_generation_token_budget(part_text, generation_context),
+            },
             timeout_seconds=timeout_seconds,
         )
         final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
@@ -2163,6 +2167,17 @@ def _plan_audio_block_splits(text: str, generation_context: dict[str, object]) -
     if len(clause_parts) > 1:
         return {"parts": clause_parts, "strategy": "clause"}
     return {"parts": _split_by_word_groups(normalized_text, hard_max_words), "strategy": "word_group"}
+
+
+def _clone_model_parameters(payload: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Read the operator clone sampling parameters carried by runtime settings or a generation context.
+    @param[in]  payload Runtime-settings or generation-context payload.
+    @return     Sampling parameter mapping, empty when the payload carries none.
+    @exception  None
+    """
+    parameters = payload.get("clone_model_parameters")
+    return dict(parameters) if isinstance(parameters, dict) else {}
 
 
 def _part_generation_token_budget(part_text: str, generation_context: dict[str, object]) -> int:

@@ -848,6 +848,7 @@ def _runtime_settings(
         "speech_block_max_generation_tokens": tts_budget_service.resolve_generation_token_limit(
             window._settings_payload
         ),
+        "clone_model_parameters": tts_budget_service.resolve_clone_sampling_parameters(window._settings_payload),
         "generate_scene_ambience_audio": bool(scene_ambience_audio_enabled),
         "scene_ambience_duration_seconds": float(
             window._settings_payload.get(

@@ -212,6 +212,37 @@ def test_generation_token_limit_falls_back_to_the_shipped_default() -> None:
     assert tts_budget_service.resolve_generation_token_limit({"speech_block_max_generation_tokens": 640}) == 640
 
 
+def test_clone_sampling_parameters_resolve_from_settings_and_clamp() -> None:
+    """
+    @brief      Verify the clone sampling parameters read the settings, clamp to range, and default when malformed.
+    @return     None.
+    @exception  None
+    """
+    defaults = tts_budget_service.resolve_clone_sampling_parameters(None)
+
+    assert defaults == {
+        "temperature": config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE,
+        "subtalker_temperature": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE,
+        "subtalker_top_k": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K,
+        "subtalker_top_p": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P,
+    }
+
+    resolved = tts_budget_service.resolve_clone_sampling_parameters(
+        {
+            "speech_block_clone_temperature": 0.6,
+            "speech_block_clone_subtalker_temperature": 9.0,
+            "speech_block_clone_subtalker_top_k": "bad",
+            "speech_block_clone_subtalker_top_p": 0.0,
+        }
+    )
+
+    assert resolved["temperature"] == 0.6
+    assert resolved["subtalker_temperature"] == config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE[1]
+    assert resolved["subtalker_top_k"] == config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K
+    assert isinstance(resolved["subtalker_top_k"], int)
+    assert resolved["subtalker_top_p"] == config.SPEECH_BLOCK_CLONE_TOP_P_RANGE[0]
+
+
 def test_budget_reports_the_model_hard_token_maximum_alongside_the_operator_target() -> None:
     """
     @brief      Verify REQ-FUNC-79fd5f3a the reported hard maximum travels beside the operator target.

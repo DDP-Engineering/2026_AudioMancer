@@ -2156,6 +2156,43 @@ def test_generation_request_raises_the_token_ceiling_for_an_over_target_part(mon
     assert requested_tokens <= 8192
 
 
+def test_generation_request_sends_the_operator_clone_sampling_parameters(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify every clone-from-prompt request carries the operator sampling parameters plus the token ceiling.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    sampling_parameters = {
+        "temperature": 0.6,
+        "subtalker_temperature": 0.5,
+        "subtalker_top_k": 20,
+        "subtalker_top_p": 0.8,
+    }
+    recorded_parameters = _generate_recording_model_parameters(
+        monkeypatch,
+        tmp_path,
+        "AudioBlocksCloneSampling",
+        "The narrator reads one short sentence.",
+        512,
+        sampling_parameters,
+    )
+
+    assert len(recorded_parameters) == 1
+    assert recorded_parameters[0] == {**sampling_parameters, "max_new_tokens": 512}
+
+    recorded_without_sampling = _generate_recording_model_parameters(
+        monkeypatch,
+        tmp_path,
+        "AudioBlocksNoCloneSampling",
+        "The narrator reads one short sentence.",
+        512,
+    )
+
+    assert recorded_without_sampling == [{"max_new_tokens": 512}]
+
+
 def test_generation_request_keeps_the_operator_ceiling_for_a_part_within_target(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify REQ-FUNC-46959c54 a part inside the operator target keeps that target as its ceiling.
@@ -2979,7 +3016,9 @@ def _update_audio_blocks_document(project_root, **fields):
     audio_blocks_service.write_audio_blocks_document(project_root, {**document, **fields})
 
 
-def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text, max_generation_tokens):
+def _generate_recording_model_parameters(
+    monkeypatch, tmp_path, name, block_text, max_generation_tokens, clone_model_parameters=None
+):
     """
     @brief      Run one Audio Blocks generation over a single block and record every request's parameters.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -2987,6 +3026,7 @@ def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text
     @param[in]  name Project display name.
     @param[in]  block_text Spoken text for the single fixture block.
     @param[in]  max_generation_tokens Operator generation-token target to configure.
+    @param[in]  clone_model_parameters Optional operator clone sampling parameters placed in runtime settings.
     @return     Recorded model-parameter mappings, one per generation request.
     @exception  None
     """
@@ -3048,6 +3088,8 @@ def _generate_recording_model_parameters(monkeypatch, tmp_path, name, block_text
     for discovered_model in runtime_settings["discovered_models"]:
         discovered_model["generation_parameter_ranges"] = dict(active_model["generation_parameter_ranges"])
     runtime_settings["speech_block_max_generation_tokens"] = max_generation_tokens
+    if clone_model_parameters is not None:
+        runtime_settings["clone_model_parameters"] = dict(clone_model_parameters)
     audio_blocks_service.start_or_continue_generation(project_root, manifest, runtime_settings)
     return recorded_parameters
 

@@ -366,6 +366,18 @@ _UI_STRINGS = {
             "Largest generation-token budget one narration block is planned against. "
             "The TTS model's own reported budget still applies, so this can only shorten blocks."
         ),
+        "tts_settings.clone_temperature": "Clone Temperature",
+        "tts_settings.clone_temperature_tooltip": (
+            "Sampling temperature of the voice-clone talker. Lower values keep the cloned voice "
+            "closer to the reference sample from block to block; higher values vary the delivery more."
+        ),
+        "tts_settings.clone_subtalker_temperature": "Sub-talker Temperature",
+        "tts_settings.clone_subtalker_top_k": "Sub-talker Top-K",
+        "tts_settings.clone_subtalker_top_p": "Sub-talker Top-P",
+        "tts_settings.clone_subtalker_tooltip": (
+            "Sampling settings of the voice-clone sub-talker, which predicts the fine acoustic detail. "
+            "Lower temperature and top-p narrow the choices and make the timbre steadier."
+        ),
         "tts_settings.scene_ambience_enabled": "Scene Ambience Generation",
         "tts_settings.scene_ambience_placement": "Scene Ambience Placement",
         "tts_settings.scene_ambience_duration": "Scene Ambience Max Sequence Duration (s)",
@@ -1511,6 +1523,18 @@ _UI_STRINGS = {
         "tts_settings.max_generation_tokens_tooltip": (
             "Cel mai mare buget de tokeni de generare cu care este planificat un bloc de naratiune. "
             "Bugetul raportat de modelul TTS ramane valabil, deci aceasta optiune poate doar scurta blocurile."
+        ),
+        "tts_settings.clone_temperature": "Temperatura Clonare",
+        "tts_settings.clone_temperature_tooltip": (
+            "Temperatura de esantionare a vorbitorului principal la clonarea vocii. Valori mici tin vocea "
+            "clonata mai aproape de mostra de referinta de la un bloc la altul; valori mari variaza mai mult rostirea."
+        ),
+        "tts_settings.clone_subtalker_temperature": "Temperatura Sub-vorbitor",
+        "tts_settings.clone_subtalker_top_k": "Top-K Sub-vorbitor",
+        "tts_settings.clone_subtalker_top_p": "Top-P Sub-vorbitor",
+        "tts_settings.clone_subtalker_tooltip": (
+            "Setarile de esantionare ale sub-vorbitorului de clonare, care prezice detaliul acustic fin. "
+            "Temperatura si top-p mai mici restrang alegerile si fac timbrul mai stabil."
         ),
         "tts_settings.scene_ambience_enabled": "Generare Ambienta Scena",
         "tts_settings.scene_ambience_placement": "Pozitionare Ambienta Scena",

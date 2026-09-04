@@ -1139,6 +1139,40 @@ def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, mon
     assert "without requiring repairs" in caplog.text
 
 
+def test_validate_settings_repairs_clone_sampling_parameters() -> None:
+    """
+    @brief      Verify out-of-range or malformed clone sampling settings are repaired to their defaults.
+    @return     None.
+    @exception  None
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["speech_block_clone_temperature"] = 5.0
+    candidate_settings["speech_block_clone_subtalker_temperature"] = "warm"
+    candidate_settings["speech_block_clone_subtalker_top_k"] = 0
+    candidate_settings["speech_block_clone_subtalker_top_p"] = True
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["speech_block_clone_temperature"] == config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE
+    assert (
+        validated_settings["speech_block_clone_subtalker_temperature"]
+        == config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE
+    )
+    assert validated_settings["speech_block_clone_subtalker_top_k"] == config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K
+    assert validated_settings["speech_block_clone_subtalker_top_p"] == config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P
+
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["speech_block_clone_temperature"] = 0.6
+    candidate_settings["speech_block_clone_subtalker_top_k"] = 20
+    candidate_settings["speech_block_clone_subtalker_top_p"] = 0.8
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["speech_block_clone_temperature"] == 0.6
+    assert validated_settings["speech_block_clone_subtalker_top_k"] == 20
+    assert validated_settings["speech_block_clone_subtalker_top_p"] == 0.8
+
+
 def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> None:
     """
     @brief      Verify invalid TTS audio timeout and preview-limit settings are repaired to their defaults.

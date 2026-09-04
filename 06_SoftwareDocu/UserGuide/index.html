@@ -349,6 +349,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>Audio Preview Timeout (s)</td><td>10 - 3600</td><td>60</td></tr>
                         <tr><td>Audio Generation Timeout (s)</td><td>30 - 7200</td><td>300</td></tr>
                         <tr><td>Max Block Tokens</td><td>128 - 8192, step 128</td><td>1024</td></tr>
+                        <tr><td>Clone Temperature</td><td>0.05 - 2.00</td><td>0.90</td></tr>
+                        <tr><td>Sub-talker Temperature</td><td>0.05 - 2.00</td><td>0.90</td></tr>
+                        <tr><td>Sub-talker Top-K</td><td>1 - 200</td><td>50</td></tr>
+                        <tr><td>Sub-talker Top-P</td><td>0.05 - 1.00</td><td>1.00</td></tr>
                     </tbody>
                 </table>
                 <p>
@@ -357,6 +361,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     this setting can only make blocks shorter, never longer. Lower it if you hear a cloned voice
                     drift or wander toward the end of a long block &mdash; a model will attempt everything up to its
                     recommended ceiling, but voice quality can fall off well before reaching it.
+                </p>
+                <p>
+                    <strong>Clone Temperature</strong> and the three <strong>Sub-talker</strong> settings are sent
+                    with every Audio Blocks clone request. The defaults are the model's own. Lower the temperatures
+                    and Top-P when the cloned voice wanders away from the reference sample or changes character from
+                    one block to the next; the voice becomes steadier at the cost of a flatter delivery. Existing
+                    audio is kept when you change them, so regenerate a block to hear the effect.
                 </p>
                 <p>
                     Preview text length is not a setting. The Narrator Voice and Character Voices editors accept

@@ -10,6 +10,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- TTS Settings now exposes the voice-clone sampling controls: Clone Temperature
+  and the Sub-talker Temperature, Top-K and Top-P. Audio Blocks sends them with
+  every clone request, so a cloned voice that wanders from its reference sample
+  can be steadied without touching the runtime. The defaults match the model's
+  own values, and changing them keeps existing audio.
+
 ### Fixed
 
 - The Windows portable packager now prevents host-injected runtime DLLs from

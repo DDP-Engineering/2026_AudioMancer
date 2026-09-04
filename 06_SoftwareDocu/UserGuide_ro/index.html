@@ -357,6 +357,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>Timeout Preview Audio (s)</td><td>10 - 3600</td><td>60</td></tr>
                         <tr><td>Timeout Generare Audio (s)</td><td>30 - 7200</td><td>300</td></tr>
                         <tr><td>Tokeni Maximi pe Bloc</td><td>128 - 8192, pas 128</td><td>1024</td></tr>
+                        <tr><td>Temperatura Clonare</td><td>0.05 - 2.00</td><td>0.90</td></tr>
+                        <tr><td>Temperatura Sub-vorbitor</td><td>0.05 - 2.00</td><td>0.90</td></tr>
+                        <tr><td>Top-K Sub-vorbitor</td><td>1 - 200</td><td>50</td></tr>
+                        <tr><td>Top-P Sub-vorbitor</td><td>0.05 - 1.00</td><td>1.00</td></tr>
                     </tbody>
                 </table>
                 <p>
@@ -365,6 +369,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     ramane valabil, deci aceasta setare poate doar scurta blocurile, niciodata nu le lungeste.
                     Coboar-o daca auzi vocea clonata deviind spre finalul unui bloc lung &mdash; un model incearca
                     orice pana la plafonul lui recomandat, dar calitatea vocii poate scadea cu mult inainte de el.
+                </p>
+                <p>
+                    <strong>Temperatura Clonare</strong> si cele trei setari <strong>Sub-vorbitor</strong> sunt
+                    trimise cu fiecare cerere de clonare din Blocuri Audio. Valorile implicite sunt cele ale
+                    modelului. Coboara temperaturile si Top-P cand vocea clonata se departeaza de mostra de referinta
+                    sau isi schimba caracterul de la un bloc la altul; vocea devine mai stabila, cu pretul unei
+                    rostiri mai plate. Audio-ul existent se pastreaza cand le schimbi, deci regenereaza un bloc ca sa
+                    auzi efectul.
                 </p>
                 <p>
                     Lungimea textului de previzualizare nu este o setare. Editoarele din Voce Narator si Voci

@@ -106,6 +106,40 @@ def test_tts_settings_page_round_trips_the_max_block_tokens_setting(qtbot, defau
     assert page._max_generation_tokens_spin.value() == config.SPEECH_BLOCK_MAX_GENERATION_TOKENS_MAXIMUM
 
 
+def test_tts_settings_page_round_trips_the_clone_sampling_settings(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the clone sampling controls load, save and stay inside their ranges.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Shared default settings fixture.
+    @return     None.
+    @exception  None
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    settings_payload = dict(default_settings_payload)
+    settings_payload["speech_block_clone_temperature"] = 0.6
+    settings_payload["speech_block_clone_subtalker_temperature"] = 0.5
+    settings_payload["speech_block_clone_subtalker_top_k"] = 20
+    settings_payload["speech_block_clone_subtalker_top_p"] = 0.8
+
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
+    saved_settings = page.build_settings(default_settings_payload)
+
+    assert saved_settings["speech_block_clone_temperature"] == 0.6
+    assert saved_settings["speech_block_clone_subtalker_temperature"] == 0.5
+    assert saved_settings["speech_block_clone_subtalker_top_k"] == 20
+    assert saved_settings["speech_block_clone_subtalker_top_p"] == 0.8
+
+    settings_payload["speech_block_clone_temperature"] = 99.0
+    settings_payload["speech_block_clone_subtalker_top_k"] = 0
+    page.load_state(settings_payload, {"voice_assignment_mode": "same_narrator"}, True)
+
+    assert page._clone_temperature_spin.value() == config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE[1]
+    assert page._clone_subtalker_top_k_spin.value() == config.SPEECH_BLOCK_CLONE_TOP_K_RANGE[0]
+    page.apply_language("ro")
+    assert page._clone_temperature_label.text() == "Temperatura Clonare"
+
+
 def test_tts_settings_page_caps_scene_ambience_duration_at_the_model_ceiling(qtbot, default_settings_payload) -> None:
     """
     @brief      Verify the Scene Ambience duration spinbox never offers an unachievable duration.

@@ -162,6 +162,34 @@ class TtsSettingsPage(QWidget):
         )
         self._configure_limit_spinbox(self._max_generation_tokens_spin)
         numeric_limits_form.addRow(self._max_generation_tokens_label, self._max_generation_tokens_spin)
+        self._clone_temperature_label = QLabel("Clone Temperature", self)
+        self._configure_runtime_limit_label(self._clone_temperature_label)
+        self._clone_temperature_spin = self._build_clone_temperature_spinbox(
+            config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE
+        )
+        numeric_limits_form.addRow(self._clone_temperature_label, self._clone_temperature_spin)
+        self._clone_subtalker_temperature_label = QLabel("Sub-talker Temperature", self)
+        self._configure_runtime_limit_label(self._clone_subtalker_temperature_label)
+        self._clone_subtalker_temperature_spin = self._build_clone_temperature_spinbox(
+            config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE
+        )
+        numeric_limits_form.addRow(self._clone_subtalker_temperature_label, self._clone_subtalker_temperature_spin)
+        self._clone_subtalker_top_k_label = QLabel("Sub-talker Top-K", self)
+        self._configure_runtime_limit_label(self._clone_subtalker_top_k_label)
+        self._clone_subtalker_top_k_spin = QSpinBox(self)
+        self._clone_subtalker_top_k_spin.setRange(*config.SPEECH_BLOCK_CLONE_TOP_K_RANGE)
+        self._clone_subtalker_top_k_spin.setValue(config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K)
+        self._configure_limit_spinbox(self._clone_subtalker_top_k_spin)
+        numeric_limits_form.addRow(self._clone_subtalker_top_k_label, self._clone_subtalker_top_k_spin)
+        self._clone_subtalker_top_p_label = QLabel("Sub-talker Top-P", self)
+        self._configure_runtime_limit_label(self._clone_subtalker_top_p_label)
+        self._clone_subtalker_top_p_spin = QDoubleSpinBox(self)
+        self._clone_subtalker_top_p_spin.setRange(*config.SPEECH_BLOCK_CLONE_TOP_P_RANGE)
+        self._clone_subtalker_top_p_spin.setSingleStep(0.05)
+        self._clone_subtalker_top_p_spin.setDecimals(2)
+        self._clone_subtalker_top_p_spin.setValue(config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P)
+        self._configure_limit_spinbox(self._clone_subtalker_top_p_spin)
+        numeric_limits_form.addRow(self._clone_subtalker_top_p_label, self._clone_subtalker_top_p_spin)
         self._scene_ambience_placement_label = QLabel("Scene Ambience Placement", self)
         self._scene_ambience_placement_combo = QComboBox(self)
         self._scene_ambience_placement_combo.setMinimumWidth(140)
@@ -278,6 +306,38 @@ class TtsSettingsPage(QWidget):
         self._max_generation_tokens_spin.setValue(
             tts_budget_service.resolve_generation_token_limit(settings_payload)
         )
+        self._clone_temperature_spin.setValue(
+            float(
+                settings_payload.get(
+                    "speech_block_clone_temperature",
+                    config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE,
+                )
+            )
+        )
+        self._clone_subtalker_temperature_spin.setValue(
+            float(
+                settings_payload.get(
+                    "speech_block_clone_subtalker_temperature",
+                    config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE,
+                )
+            )
+        )
+        self._clone_subtalker_top_k_spin.setValue(
+            int(
+                settings_payload.get(
+                    "speech_block_clone_subtalker_top_k",
+                    config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K,
+                )
+            )
+        )
+        self._clone_subtalker_top_p_spin.setValue(
+            float(
+                settings_payload.get(
+                    "speech_block_clone_subtalker_top_p",
+                    config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P,
+                )
+            )
+        )
         scene_ambience_placement = str(
             settings_payload.get(
                 "scene_ambience_placement",
@@ -383,6 +443,10 @@ class TtsSettingsPage(QWidget):
         merged_settings["tts_audio_preview_timeout_seconds"] = self._preview_timeout_spin.value()
         merged_settings["tts_audio_generation_timeout_seconds"] = self._generation_timeout_spin.value()
         merged_settings["speech_block_max_generation_tokens"] = self._max_generation_tokens_spin.value()
+        merged_settings["speech_block_clone_temperature"] = self._clone_temperature_spin.value()
+        merged_settings["speech_block_clone_subtalker_temperature"] = self._clone_subtalker_temperature_spin.value()
+        merged_settings["speech_block_clone_subtalker_top_k"] = self._clone_subtalker_top_k_spin.value()
+        merged_settings["speech_block_clone_subtalker_top_p"] = self._clone_subtalker_top_p_spin.value()
         merged_settings.pop("scene_ambience_generation_enabled", None)
         merged_settings.pop("scene_ambience_audio_generation_enabled", None)
         merged_settings["scene_ambience_placement"] = str(
@@ -428,6 +492,23 @@ class TtsSettingsPage(QWidget):
         self._max_generation_tokens_spin.setToolTip(
             ui_state_service.translate("tts_settings.max_generation_tokens_tooltip", language)
         )
+        self._clone_temperature_label.setText(ui_state_service.translate("tts_settings.clone_temperature", language))
+        self._clone_temperature_spin.setToolTip(
+            ui_state_service.translate("tts_settings.clone_temperature_tooltip", language)
+        )
+        self._clone_subtalker_temperature_label.setText(
+            ui_state_service.translate("tts_settings.clone_subtalker_temperature", language)
+        )
+        self._clone_subtalker_top_k_label.setText(
+            ui_state_service.translate("tts_settings.clone_subtalker_top_k", language)
+        )
+        self._clone_subtalker_top_p_label.setText(
+            ui_state_service.translate("tts_settings.clone_subtalker_top_p", language)
+        )
+        subtalker_tooltip = ui_state_service.translate("tts_settings.clone_subtalker_tooltip", language)
+        self._clone_subtalker_temperature_spin.setToolTip(subtalker_tooltip)
+        self._clone_subtalker_top_k_spin.setToolTip(subtalker_tooltip)
+        self._clone_subtalker_top_p_spin.setToolTip(subtalker_tooltip)
         self._scene_ambience_placement_label.setText(
             ui_state_service.translate("tts_settings.scene_ambience_placement", language)
         )
@@ -472,6 +553,21 @@ class TtsSettingsPage(QWidget):
             if str(combo.itemData(index)) == value:
                 combo.setCurrentIndex(index)
                 return
+
+    def _build_clone_temperature_spinbox(self, default_value: float) -> QDoubleSpinBox:
+        """
+        @brief      Build one compact temperature control for the clone sampling settings.
+        @param[in]  default_value Initial temperature value.
+        @return     Configured double spin box.
+        @exception  None
+        """
+        spinbox = QDoubleSpinBox(self)
+        spinbox.setRange(*config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE)
+        spinbox.setSingleStep(0.05)
+        spinbox.setDecimals(2)
+        spinbox.setValue(default_value)
+        self._configure_limit_spinbox(spinbox)
+        return spinbox
 
     def _configure_limit_spinbox(self, spinbox: QAbstractSpinBox) -> None:
         """

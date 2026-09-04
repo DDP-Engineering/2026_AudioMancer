@@ -568,6 +568,38 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             )
             normalized_settings[field_name] = defaults[field_name]
 
+    for field_name, value_range in (
+        ("speech_block_clone_temperature", config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE),
+        ("speech_block_clone_subtalker_temperature", config.SPEECH_BLOCK_CLONE_TEMPERATURE_RANGE),
+        ("speech_block_clone_subtalker_top_p", config.SPEECH_BLOCK_CLONE_TOP_P_RANGE),
+    ):
+        candidate_value = normalized_settings[field_name]
+        if (
+            isinstance(candidate_value, bool)
+            or not isinstance(candidate_value, int | float)
+            or not value_range[0] <= float(candidate_value) <= value_range[1]
+        ):
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+        else:
+            normalized_settings[field_name] = float(candidate_value)
+
+    top_k_value = normalized_settings["speech_block_clone_subtalker_top_k"]
+    if (
+        type(top_k_value) is not int
+        or not config.SPEECH_BLOCK_CLONE_TOP_K_RANGE[0] <= top_k_value <= config.SPEECH_BLOCK_CLONE_TOP_K_RANGE[1]
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'speech_block_clone_subtalker_top_k' using the default value.",
+            "speech_block_clone_subtalker_top_k",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["speech_block_clone_subtalker_top_k"] = defaults["speech_block_clone_subtalker_top_k"]
+
     if normalized_settings["scene_ambience_duration_seconds"] > config.MAX_SOUND_PROMPT_DURATION_SECONDS:
         _log_settings_repair(
             "Repaired invalid 'scene_ambience_duration_seconds' using the default value.",
@@ -743,6 +775,10 @@ def build_default_settings() -> dict[str, Any]:
         "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
         "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
         "speech_block_max_generation_tokens": config.DEFAULT_SPEECH_BLOCK_MAX_GENERATION_TOKENS,
+        "speech_block_clone_temperature": config.DEFAULT_SPEECH_BLOCK_CLONE_TEMPERATURE,
+        "speech_block_clone_subtalker_temperature": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TEMPERATURE,
+        "speech_block_clone_subtalker_top_k": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_K,
+        "speech_block_clone_subtalker_top_p": config.DEFAULT_SPEECH_BLOCK_CLONE_SUBTALKER_TOP_P,
         "scene_ambience_placement": config.DEFAULT_SCENE_AMBIENCE_PLACEMENT,
         "scene_ambience_duration_seconds": config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
         "scene_ambience_max_blocks_per_sequence": config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE,
