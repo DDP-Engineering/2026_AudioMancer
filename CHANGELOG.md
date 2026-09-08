@@ -10,6 +10,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Updated the AEGIS workflow to 0.12.0 for focused verification and leaner
+  engineering records, preserving project configuration and history.
+
 ### Added
 
 - TTS Settings now exposes the voice-clone sampling controls: Clone Temperature
