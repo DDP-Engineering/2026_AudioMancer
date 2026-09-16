@@ -1,0 +1,33 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-FUNC-cfd856fa"
+
+title = "Select and enforce per-model subscription reasoning effort"
+
+status = "active"
+
+requirement = """
+A subscription profile shall persist Provider default or an explicit supported model reasoning effort, send the exact selected effort, retain unsupported saved choices visibly and reject them before inference rather than silently reverting to the provider default; legacy API-key/local reasoning behavior remains unchanged.
+"""
+
+verification = "Automated: legacy migration, exact effort payloads, unsupported-choice rejection, profile/model/backend edit preservation and Book Analysis resume-fingerprint tests. Inspection: synthetic Luna Low-effort request completes with the selected effort metadata."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_catalog_service.py","05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py","05_Software/AudioMancer/src/audiomancer/services/settings_service.py","05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py","05_Software/AudioMancer/src/audiomancer/services/book_analysis_document_service.py","05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py","05_Software/AudioMancer/src/audiomancer/ui/controllers/chatgpt_auth_ui_controller.py","05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_catalog.py","05_Software/AudioMancer/tests/test_chatgpt_settings.py","05_Software/AudioMancer/tests/test_chatgpt_ui.py","05_Software/AudioMancer/tests/test_chatgpt_provider.py","05_Software/AudioMancer/tests/test_book_analysis_document_service.py::test_subscription_effort_changes_resume_fingerprint_without_changing_local_semantics"]
+
+
+spec = "specs/REQ-FUNC-be219dba.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-09-16
+updated = 2026-09-16

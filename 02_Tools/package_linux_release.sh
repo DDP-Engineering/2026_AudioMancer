@@ -329,6 +329,9 @@ invoke_step "Build Ubuntu bundle with PyInstaller" \
         --clean \
         --name AudioMancer \
         --windowed \
+        --hidden-import keyring.backends.SecretService \
+        --hidden-import keyring.backends.kwallet \
+        --collect-data keyring \
         --paths "${APP_ROOT}/src" \
         --add-data "${APP_ROOT}/src/audiomancer/assets/icons:audiomancer/assets/icons" \
         --distpath "${DIST_PATH}" \

@@ -1,0 +1,33 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-FUNC-dbf2ccce"
+
+title = "Apply subscription model context defaults while preserving manual edits"
+
+status = "active"
+
+requirement = """
+Selecting a ChatGPT subscription model shall apply its catalog-reported default context window, retain later manual edits across refresh and settings reload, and reset that override when another model is selected. Unknown defaults retain the current value; automatic model selection for local/custom endpoints leaves their user-configured context unchanged.
+"""
+
+verification = "Automated: catalog default-context validation, caching and legacy-cache refresh; UI model changes, manual override persistence, unknown metadata and local-profile preservation. Inspection: current native catalog distinguishes default context_window from max_context_window."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_catalog_service.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_catalog.py", "05_Software/AudioMancer/tests/test_chatgpt_ui.py::test_subscription_context_follows_selected_model_and_preserves_manual_edits"]
+
+
+spec = "specs/REQ-FUNC-be219dba.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-09-16
+updated = 2026-09-16

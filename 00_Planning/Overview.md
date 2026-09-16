@@ -33,6 +33,8 @@ It should allow an operator to:
 - extract raw text from the source
 - clean and normalize the text into canonical book content
 - split the content into meaningful narration chunks
+- optionally produce a resumable book summary and literary/audiobook analysis
+- choose local, API-key or ChatGPT subscription profiles for AI text operations
 - discover and manage speaking characters and character traits
 - translate chunks when needed
 - prepare narration-relevant metadata for character voice selection, real voice use, and later generation stages
@@ -46,6 +48,7 @@ It should allow an operator to:
 The final application should follow these principles:
 
 - offline-first by default
+- optional online AI processing through explicitly selected provider profiles
 - distributable as a zip archive without installer dependency
 - runnable on Windows 11 and Ubuntu 22.04 LTS or newer
 - deterministic project storage
@@ -159,7 +162,7 @@ Only data that helps downstream narration should be kept.
 The translation workflow must:
 
 - translate chunks into the project-locked target language when needed
-- create pass-through translation state when source and target languages match
+- allow same-language rewriting or adaptation through the selected AI profile when source and target languages match
 - preserve source-to-translation alignment
 - support partial progress, edits, approvals, and retranslation
 - keep translation state explicit and reviewable
@@ -209,9 +212,10 @@ projects should preserve continuous phrases and emotional flow by segmenting
 text for the TTS budget instead of forcing dialogue speaker splits.
 
 Application-level Settings, AI Settings, and TTS Settings should use consistent
-dialog semantics: Cancel discards unsaved edits, Save persists while keeping the
-dialog open, and OK persists then closes where the dialog supports Apply-style
-workflows.
+dialog semantics: Cancel discards unsaved settings edits, Apply (Settings and AI
+Settings) or Save (TTS Settings) persists while keeping the dialog open, and OK
+persists then closes. ChatGPT sign-in and
+disconnect are immediate account actions, independent of unsaved profile edits.
 
 ### 5.10 Export And Assembly
 
@@ -229,6 +233,59 @@ The assembly stage supports:
 
 MP3 encoding, chapter metadata, silence trimming, volume normalization, pitch
 changes, and cover-art embedding remain future work.
+
+### 5.11 Book Analysis
+
+Book Analysis is an optional operation after completed Text Chunking. It produces
+a concise book summary and a detailed literary and audiobook report in the
+project's target language. It remains independent of translation, canonical
+character data, voice assignments and audio generation.
+
+The operation supports:
+
+- whole-chunk source windows, intermediate summaries and recursive consolidation
+- validated checkpoints for interrupted, cancelled or failed runs
+- preservation of an existing completed report while a replacement is prepared
+- resume when the source, language, profile and request configuration match
+- explicit response-format instructions even without provider-enforced schemas
+- one regeneration from the original evidence when a response has invalid fields
+  or value types, followed by a clear model-response error if recovery fails
+- context budgeting that includes response instructions and preserves conservative
+  source limits when resuming older checkpoints
+
+Only validated responses become checkpoints. Format recovery preserves accepted
+work and uses an additional model request; cancellation and transport failures
+do not trigger that format retry. Reset owns only Book Analysis data and logs.
+
+### 5.12 AI Profiles And ChatGPT Subscriptions
+
+AI Settings manages reusable text-model profiles for LM Studio, Ollama,
+OpenAI-compatible API-key endpoints and experimental ChatGPT subscription access.
+Workflow defaults select profiles for cleanup, chunking, Book Analysis,
+translation, character discovery, narrator descriptions and Speech Blocks.
+Audio synthesis remains the responsibility of the configured TTS service.
+
+ChatGPT subscription profiles support:
+
+- browser sign-in or device-code sign-in without an API key
+- protected credentials per OS user, or explicitly selected session-only storage
+- primary-model discovery with refresh, cached fallback and manual model entry
+- model-specific reasoning levels, including explicit effort or provider default
+- automatic context defaults when selecting a model, with later manual overrides
+- separate tests of text access and strict JSON Schema capability
+- cancellation, renewable authorization and account disconnect
+
+Subscription allowance is separate from API billing. Available models, reasoning
+levels and limits depend on the account and provider. Cleanup AI requires verified
+strict schema support. Model discovery alone does not verify inference capability.
+Copying a portable application or project does not copy the subscription sign-in.
+
+AI Settings opens at a screen-bounded 800 by 600 logical pixels. Compact workflow
+defaults sit below an independently scrollable profile list; the selected profile
+remains visible. The editor moves below the defaults when the window is narrow.
+Cancel, Apply and OK remain outside the scrolling content, and control dimensions
+adapt to the configured font size. Both help languages provide model and reasoning
+recommendations as optional starting points, rather than automatic defaults.
 
 ## 6. Non-Functional Goals
 
@@ -278,6 +335,8 @@ Technologies currently used are:
 - JSON files for manifests, reports, settings, and operation artifacts
 - Python standard library concurrency primitives for background work
 - Python standard library HTTP/JSON handling for OpenAI-compatible provider integration
+- `httpx` for the ChatGPT subscription OAuth and streaming Responses transport
+- Windows DPAPI or a native Linux keyring for persistent subscription credentials
 - `pytest` for automated tests
 - `pytest-qt` for Qt/UI-oriented tests
 - `PyInstaller` for packaged desktop builds
@@ -307,9 +366,12 @@ The UI should make it easy to understand:
 - what downstream data will be invalidated by rerunning an earlier stage
 - what expensive downstream work will be preserved after local manual edits
 
-## 10. Documentation Review Notes
+## 10. Documentation Scope
 
-Reviewed for the AI chunking context mode feature. The Text Chunking stage supports operator control over how much paragraph context AI chunking may use when larger scenes need wider prompt windows.
+This overview describes product direction and the major implemented capabilities.
+Self-contained requirements and specifications under `.agentic/` define detailed
+behavior; the English and Romanian user guides describe operator actions.
 
-Reviewed for the 1.5.9 release sync. Release numbering remains implementation
+Text Chunking includes operator control over how much paragraph context AI
+chunking may use for larger scenes. Release numbering remains implementation
 metadata and does not change the product vision described here.

@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-UX-3d0aeaec"
+title = "Manage subscription accounts without blocking the desktop"
+status = "active"
+requirement = "When subscription controls are used, AudioMancer shall present localized account and model state through cancellable background operations whose late results cannot mutate another profile or closed editor."
+verification = "Automated: Qt tests exercise login/cancel/disconnect/model-test with profile switching, dialog close and application shutdown; check English/Romanian labels."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/chatgpt_auth_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_ui.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

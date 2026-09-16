@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-SEC-6bf98d63"
+title = "Exclude subscription secrets from diagnostics and artifacts"
+status = "active"
+requirement = "When subscription operations fail or persist state, AudioMancer shall expose only safe diagnostic/account metadata outside its protected credential boundary."
+verification = "Automated: Sentinel OAuth secrets must be absent from profile persistence, logs, GUI errors and artifact/export-visible payloads under HTTP/storage/auth failures."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_http_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_auth_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_credential_service.py", "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_auth.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

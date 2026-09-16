@@ -103,7 +103,7 @@ _PERSISTENCE_PERCENT = 98
 
 
 class CleanupDocumentError(ValueError):
-    """Raised when cleanup.json violates the current strict contract."""
+    """@brief Raised when cleanup.json violates the current strict contract."""
 
 
 def clean_text(
@@ -113,7 +113,7 @@ def clean_text(
     progress_callback=None,
     cancel_requested=None,
 ) -> dict[str, object]:
-    """Start or resume Cleanup and publish only a validated completed result."""
+    """@brief Start or resume Cleanup and publish only a validated completed result."""
     root = Path(project_root)
     if not isinstance(manifest.get("source_document"), dict):
         raise ValueError("No imported source is available for Cleanup.")
@@ -298,6 +298,7 @@ def clean_text(
         _batch_id: str,
         batch: list[dict[str, object]],
     ) -> None:
+        """@brief Persist remote fragment submission accounting before the request."""
         if not isinstance(ai_profile_payload, dict) or not _is_online_backend(
             str(ai_profile_payload.get("backend_kind") or "")
         ):
@@ -321,6 +322,7 @@ def clean_text(
         answers: list[dict[str, str]],
         request_usage: dict[str, object],
     ) -> None:
+        """@brief Checkpoint adjudication answers and cumulative usage after a completed request."""
         answer_by_id = {
             str(item["question_id"]): str(item["choice"])
             for item in answers
@@ -353,6 +355,7 @@ def clean_text(
         _write_checkpoint(root, document)
 
     def _ai_progress(current: int, total: int, message: str) -> None:
+        """@brief Publish bounded adjudication progress and checkpoint its estimated request count."""
         bounded_current = max(0, int(current))
         bounded_total = max(1, int(total), bounded_current)
         if bounded_total > int(
@@ -429,7 +432,7 @@ def clean_text(
 def load_cleanup_document(
     project_root: str | Path,
 ) -> dict[str, object] | None:
-    """Load and strictly validate the current cleanup.json contract."""
+    """@brief Load and strictly validate the current cleanup.json contract."""
     root = Path(project_root)
     path = root / config.CLEANUP_DOCUMENT_FILE_NAME
     if not path.is_file():
@@ -467,6 +470,7 @@ def save_user_cleaned_text(
     @exception  CleanupDocumentError Raised when completed Cleanup is unavailable.
     """
     root = Path(project_root)
+    _CLEANUP_LOGGER.debug("Saving operator-edited Cleanup text")
     edited_text = str(cleaned_text).replace("\r\n", "\n").replace("\r", "\n")
     if not edited_text.strip():
         raise ValueError("Cleaned text cannot be empty.")
@@ -526,7 +530,7 @@ def save_user_cleaned_text(
 
 
 def reset_cleanup_and_downstream(project_root: str | Path) -> None:
-    """Remove Cleanup and all downstream artifacts while keeping Extraction."""
+    """@brief Remove Cleanup and all downstream artifacts while keeping Extraction."""
     reset_operation_data(project_root, "cleanup", include_current=True)
 
 
@@ -536,7 +540,8 @@ def validate_cleanup_document(
     canonical_text: str,
     ledger: dict[str, object],
 ) -> None:
-    """Validate the strict unversioned Cleanup document."""
+    """@brief Validate the strict unversioned Cleanup document."""
+    _CLEANUP_LOGGER.debug("Validating Cleanup document contract")
     if not isinstance(payload, dict):
         raise CleanupDocumentError("Cleanup document must be one JSON object.")
     if set(payload) != CLEANUP_ROOT_FIELDS:
@@ -620,7 +625,7 @@ def validate_cleanup_document(
 
 
 def _validate_progress(progress: dict[str, object]) -> None:
-    """Validate the exact persisted Cleanup progress contract."""
+    """@brief Validate the exact persisted Cleanup progress contract."""
     if set(progress) != _PROGRESS_FIELDS:
         raise CleanupDocumentError(
             "Cleanup progress fields do not match the current contract."
@@ -647,7 +652,7 @@ def _validate_progress(progress: dict[str, object]) -> None:
 def _validate_blocking_quality_metrics(
     quality_report: dict[str, object],
 ) -> None:
-    """Require completed Cleanup blocking metrics to be integer zeroes."""
+    """@brief Require completed Cleanup blocking metrics to be integer zeroes."""
     for field in _BLOCKING_QUALITY_FIELDS:
         value = quality_report.get(field)
         if type(value) is not int:
@@ -667,7 +672,7 @@ def _finalize_document(
     document: dict[str, object],
     progress_callback,
 ) -> dict[str, object]:
-    """Render and atomically publish one finalizing Cleanup document."""
+    """@brief Render and atomically publish one finalizing Cleanup document."""
     _emit(
         progress_callback,
         1,
@@ -768,7 +773,7 @@ def _apply_ai_result(
     questions: list[dict[str, object]],
     result: dict[str, object],
 ) -> None:
-    """Project adjudication answers onto persisted boundary decisions."""
+    """@brief Project adjudication answers onto persisted boundary decisions."""
     boundary_by_id = {
         str(item["boundary_id"]): item
         for item in document["boundaries"]
@@ -834,7 +839,7 @@ def _can_reuse_analysis(
     canonical_text: str,
     ledger: dict[str, object],
 ) -> bool:
-    """Return whether a checkpoint's deterministic layer remains compatible."""
+    """@brief Return whether a checkpoint's deterministic layer remains compatible."""
     try:
         validate_cleanup_document(
             document,
@@ -859,7 +864,7 @@ def _validate_checkpoint_plan(
     canonical_text: str,
     ledger: dict[str, object],
 ) -> None:
-    """Require checkpoint question counts and batches to match the shared plan."""
+    """@brief Require checkpoint question counts and batches to match the shared plan."""
     if document["user_modified"]:
         return
     questions = cleanup_analysis_service.questions_from_boundaries(
@@ -898,7 +903,7 @@ def _reset_ai_adjudication(
     *,
     questions: list[dict[str, object]],
 ) -> None:
-    """Preserve deterministic analysis and clear all mutable AI state."""
+    """@brief Preserve deterministic analysis and clear all mutable AI state."""
     for decision in document["boundaries"]:
         prior = dict(decision["prior"])
         decision["adjudication"] = {
@@ -951,7 +956,7 @@ def _resume_answers(
     questions: list[dict[str, object]],
     boundaries: list[dict[str, object]],
 ) -> dict[str, dict[str, object]]:
-    """Map persisted partial AI choices back to stable question identifiers."""
+    """@brief Map persisted partial AI choices back to stable question identifiers."""
     boundary_by_id = {
         str(item["boundary_id"]): item
         for item in boundaries
@@ -1046,7 +1051,7 @@ def _realign_whitespace_roles(
 
 
 def _reason_codes_with_whitespace_realign(value: object) -> list[str]:
-    """Return ordered unique reason codes with the realignment marker."""
+    """@brief Return ordered unique reason codes with the realignment marker."""
     existing = (
         [str(item) for item in value]
         if isinstance(value, list)
@@ -1060,7 +1065,7 @@ def _realign_whitespace_boundaries(
     document: dict[str, object],
     edited_text: str,
 ) -> None:
-    """Update resolvable typed choices to match one whitespace-only edit."""
+    """@brief Update resolvable typed choices to match one whitespace-only edit."""
     ledger = source_ledger_service.load_source_ledger(root)
     canonical_text = (root / config.EXTRACTED_TEXT_FILE_NAME).read_text(
         encoding="utf-8"
@@ -1146,7 +1151,7 @@ def _validate_completed_output(
     root: Path,
     document: dict[str, object],
 ) -> None:
-    """Require the completed Cleanup text artifact to exist and match its hash."""
+    """@brief Require the completed Cleanup text artifact to exist and match its hash."""
     cleaned_path = root / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_path.is_file():
         raise CleanupDocumentError("Completed Cleanup requires clean_text.txt.")
@@ -1156,7 +1161,7 @@ def _validate_completed_output(
 
 
 def _read_checkpoint(root: Path) -> dict[str, object] | None:
-    """Read cleanup.json without requiring a completed output artifact."""
+    """@brief Read cleanup.json without requiring a completed output artifact."""
     path = root / config.CLEANUP_DOCUMENT_FILE_NAME
     if not path.is_file():
         return None
@@ -1168,7 +1173,7 @@ def _read_checkpoint(root: Path) -> dict[str, object] | None:
 
 
 def _write_checkpoint(root: Path, document: dict[str, object]) -> None:
-    """Atomically persist the sole Cleanup metadata/checkpoint document."""
+    """@brief Atomically persist the sole Cleanup metadata/checkpoint document."""
     write_json_atomic(root / config.CLEANUP_DOCUMENT_FILE_NAME, document)
 
 
@@ -1176,7 +1181,7 @@ def _policy_hash(
     unit_operations: list[dict[str, object]],
     boundaries: list[dict[str, object]],
 ) -> str:
-    """Hash deterministic roles/priors together with the active policy token."""
+    """@brief Hash deterministic roles/priors together with the active policy token."""
     payload = {
         "policy": cleanup_analysis_service.ANALYSIS_POLICY_ID,
         "unit_operations": unit_operations,
@@ -1198,7 +1203,7 @@ def _policy_hash(
 
 
 def _prompt_hash() -> str:
-    """Hash exact prompt templates and the response-contract identifier."""
+    """@brief Hash exact prompt templates and the response-contract identifier."""
     payload = {
         "contract": cleanup_ai_adjudication_service.PROMPT_CONTRACT_ID,
         "primary": prompt_template_service.load_prompt(
@@ -1214,7 +1219,7 @@ def _prompt_hash() -> str:
 def _profile_fingerprint(
     profile: dict[str, object] | None,
 ) -> dict[str, object] | None:
-    """Project non-secret model and request policy into the resume fingerprint."""
+    """@brief Project non-secret model and request policy into the resume fingerprint."""
     if profile is None:
         return None
     return {
@@ -1239,7 +1244,7 @@ def _batch_order(
     questions: list[dict[str, object]],
     profile: dict[str, object] | None,
 ) -> list[list[str]]:
-    """Project the authoritative runtime plan into durable target IDs."""
+    """@brief Project the authoritative runtime plan into durable target IDs."""
     return [
         [str(item["target_id"]) for item in batch]
         for batch in cleanup_ai_adjudication_service.plan_question_batches(
@@ -1253,7 +1258,7 @@ def _next_batch_index(
     progress: dict[str, object],
     batch: list[dict[str, object]],
 ) -> int:
-    """Return the first estimated batch that still follows the completed request."""
+    """@brief Return the first estimated batch that still follows the completed request."""
     batch_targets = {
         str(item["target_id"])
         for item in batch
@@ -1267,7 +1272,7 @@ def _next_batch_index(
 def _estimated_input_tokens(
     questions: list[dict[str, object]],
 ) -> int:
-    """Estimate question context using a conservative four-codepoint ratio."""
+    """@brief Estimate question context using a conservative four-codepoint ratio."""
     characters = sum(
         len(str(item.get("left_text") or ""))
         + len(str(item.get("right_text") or ""))
@@ -1277,7 +1282,7 @@ def _estimated_input_tokens(
 
 
 def _empty_quality_report() -> dict[str, object]:
-    """Return runtime quality counters before final rendering."""
+    """@brief Return runtime quality counters before final rendering."""
     return {
         "introduced_fusion_count": 0,
         "projection_violation_count": 0,
@@ -1298,7 +1303,7 @@ def _empty_quality_report() -> dict[str, object]:
 
 
 def _manifest_summary(document: dict[str, object]) -> dict[str, object]:
-    """Project the Cleanup document into the compact project manifest."""
+    """@brief Project the Cleanup document into the compact project manifest."""
     progress = document["progress"]
     total = max(1, len(progress["batch_order"]))
     return {
@@ -1315,17 +1320,17 @@ def _manifest_summary(document: dict[str, object]) -> dict[str, object]:
 
 
 def _is_online_backend(backend_kind: str) -> bool:
-    """Return whether a profile backend represents a remote hosted provider."""
-    return backend_kind.casefold() == config.ONLINE_AI_BACKEND_KIND.casefold()
+    """@brief Return whether a profile backend represents a remote hosted provider."""
+    return backend_kind.casefold() in config.ONLINE_AI_BACKEND_KINDS
 
 
 def _lexical_projection(text: str) -> str:
-    """Remove Unicode whitespace for whitespace-only edit classification."""
+    """@brief Remove Unicode whitespace for whitespace-only edit classification."""
     return re.sub(r"\s+", "", str(text))
 
 
 def _json_hash(payload: object) -> str:
-    """Return a stable SHA-256 for canonical JSON."""
+    """@brief Return a stable SHA-256 for canonical JSON."""
     canonical = json.dumps(
         payload,
         ensure_ascii=False,
@@ -1336,7 +1341,7 @@ def _json_hash(payload: object) -> str:
 
 
 def _timestamp_token() -> str:
-    """Return a filename-safe UTC timestamp."""
+    """@brief Return a filename-safe UTC timestamp."""
     return utc_now_iso().replace(":", "").replace("-", "").replace("+", "_")
 
 
@@ -1347,7 +1352,7 @@ def _emit(
     percent: int,
     message: str,
 ) -> None:
-    """Emit one bounded Cleanup progress update."""
+    """@brief Emit one bounded Cleanup progress update."""
     if callable(callback):
         callback(
             current,

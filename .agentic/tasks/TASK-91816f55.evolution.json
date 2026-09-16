@@ -1,0 +1,110 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-09-16T11:31:53.374460Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "0d19727b23a5ae58",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ba46c9ad28d5e1f4be7d84660a5767b63d25a942f6df4e6bad98c521c88ba7f1"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "670d9e2acb935551a4be680d1ff0fce2765751b970254f1c18e35bf7241d3866"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/book_analysis_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2552c06aa0b40ac9ad1d59fe3797d1b0c180560bdca37000c4724e72a8c27043"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "28cd591b45fe65699f42939ada6e3a47f8d2639b438b0cbaa2cde87804bdd587"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "910326cbb11e69af8cb957a37ea4fa67229c842abb8930d5c9d15553652ac5df"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "07a0ac61702f5fd7696ec3f43dd64f39781f970275b8f62d492b1868f4090c77"
+          },
+          "path": "06_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8d2bdc5c7773e3c5e6fd842f92d7469b6a3f65dc7d58bfc03dd838ac27125a14"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "cb05b9ba497969c94c28e63c8639560adb4d0ea89927e83f158eaaa6384c698d"
+          },
+          "path": "06_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3b0ff7d784f7ab29a41c4be94f367bbb83934246bfa8bb2e8a242232e80d97b2"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "8087f907932ad3456a6bd7c004f0c8a383782a840e69d576337f0bc876017086"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "source": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 116
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 135
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 353
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "validate",
+      "evolved_at": "2026-09-16T11:35:37.575478Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-91816f55"
+}

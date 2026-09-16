@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v2.1.0</title>
+    <title>AudioMancer User Guide v2.2.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -44,8 +44,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 2.1.0</p>
-                    <p><strong>Application version:</strong> 2.1.0</p>
+                    <p><strong>Help version:</strong> 2.2.0</p>
+                    <p><strong>Application version:</strong> 2.2.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -215,6 +215,41 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Book Analysis, character discovery, narrator profile generation, and Speech Blocks. These profiles never generate
                     audio &mdash; that is VoiceWeaver's job, configured in TTS Settings.
                 </p>
+                <h3>Use A ChatGPT Subscription</h3>
+                <p>AI Settings opens at 800 &times; 600 logical pixels, bounded by the screen. Compact equal-width default selectors sit below the profile list, with single-line labels. The editor sits alongside them when space allows; narrow windows stack the sections. The profile list preserves its scroll position and keeps the selected profile visible. Cancel, Apply and OK stay visible while content scrolls. Idle subscription status is available in tooltips; progress and errors appear when needed.</p>
+                <ol>
+                    <li>Add a profile and select <code>chatgpt_subscription</code>. The service URL is fixed and no API key is needed.</li>
+                    <li>Press <strong>Sign in with ChatGPT</strong> and complete the OpenAI browser page. If the callback port is busy, choose <strong>Use device code</strong>, open the displayed OpenAI page, and enter the temporary code.</li>
+                    <li>Choose a candidate model or type its identifier, then press <strong>Test model</strong>. The test sends tiny synthetic prompts and separately checks text access and the exact strict schema needed by Cleanup. Candidate names are suggestions, not a list of your account entitlements.</li>
+                    <li>The primary model list refreshes after sign-in and when AI Settings opens with a cache older than one hour. <strong>Refresh models</strong> updates it immediately without sending a prompt. The Refresh models tooltip identifies live, cached, stale or built-in model data. Refreshing preserves your model and unsaved edits.</li>
+                    <li>Choose <strong>Reasoning effort</strong> per profile: Provider default lets the server decide; explicit levels are the selected model's supported options. Higher effort can affect response time and subscription consumption. A saved unavailable level remains visible and must be changed before running; AudioMancer never silently substitutes another effort. Older Thinking enabled settings become Medium; Thinking disabled becomes None, which may be unavailable.</li>
+                    <li>Selecting a subscription model fills <strong>Context Window</strong> from its reported default, not its maximum capacity. You can edit it afterwards; refresh and reopening settings preserve that edit until another model is selected. Unknown defaults leave the current value unchanged. Local/custom model selection keeps context manual. Choose workflow defaults, then <strong>Apply</strong> or <strong>OK</strong>. Temperature is provider-controlled; catalog metadata does not replace model/schema testing. Changing reasoning effort starts a new Book Analysis candidate rather than resuming checkpoints made with another effort.</li>
+                </ol>
+                <p>This experimental connection uses your ChatGPT subscription allowance, separately from API billing. Access and limits can change. No audio or TTS service is included. A text-only verified model can run the other JSON text workflows; Cleanup AI remains unavailable until strict schema verification succeeds.</p>
+                <p>Credentials are protected per OS user, outside portable settings: Windows uses DPAPI; Linux requires an available native Secret Service or KWallet keyring. Select <strong>Session only</strong> before sign-in to keep new credentials in memory. If an unavailable store prevents removal of an older saved connection, the status says so; disconnect it once that store is available again. Copying a portable folder does not copy the sign-in.</p>
+                <p><strong>Disconnect</strong> removes the active account and invalidates its verified models without deleting profiles. Sign-in and disconnect apply immediately; cancelling the settings dialog only discards profile edits. <strong>Cancel sign-in / test</strong>, switching profiles, or closing the dialog cancels pending account work. Expired or revoked authorization asks you to sign in again; quota errors ask you to retry after your subscription limit resets.</p>
+                <h3>Recommended ChatGPT Models And Reasoning</h3>
+                <p>These starting recommendations balance audiobook quality and subscription consumption. Compare results on a representative chapter before processing a whole book; they are not measured quality benchmarks. Availability and supported reasoning levels depend on the account and current model catalog.</p>
+                <table>
+                    <thead>
+                        <tr><th>AudioMancer step</th><th>Recommended model</th><th>Reasoning effort</th><th>Guidance</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Text Cleanup &mdash; optional AI assistance</td><td>GPT-5.6 Luna</td><td>Low</td><td>Bounded classification of ambiguous text boundaries. Try Terra if decisions are unreliable. Test model must verify strict schema support.</td></tr>
+                        <tr><td>AI Text Chunking</td><td>GPT-5.6 Terra</td><td>Low</td><td>Identifies coherent scenes and boundaries. Use Medium for complicated scene transitions.</td></tr>
+                        <tr><td>Book Analysis</td><td>GPT-5.6 Sol</td><td>Medium</td><td>Summarization and consolidation require understanding relationships across the book.</td></tr>
+                        <tr><td>AI Translation</td><td>GPT-5.6 Sol</td><td>Medium</td><td>Prioritizes meaning, literary tone and dialogue consistency. Terra Medium is the economical alternative.</td></tr>
+                        <tr><td>Characters &mdash; discovery and profiles</td><td>GPT-5.6 Terra</td><td>Medium</td><td>Balances extraction quality with consumption. Use Sol Medium for large casts, aliases or ambiguous identities.</td></tr>
+                        <tr><td>Narrator Voice &mdash; written voice description</td><td>GPT-5.6 Terra</td><td>Low</td><td>A small creative task that usually needs little extended reasoning.</td></tr>
+                        <tr><td>Character Voices &mdash; voice samples</td><td>No ChatGPT model</td><td>&mdash;</td><td>Audio generation uses the configured TTS provider.</td></tr>
+                        <tr><td>Speech Blocks &mdash; narrator and characters</td><td>GPT-5.6 Terra</td><td>Medium</td><td>Speaker attribution and narration/dialogue separation need careful interpretation. Use Sol Medium for difficult dialogue.</td></tr>
+                        <tr><td>Speech Blocks &mdash; same narrator</td><td>No ChatGPT model</td><td>&mdash;</td><td>Uses deterministic sentence packing.</td></tr>
+                        <tr><td>Audio Blocks</td><td>No ChatGPT model</td><td>&mdash;</td><td>Uses the configured TTS provider.</td></tr>
+                        <tr><td>Audio Assembly / export</td><td>No ChatGPT model</td><td>&mdash;</td><td>Audio processing and assembly do not require an LLM.</td></tr>
+                    </tbody>
+                </table>
+                <p>Select explicit <strong>Low</strong> or <strong>Medium</strong> effort for consistent settings. Consider <strong>GPT-6 Astra Medium</strong> for especially difficult material. Higher reasoning uses more tokens and takes longer; reserve <strong>High</strong> for cases where a chapter comparison shows a meaningful improvement. XHigh, Max and Ultra are not recommended for routine audiobook processing. Exact subscription savings cannot be inferred from API prices.</p>
+                <p>Model positioning and reasoning guidance: <a href="https://learn.chatgpt.com/docs/models">OpenAI model documentation</a>. These recommendations guide profile selection; AudioMancer does not apply them automatically.</p>
                 <h3>Create A Profile</h3>
                 <ol>
                     <li>Open <strong>AI Settings</strong> and press <strong>Add Profile</strong>. The new profile is added to the list on the left and selected.</li>
@@ -275,38 +310,24 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <strong>Maximum context</strong> &mdash; decides how much text AI chunking reads at once; wider windows
                     can produce more natural boundaries but cost more time per request.
                 </p>
-                <h3>Recommended OpenAI Online Profiles</h3>
-                <table>
-                    <thead>
-                        <tr><th>Operation</th><th>Recommended model</th><th>Temperature</th><th>Context</th><th>Max output</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>AI Cleanup</td><td><code>gpt-5.4-nano</code></td><td>0.0-0.1</td><td>400000</td><td>32768</td></tr>
-                        <tr><td>AI Chunking</td><td><code>gpt-5.4-mini</code></td><td>0.1</td><td>400000</td><td>32768</td></tr>
-                        <tr><td>AI Translation</td><td><code>gpt-5.5</code></td><td>0.2</td><td>1000000</td><td>64000</td></tr>
-                        <tr><td>Character Discovery</td><td><code>gpt-5.4</code></td><td>0.1</td><td>1000000</td><td>64000</td></tr>
-                        <tr><td>Speech Blocks</td><td><code>gpt-5.4</code></td><td>0.0-0.1</td><td>1000000</td><td>64000</td></tr>
-                    </tbody>
-                </table>
                 <h3>Recommended LM Studio Local Profiles</h3>
+                <p>Example local models: <code>Qwen3.8-27B</code>, <code>google/gemma-4-12b</code>, <code>meta/muse-glimmer</code>, <code>openai/gpt-oss-20b</code>. Use the exact identifier shown by your LM Studio server. These are models to evaluate, not a measured ranking. The values below are starting settings by operation, not model capacity claims or publisher sampling defaults; test a representative chapter and follow the model card if it requires a different sampling setup.</p>
                 <table>
-                    <thead>
-                        <tr><th>Operation</th><th>Recommended model</th><th>Fallback</th><th>Temperature</th><th>Context</th><th>Max output</th></tr>
-                    </thead>
+                    <thead><tr><th>Operation</th><th>Context (tokens)</th><th>Temperature</th><th>Reasoning in AudioMancer</th></tr></thead>
                     <tbody>
-                        <tr><td>AI Cleanup</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td><td>8192</td></tr>
-                        <tr><td>AI Chunking</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
-                        <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td><td>8192</td></tr>
-                        <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
-                        <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>AI Cleanup</td><td>32768</td><td>0.1</td><td>Provider default</td></tr>
+                        <tr><td>AI Chunking</td><td>32768</td><td>0.1</td><td>Provider default</td></tr>
+                        <tr><td>Book Analysis</td><td>32768; try 65536 if needed</td><td>0.2</td><td>Thinking enabled, if supported</td></tr>
+                        <tr><td>AI Translation</td><td>32768</td><td>0.2</td><td>Provider default</td></tr>
+                        <tr><td>Character Discovery</td><td>32768; try 65536 if needed</td><td>0.1</td><td>Thinking enabled, if supported</td></tr>
+                        <tr><td>Narrator description</td><td>16384</td><td>0.3</td><td>Provider default</td></tr>
+                        <tr><td>Speech Blocks — narrator and characters</td><td>32768</td><td>0.1</td><td>Thinking enabled, if supported</td></tr>
                     </tbody>
                 </table>
-                <div class="note">
-                    AudioMancer sends the model, context window, output budget, temperature, timeout, and &mdash; when
-                    <strong>Structured output</strong> is ticked &mdash; a structured-output hint. You can
-                    configure top-p, top-k, repeat penalty, seed, and reasoning mode in LM Studio presets for the
-                    loaded model. Keep online API keys private and enter them only in this dialog.
-                </div>
+                <p><strong>Context:</strong> load the model in LM Studio with the intended context, then set AudioMancer's Context Window to no more than that loaded capacity and the model's supported limit. Start at 32768 for most tasks; try 65536 only when the model and available memory support it and wider source windows help. Increasing AudioMancer's value alone does not reload the server model. Larger context can require more memory and time.</p>
+                <p><strong>Reasoning:</strong> Provider default leaves reasoning to LM Studio. Thinking enabled requests Medium when the endpoint supports the request. If the model or runtime does not accept this setting, use Provider default and configure its supported reasoning control in LM Studio. For simple cleanup, chunking and narrator descriptions, try Low in the LM Studio preset when available; for gpt-oss-20b, Low is a useful starting point and Medium is worth comparing for analysis and speaker attribution. Support for disabling thinking varies by model. Local profiles do not use the subscription's per-model effort selector.</p>
+                <p>AI Cleanup requires working strict structured output; confirm compatibility before assigning a model. Speech Blocks in same-narrator mode, audio synthesis and assembly do not use these LLM settings.</p>
+                <p>Configuration reference: <a href="https://lmstudio.ai/docs/python/llm-prediction/parameters">LM Studio model configuration</a>; reasoning reference: <a href="https://huggingface.co/openai/gpt-oss-20b">gpt-oss-20b model card</a>.</p>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
                     <figcaption>AI Settings stores text-model profiles, their limits, and the default profile for each AI-assisted operation.</figcaption>
@@ -608,6 +629,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>AudioMancer accepts compatible models by capability, not by model name. Context and reasoning settings remain in <strong>AI Settings</strong>, not on this page.</li>
                     <li>Long books are summarized in whole-chunk windows and then consolidated. A canonical chunk is never split; if one cannot fit, make the Text Chunking result smaller or select a wider-context profile.</li>
                     <li>An interrupted, cancelled or failed run is resumed by pressing <strong>Analyze</strong> again when the chunks, target language, profile and safe request settings still match.</li>
+                    <li>If a model returns an incorrectly structured summary or report, AudioMancer regenerates it once from the original evidence. This additional request uses model allowance. If the format remains invalid, the operation stops with a model-response error and preserves accepted checkpoints. Test the model in AI Settings or choose another profile, then Analyze again.</li>
                     <li>Selecting a different profile starts a new candidate and preserves any completed report. A completed report also stays visible as <em>stale</em> if the chunks or target language change, and Analyze becomes available for a replacement.</li>
                     <li>After a fresh completion, Analyze is disabled. Press <strong>Reset</strong> to remove Book Analysis data and start again. Reset does not delete translation, character, voice, speech or audio work.</li>
                 </ul>

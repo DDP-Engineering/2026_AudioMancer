@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-SEC-5317d6ae"
+title = "Protect subscription credentials and invalidate disconnected sessions"
+status = "active"
+requirement = "When a subscription account is connected or disconnected, AudioMancer shall keep credentials in OS-protected per-user storage or explicitly selected process-only memory, with disconnected generations rejecting late credential saves."
+verification = "Automated: Protected-store and memory fixtures exercise persistence, corrupted/unavailable store, logout/login race, and a real Windows protection round trip."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_credential_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_storage_service.py", "02_Tools/audiomancer_windows.spec", "02_Tools/package_linux_release.sh", "05_Software/AudioMancer/pyproject.toml", "05_Software/AudioMancer/uv.lock"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_credentials.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

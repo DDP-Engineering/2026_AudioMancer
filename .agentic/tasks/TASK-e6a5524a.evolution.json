@@ -1,0 +1,1202 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-09-16T07:41:33.686323Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "559756fc267007d7",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1fe0d8eab1e0a9e56943484390354d001eca4bcc3c11cdc87ed7955c0a24a589"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "7c4ee19daf1757c8718cbfedccf7e7707bba27cdcfd1a9ed7d8064698f577520"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_http_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1c3ade73adae5b637b66e533f5bd4093c0987319478688c58824a521ea8875f9"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "ee428ba4575956746e51ac145d57e0ac0ea6392651555ce72c5f2cdd3415f36c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5d327e4a6d4c5c8633d0c7ac8abb87fc37c4186fd33031010800cd5ccf02e478"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "28a9881c85c862c3c5515ea77aacd3586d4c33d1e4866aff2cb9bfa9e6959979"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f34f448bae6545a280822236583d875c65b749dbfe72b41600440f9ea1841556"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "564bb83b89ab32d5a8cc8ac901ac78f9851580d98536d0b7f862bd0f69914f2c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f007b7df610559e718875d1deffd6eab7ad3505c00efc098498d89446162f30a"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "c97cf733c65b610585ddaff5272b9993900a54458c8e5364180f0caf6eda85dc"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_auth.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "9816e46172b362f2ae3d201150ae8f4d4663eda0c2ce0ad2e273e75f8dd55e30"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "39acced754d45ccbf9eb5c6981805473402229f4538866dc4e9fdb217dfb3f6d"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_credentials.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "770c61cbaeff0c0b83915d67c72d1117b267010b6e146c2fae0cc655ea911d88"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "ba5516d4877e3ac24ad6a3b5a98a2ca0edac526a8440bc756b4c1e6e5e58d418"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_facade.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "428b1e1364bf87da88c178aa683581ed541e0eeb77757d9297df1b330ee38bad"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "8c4c97a4c199c05eb66087908bbeceeeb0e35253bd0dc5c02f29d55802aad8ac"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_models.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c515a546fa0507a0da93c96903504b813ace576c1c397960c530da936293136a"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "4558ae6cc1a700f1fc0ce5bee26e4f90304463c8a0efb0b83c063e2257e44f1f"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_provider.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e3643c814c8f393cb02b4115aa8fa3b563e6897d3c5775f0927eb42af3af1c51"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "c2f56a957f80efb09f32d3d7e284764380c8b381b1052021fb38074f2d5459ed"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_settings.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3569a3f2f537775981a98b753020a06a610c629a9ef6f2d0533cc9439a8e46b7"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "227754256d5b6e137ae7e180fe3db51df6ff93d48512cf442d434525b7489cbe"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 112
+          },
+          "tests": {
+            "added": 0,
+            "modified": 7,
+            "removed": 0,
+            "unchanged": 127
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 11,
+          "removed": 0,
+          "unchanged": 344
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T07:48:42.910234Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T07:57:02.721784Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "645d7e015b66f859",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e92f4cd16db35e888324649650d3447c76070feb4d75598f1a17b2a99a7c285c"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "1fe0d8eab1e0a9e56943484390354d001eca4bcc3c11cdc87ed7955c0a24a589"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_http_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "edab3cbd139100e7ca35e8c65fd11485fb7b0a339832c10817f44c229d541424"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "1c3ade73adae5b637b66e533f5bd4093c0987319478688c58824a521ea8875f9"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "1e1bb52fc87c6302e58e4e6936333331a2cbfc7ef9bfedb18743201310d2358f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "89de45d65772db0a5fa094da0b997a96cac4389fec177176dbb4c492e7d7de38"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "228e61cac739ba0c3983951a8ccb31ae46c428ada0d149cf1b414dfb7b6f3567"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "3eb277cc51daa44c3403dd60e2e31b7c6350283ccd01e0012f618f0984eb3579"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_provider.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 113
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 133
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 4,
+          "removed": 0,
+          "unchanged": 351
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T07:58:43.130643Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T08:11:06.436881Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "142aa233f4c01529",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "06d2900f69ee4b4d5fa33584c86ed802b11499ab752a05a4755fee7debc9b430"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "5d327e4a6d4c5c8633d0c7ac8abb87fc37c4186fd33031010800cd5ccf02e478"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "81b6b2c134c65f81333cebbf34b6db987e146adb4258f71a01c669a88d7a1871"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f34f448bae6545a280822236583d875c65b749dbfe72b41600440f9ea1841556"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "bccf9a97d999bdd448fa3a766a58a2844db561c4b42d6be50629ec5f85bdcac2"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "0fad2d91a97974d8fef4cb6401c219cb5e3985a8a5277123ac51c922e57812b1"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_layout.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "36ac81234c85c20dec2b4c744c8626a15e4d5142dfa7a086bcd6ab0b18f25946"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "40e29d5e58a65d371cdf0bd298d14793b9c0b679571d7dd79ae9155644c96619"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "6997adce292709d5c7f3f5e7664b29169493b4f3c745f4b2b4fb8e47f2e4f9f1"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "26dd15173990ea4df9aaeac86a6a1d41eaaf8803f4b667727df77d24188bc2f3"
+          },
+          "path": "05_Software/AudioMancer/tests/test_main_window_lifecycle.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "65a5a7b03438dea8513b07e6c49ed6203f7c0c1528317c7ffc7505d9044460cd"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "dd098f4722b7c7f1358ac33677f2386e7d993dfe7b89291ae9936b95cbb0396b"
+          },
+          "path": "06_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ef73d68e1e6faa833024e1d61f126cfc79180fcfbbce9b113c97f96658b4e277"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "c4b6f268eecd90cb21691bd61fa18d3dcf6975f88137bda29c1b33ee3c923ff2"
+          },
+          "path": "06_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "acdd5d8bf320bd0bf7f64c559dbdb8dc5f22cf568577193d3d741c93ea422663"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "0ae3e76176013d4c4d5bcb3d15b07226104683356464eea120edaf3a9db944cf"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 114
+          },
+          "tests": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 132
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 8,
+          "removed": 0,
+          "unchanged": 348
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T08:17:14.162589Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T08:54:09.948929Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "e24b838979cc0e73",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d2a1a678a23b4bc14b5517b59b655317bfb6491ad62cf3f4779782df4a8e857f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "4a41fd860fc241fc64f46d43920e075dd96a7a369d5ae6d4f0060d915a69c315"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_model_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2096f6f84ff6ad6d29a4d44834459fb66d9d459701e05bf8146f69dd57a53be3"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "c8279a9a2276c5eda19daa47b307aac65351d6a9f4f043c59e07238890b411fe"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8236a6f53970a3133f8a85bc334c74ffda24c8e9459373f0218b670d6723b17a"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "06d2900f69ee4b4d5fa33584c86ed802b11499ab752a05a4755fee7debc9b430"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "62264befca5c6e9593d31cd30e86aa679102dea65960912e0c86c1e94fe94d29"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "81b6b2c134c65f81333cebbf34b6db987e146adb4258f71a01c669a88d7a1871"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "45af91f0a36174e83b7d5622fc6f53602e59671e8b52c323440b894311a8e8f7"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "627425d1695fcad0d844a64d42a5505447676e763b2539dbb43dee255f31bb5c"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_layout.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c0767c834bc26b167e318a5e959a80097f38a5f729fa938370b3f538e29d9f8e"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "36ac81234c85c20dec2b4c744c8626a15e4d5142dfa7a086bcd6ab0b18f25946"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ff846c02d12dcd99a3d9ed2ef20258c71a972db124468e39c0e1d3254d9eeffd"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "126a3318d1a89926c2d4955597b0a68ab385a7d4fd299c839680a0412e82fb76"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a16d5f46689e0da452ef8c88ae6c03a758dbe05d4bb1f9d51a4c6ee387375776"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "65a5a7b03438dea8513b07e6c49ed6203f7c0c1528317c7ffc7505d9044460cd"
+          },
+          "path": "06_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a289bd5160e14760055e599f50a2d47749f2b6c97218b9e6a0ad19994655a89f"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "ef73d68e1e6faa833024e1d61f126cfc79180fcfbbce9b113c97f96658b4e277"
+          },
+          "path": "06_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "ccc20d4938ce1ced9c9bac87733d62af690e420ab5ae12df1cec3e0dcb4c811b"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "acdd5d8bf320bd0bf7f64c559dbdb8dc5f22cf568577193d3d741c93ea422663"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "source": {
+            "added": 0,
+            "modified": 4,
+            "removed": 0,
+            "unchanged": 112
+          },
+          "tests": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 132
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 10,
+          "removed": 0,
+          "unchanged": 346
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T09:00:44.428161Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T09:21:27.838883Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "82d24583c851f427",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cf73d5784eda0b4c64661ecf38a3090da5dd499476797e5b6902d3a19c081963"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "888b63a5d61ae7a7f7dbfd6c592e73878ee015f1e5f734fb6c2118ade3df6f5b"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_catalog_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2e0956637d64ab7811b67e117a222846e27ec371ea92e085e303022b7e5261e5"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "d2a1a678a23b4bc14b5517b59b655317bfb6491ad62cf3f4779782df4a8e857f"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_model_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "eb1a060fed73c293d82ca3ade9ed6c660d5b920b4dcbaa53bcd012bf0ee4e5cf"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "edab3cbd139100e7ca35e8c65fd11485fb7b0a339832c10817f44c229d541424"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8153e60452ac11a00da54585a053e4adeabd1a25b09833f66704419aa4c27b6e"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "1e1bb52fc87c6302e58e4e6936333331a2cbfc7ef9bfedb18743201310d2358f"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0027bffc01a206890253ffbcfcad02e47fe5549ac5fa4d84428f5d2054708682"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8febe6d1e31450cfd7b5a67a6180a998628fb93ac80f70e24a0b5af8f0607027"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d08bb74a0bb570a56f39562f0b973ba93b4063747f71b6d889d23bbad036b599"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "ff846c02d12dcd99a3d9ed2ef20258c71a972db124468e39c0e1d3254d9eeffd"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 5,
+            "removed": 0,
+            "unchanged": 112
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 135
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 6,
+          "removed": 0,
+          "unchanged": 352
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T09:24:31.037332Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T09:24:31.277062Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "93c03b35e5f60fd5",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5f2767de1ce952f0b4cbadfec95869c1d1512587a40f6298145849c597f21155"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "2096f6f84ff6ad6d29a4d44834459fb66d9d459701e05bf8146f69dd57a53be3"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "661a2dd9146bb5f12bf7fc2041d506eed61f949bc5a46ad58d0814d2454d89e6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "c9d4ad2a6dd996a32037e75b050a2a5d4261ee080bdbdf581ef3a9ed973440ca"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/controllers/chatgpt_auth_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "724f89119c5fd59899fe18d15efc68f35c183574ab63bbc5a7f4b007e0b4e351"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "62264befca5c6e9593d31cd30e86aa679102dea65960912e0c86c1e94fe94d29"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "da3c6e5cfffa4562e1e107983c0fc145197cb6ac710fc628de629f03d603e39f"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "d63de2dbab6c88cb56ff6e0fda14341ff73d81dc686bbcfa561a0467007e53d8"
+          },
+          "path": "05_Software/AudioMancer/tests/test_book_analysis_document_service.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 114
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 135
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 4,
+          "removed": 0,
+          "unchanged": 354
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T09:26:51.610139Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T09:40:55.171536Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "7beaf8041927607c",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "55259499494e7e8975cf38df1d85d7b8ea71a51736b8c3ee33e9cee3725f3df5"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "09e237f9aaf9936bfd3b4d186168f867d0f381b33e412ac7a24f8069f1f0d189"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 116
+          },
+          "tests": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 136
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 1,
+          "removed": 0,
+          "unchanged": 357
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T09:42:37.717807Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T10:00:52.141926Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "44d32742c9092db4",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "c5946fce5a0045a3d810701bf2d46e891b58a6953f967c60becd304e6397a941"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8236a6f53970a3133f8a85bc334c74ffda24c8e9459373f0218b670d6723b17a"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "42675198504749d941cd806c71beac9d713051c5b681821b1106094bb2f1f399"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "55259499494e7e8975cf38df1d85d7b8ea71a51736b8c3ee33e9cee3725f3df5"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "2f69ae2c4d7aa208caccd0fbee1eefa9faafb815b2f757adb07df10bf9429baf"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "9ad6ac0a66728a56d311b125d1f5d2785c181e7cd8b1609baea1ba41aa700e67"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_layout.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "85bfc9bf87c081da96decf254ea32980bc24be9ff209984d381c805c47c0e45a"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "e5140a85dc6ca832785bbef04f41425172566637f86c6cdd711b890e23a461f4"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_catalog.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5a2cf9e2765b2958692d441a2a049fb4b71c21a004c9fd1db6ef0aa78844b140"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "cdc6cae7d2b2e1bc949ca3e07d03385a0acb7a6e9896afbe9886205eff8c3ce6"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 115
+          },
+          "tests": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 133
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 353
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T10:04:16.075518Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T10:04:16.344429Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "ba8f3a9308e7eac7",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cd6de1b165d12090cab3aecc4419fe100e5abefcaaa5f1d91155f1b8c806c80f"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "f6d968474c13be0d61dc42171935f72851cd72eb6c6b8d647387ead10ac03a0c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_catalog_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8d988a372bfce82e14f63a7863ab5a1aee943386b4b0fbf33c5d0c72d4afcd3a"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "42675198504749d941cd806c71beac9d713051c5b681821b1106094bb2f1f399"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "710724e500990c5a81f752989e623f0e0952e02e0e642de867090a5a50844a17"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "2f69ae2c4d7aa208caccd0fbee1eefa9faafb815b2f757adb07df10bf9429baf"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_layout.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "9c7f89c7ac2d7a54886857df1380a4bfb0e9b5d94e487f03d51044c868100aec"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "85bfc9bf87c081da96decf254ea32980bc24be9ff209984d381c805c47c0e45a"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_catalog.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7ec33620d5453b4f847e86e8386ff9a86394a4cac869610a5dace7e6b8bf94ef"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "5a2cf9e2765b2958692d441a2a049fb4b71c21a004c9fd1db6ef0aa78844b140"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 0,
+            "removed": 0,
+            "unchanged": 105
+          },
+          "source": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 115
+          },
+          "tests": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 133
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 353
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "build",
+      "evolved_at": "2026-09-16T10:09:14.242296Z"
+    },
+    {
+      "anchor_created_at": "2026-09-16T10:09:14.497189Z",
+      "anchor_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "anchor_id": "083ab804a0ccdf3e",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7f23b9be1c86bab17df0c25bea3c2739df248c977e091075e77d4053dadb76f6"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "cd6de1b165d12090cab3aecc4419fe100e5abefcaaa5f1d91155f1b8c806c80f"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/chatgpt_catalog_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "a37c132eccf244138c0627eac576570b08a9e29ecc02e045aea859637c3cccf5"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "08dc50ef2dfe114ff90cbb2fea748b7efc2e8499381a9a5cf1b7cbde960f9a8c"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/controllers/chatgpt_auth_ui_controller.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "e4c55f5c233cc37fa4f89a95a5694cb466a1254d7d1dedd2435f48201a743834"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "8d988a372bfce82e14f63a7863ab5a1aee943386b4b0fbf33c5d0c72d4afcd3a"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "56197c7e08f14ec7dd99bc16932e4f593138fa9a7d4e817979d8226c5d745086"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "710724e500990c5a81f752989e623f0e0952e02e0e642de867090a5a50844a17"
+          },
+          "path": "05_Software/AudioMancer/tests/test_ai_settings_layout.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "5ea5c3da492a78346e86200b855d49d5ee4d4a9e7f5c66a9a743fdb2d38aa7bb"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "7ec33620d5453b4f847e86e8386ff9a86394a4cac869610a5dace7e6b8bf94ef"
+          },
+          "path": "05_Software/AudioMancer/tests/test_chatgpt_ui.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "07a0ac61702f5fd7696ec3f43dd64f39781f970275b8f62d492b1868f4090c77"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "9f91dd000cf5d5e6af432e3835d17aa14a9993029fd417504cda33d4b18accc2"
+          },
+          "path": "06_SoftwareDocu/UserGuide/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cb05b9ba497969c94c28e63c8639560adb4d0ea89927e83f158eaaa6384c698d"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "3cda43bcfec0a1dbe0c677661c5bb54c4cec705666948769b1fa43226abfbcbd"
+          },
+          "path": "06_SoftwareDocu/UserGuide_ro/index.html",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8087f907932ad3456a6bd7c004f0c8a383782a840e69d576337f0bc876017086"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "3c0e3db2d1a49fbc777aa3d8ec3a54c216f0d17fb575c8a87350e806cd1b10a9"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 102
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 114
+          },
+          "tests": {
+            "added": 0,
+            "modified": 2,
+            "removed": 0,
+            "unchanged": 134
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 8,
+          "removed": 0,
+          "unchanged": 350
+        }
+      },
+      "current_head": "2575a75c803a54266a2d2f7a84a3a456236b618c",
+      "evolution_stage": "deliver",
+      "evolved_at": "2026-09-16T11:24:10.538445Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-e6a5524a"
+}

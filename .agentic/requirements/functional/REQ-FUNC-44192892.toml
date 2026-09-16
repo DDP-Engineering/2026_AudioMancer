@@ -1,0 +1,24 @@
+schema = 1
+id = "REQ-FUNC-44192892"
+title = "Validate and recover Book Analysis model response formats"
+status = "active"
+requirement = """
+When a Book Analysis leaf, consolidation or final report response has invalid fields or types,
+AudioMancer shall regenerate it once from the original evidence using the same profile and language,
+then either accept the validated result or report a model-response format error while preserving
+valid checkpoints and completed reports. Every request includes the canonical JSON schema in its
+prompt, independent of provider enforcement. Prompt budgets include schema and correction overhead,
+including on resume without enlarging a previously reduced source allowance. Successful recovery
+combines both responses' usage. Cancellation and transport failures do not trigger format retries.
+"""
+verification = "Scripted-provider tests exercise all three phases, wrong-shaped valid JSON, schema text parity, bounded retries, cancellation, transport failure and failed-checkpoint preservation; Book Analysis regression modules cover resume and document validation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/book_analysis_service.py"]
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_response_contract_budget_refresh_preserves_checkpoint_and_reduction",
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_response_contract_and_one_format_retry",
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_response_format_retry_is_bounded_and_cancellable",
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_response_format_retry_does_not_repeat_transport_failures",
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_invalid_leaf_response_is_checkpointed_as_failure_not_success",
+]
+created = 2026-09-16
+updated = 2026-09-16

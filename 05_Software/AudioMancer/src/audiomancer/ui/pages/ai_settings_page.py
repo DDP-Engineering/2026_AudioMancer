@@ -21,10 +21,12 @@ from uuid import uuid4
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import (
+    QBoxLayout,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -32,18 +34,19 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
 from audiomancer import config
-from audiomancer.services import ui_state_service
+from audiomancer.services import chatgpt_catalog_service, ui_state_service
 
 # CONSTANTS
 
 # @brief Characters the model selector reserves room for before it starts eliding.
-_MODEL_COMBO_MINIMUM_CONTENTS_LENGTH = 28
+_MODEL_COMBO_MINIMUM_CONTENTS_LENGTH = 12
 
 # @brief Hard width ceiling for the model selector, so one long model id cannot widen the dialog.
 # @details Kept above the width the reserved character count implies, so the ceiling never
@@ -99,12 +102,21 @@ class AiSettingsPage(QWidget):
         self._current_language = config.DEFAULT_LANGUAGE
         self._discovered_model_options: dict[str, list[tuple[str, str]]] = {}
         self._suspend_override_tracking = False
+        self._chatgpt_busy = False
+        self._subscription_catalog = {"source": "builtin", "models": chatgpt_catalog_service.builtin_models()}
 
         layout = QVBoxLayout(self)
         self._title_label = QLabel("<h2>AI Settings</h2>")
         layout.addWidget(self._title_label)
 
-        content_row = QHBoxLayout()
+        content = QWidget(self)
+        content_row = QHBoxLayout(content)
+        content_row.setContentsMargins(0, 0, 0, 0)
+        content_row.setSpacing(12)
+        self._content_scroll = QScrollArea(self)
+        self._content_scroll.setWidgetResizable(True)
+        self._content_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._content_scroll.setWidget(content)
 
         profile_column = QWidget(self)
         profile_column_layout = QVBoxLayout(profile_column)
@@ -112,7 +124,8 @@ class AiSettingsPage(QWidget):
 
         self._profile_list = QListWidget(self)
         self._profile_list.currentRowChanged.connect(self._load_selected_profile_into_editor)
-        profile_column_layout.addWidget(self._profile_list, 1)
+        self._profile_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        profile_column_layout.addWidget(self._profile_list)
 
         profile_button_row = QHBoxLayout()
         self._add_profile_button = QPushButton("Add Profile", self)
@@ -121,15 +134,24 @@ class AiSettingsPage(QWidget):
         self._remove_profile_button.clicked.connect(self._remove_selected_profile)
         profile_button_row.addWidget(self._add_profile_button)
         profile_button_row.addWidget(self._remove_profile_button)
+        profile_button_row.addStretch(1)
         profile_column_layout.addLayout(profile_button_row)
 
-        content_row.addWidget(profile_column, 1)
+        content_row.addWidget(profile_column, 6)
+        self._defaults_form = QFormLayout()
+        self._defaults_form.setContentsMargins(0, 0, 0, 0)
+        self._defaults_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self._defaults_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        profile_column_layout.addLayout(self._defaults_form)
+        profile_column_layout.addStretch(1)
 
         editor_container = QWidget(self)
         editor_layout = QVBoxLayout(editor_container)
+        editor_layout.setContentsMargins(0, 0, 0, 0)
         top_form_layout = QFormLayout()
         top_form_layout.setContentsMargins(0, 0, 0, 0)
         top_form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        top_form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         bottom_form_layout = QFormLayout()
         bottom_form_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -138,10 +160,11 @@ class AiSettingsPage(QWidget):
         profile_name_row.addWidget(self._label_edit, 1)
 
         self._enabled_checkbox = QCheckBox("Profile enabled")
-        profile_name_row.addWidget(self._enabled_checkbox)
 
         self._backend_combo = QComboBox(self)
         self._backend_combo.addItems(config.LLM_BACKEND_OPTIONS)
+        self._backend_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self._backend_combo.setMinimumContentsLength(8)
         backend_row = QHBoxLayout()
         backend_row.addWidget(self._backend_combo, 1)
 
@@ -205,7 +228,12 @@ class AiSettingsPage(QWidget):
 
         model_name_row = QHBoxLayout()
         model_name_row.addWidget(self._model_combo, 1)
-        model_name_row.addWidget(self._supports_structured_checkbox)
+        self._chatgpt_refresh_button = QPushButton(self)
+        model_name_row.addWidget(self._chatgpt_refresh_button)
+        flags_row = QHBoxLayout()
+        flags_row.addWidget(self._enabled_checkbox)
+        flags_row.addWidget(self._supports_structured_checkbox)
+        flags_row.addStretch(1)
 
         numeric_settings_grid = QGridLayout()
         numeric_settings_grid.setContentsMargins(0, 0, 0, 0)
@@ -213,20 +241,20 @@ class AiSettingsPage(QWidget):
         numeric_settings_grid.setVerticalSpacing(6)
         numeric_settings_grid.addWidget(self._context_window_label, 0, 0)
         numeric_settings_grid.addWidget(self._context_window_spin, 0, 1)
-        numeric_settings_grid.addWidget(self._output_reserve_label, 0, 2)
-        numeric_settings_grid.addWidget(self._output_reserve_spin, 0, 3)
-        numeric_settings_grid.addWidget(self._timeout_label, 1, 0)
-        numeric_settings_grid.addWidget(self._timeout_spin, 1, 1)
-        numeric_settings_grid.addWidget(self._temperature_label, 1, 2)
-        numeric_settings_grid.addWidget(self._temperature_spin, 1, 3)
+        numeric_settings_grid.addWidget(self._output_reserve_label, 1, 0)
+        numeric_settings_grid.addWidget(self._output_reserve_spin, 1, 1)
+        numeric_settings_grid.addWidget(self._timeout_label, 2, 0)
+        numeric_settings_grid.addWidget(self._timeout_spin, 2, 1)
+        numeric_settings_grid.addWidget(self._temperature_label, 3, 0)
+        numeric_settings_grid.addWidget(self._temperature_spin, 3, 1)
         numeric_settings_grid.setColumnStretch(1, 1)
-        numeric_settings_grid.setColumnStretch(3, 1)
 
         top_form_layout.addRow(self._profile_name_label, profile_name_row)
         top_form_layout.addRow(self._backend_kind_label, backend_row)
         top_form_layout.addRow(self._base_url_label, self._base_url_edit)
         top_form_layout.addRow(self._api_key_label, self._api_key_edit)
         top_form_layout.addRow(self._model_name_label, model_name_row)
+        top_form_layout.addRow(flags_row)
         bottom_form_layout.addRow(numeric_settings_grid)
         bottom_form_layout.addRow(self._reasoning_mode_label, self._reasoning_mode_combo)
 
@@ -257,26 +285,59 @@ class AiSettingsPage(QWidget):
         )
         self._default_speech_blocks_label = QLabel("Default Speech Blocks Profile", self)
 
-        bottom_form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
-        bottom_form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
-        bottom_form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
-        bottom_form_layout.addRow(self._default_context_mode_label, self._default_context_mode_combo)
-        bottom_form_layout.addRow(
+        self._defaults_form.addRow(self._default_cleanup_label, self._default_cleanup_combo)
+        self._defaults_form.addRow(self._default_chunking_label, self._default_chunking_combo)
+        self._defaults_form.addRow(self._default_strategy_label, self._default_strategy_combo)
+        self._defaults_form.addRow(self._default_context_mode_label, self._default_context_mode_combo)
+        self._defaults_form.addRow(
             self._default_book_analysis_label,
             self._default_book_analysis_combo,
         )
-        bottom_form_layout.addRow(self._default_translation_label, self._default_translation_combo)
-        bottom_form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
-        bottom_form_layout.addRow(
+        self._defaults_form.addRow(self._default_translation_label, self._default_translation_combo)
+        self._defaults_form.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
+        self._defaults_form.addRow(
             self._default_character_label,
             self._default_character_combo,
         )
-        bottom_form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
+        self._defaults_form.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
+        for row in range(self._defaults_form.rowCount()):
+            label = self._defaults_form.itemAt(row, QFormLayout.ItemRole.LabelRole).widget()
+            label.setWordWrap(False)
+            combo = self._defaults_form.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+            combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(10)
+            combo.currentTextChanged.connect(combo.setToolTip)
         editor_layout.addLayout(top_form_layout)
+        self._chatgpt_panel = QWidget(self)
+        account_layout = QVBoxLayout(self._chatgpt_panel)
+        account_layout.setContentsMargins(0, 0, 0, 0)
+        self._chatgpt_status = QLabel(self)
+        self._chatgpt_status.setWordWrap(True)
+        self._chatgpt_status.setTextFormat(Qt.TextFormat.PlainText)
+        self._chatgpt_status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        account_layout.addWidget(self._chatgpt_status)
+        self._chatgpt_session_only = QCheckBox(self)
+        account_layout.addWidget(self._chatgpt_session_only)
+        account_buttons = QGridLayout()
+        self._chatgpt_browser_button = QPushButton(self)
+        self._chatgpt_device_button = QPushButton(self)
+        self._chatgpt_disconnect_button = QPushButton(self)
+        self._chatgpt_cancel_button = QPushButton(self)
+        for index, button in enumerate((self._chatgpt_browser_button, self._chatgpt_device_button,
+                                        self._chatgpt_disconnect_button, self._chatgpt_cancel_button)):
+            account_buttons.addWidget(button, index // 2, index % 2)
+        account_buttons.setColumnStretch(0, 1)
+        account_buttons.setColumnStretch(1, 1)
+        account_button_row = QHBoxLayout()
+        account_button_row.addLayout(account_buttons)
+        account_button_row.addStretch(1)
+        account_layout.addLayout(account_button_row)
+        top_form_layout.addRow(self._chatgpt_panel)
         editor_layout.addLayout(bottom_form_layout)
 
-        content_row.addWidget(editor_container, 2)
-        layout.addLayout(content_row, 1)
+        editor_layout.addStretch(1)
+        content_row.addWidget(editor_container, 5)
+        layout.addWidget(self._content_scroll, 1)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
@@ -289,8 +350,11 @@ class AiSettingsPage(QWidget):
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
+        self._profile_list.installEventFilter(self)
+        self._content_scroll.viewport().installEventFilter(self)
         self._model_combo.currentTextChanged.connect(self._on_model_name_edited)
         self._context_window_spin.valueChanged.connect(self._on_context_window_edited)
+        self._backend_combo.currentTextChanged.connect(self._on_backend_changed)
 
         self.load_settings(
             {
@@ -306,6 +370,48 @@ class AiSettingsPage(QWidget):
                 "default_character_extraction_profile_id": None,
             }
         )
+
+    def _refresh_layout_metrics(self) -> None:
+        """@brief Size the compact list and equal footer actions from current font and style metrics."""
+        row_height = max(self._profile_list.sizeHintForRow(0), self._profile_list.fontMetrics().height() + 8)
+        self._profile_list.setFixedHeight(5 * row_height + 2 * self._profile_list.frameWidth())
+        fields = [self._defaults_form.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+                  for row in range(self._defaults_form.rowCount())]
+        field_width = max(field.sizeHint().width() for field in fields)
+        for field in fields:
+            field.setFixedWidth(field_width)
+        self._profile_list.parentWidget().setFixedWidth(self._defaults_form.minimumSize().width())
+        action_groups = (
+            (self._cancel_button, self._save_button, self._ok_button),
+            (self._add_profile_button, self._remove_profile_button),
+            (self._chatgpt_browser_button, self._chatgpt_device_button,
+             self._chatgpt_disconnect_button, self._chatgpt_cancel_button),
+        )
+        for actions in action_groups:
+            width = max(button.sizeHint().width() for button in actions)
+            for button in actions:
+                button.setFixedWidth(width)
+        self._adapt_content_columns()
+
+    def _adapt_content_columns(self) -> None:
+        """@brief Stack settings sections when both natural column widths exceed the viewport."""
+        content_row = self._content_scroll.widget().layout()
+        left = self._profile_list.parentWidget()
+        right = self._label_edit.parentWidget()
+        required_width = left.width() + right.minimumSizeHint().width() + content_row.spacing()
+        direction = (QBoxLayout.Direction.LeftToRight
+                     if self._content_scroll.viewport().width() >= required_width
+                     else QBoxLayout.Direction.TopToBottom)
+        if content_row.direction() != direction:
+            content_row.setDirection(direction)
+        content_row.setStretch(0, 0)
+        content_row.setStretch(1, 1 if direction == QBoxLayout.Direction.LeftToRight else 0)
+
+    def changeEvent(self, event) -> None:
+        """@brief Recompute font-derived geometry after inherited UI font or style changes."""
+        super().changeEvent(event)
+        if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            QTimer.singleShot(0, self, self._refresh_layout_metrics)
 
     def load_settings(self, settings_payload: dict[str, object]) -> None:
         """
@@ -438,6 +544,9 @@ class AiSettingsPage(QWidget):
         probe_succeeded = bool(probe_result.get("success", False))
         current_profile["discovery_succeeded"] = probe_succeeded
         current_profile["discovery_message"] = str(probe_result.get("message", ""))
+        if current_profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND:
+            current_profile["supports_structured_output"] = bool(probe_result.get("supports_structured_output", False))
+            self._supports_structured_checkbox.setChecked(current_profile["supports_structured_output"])
         if not probe_succeeded:
             return
 
@@ -487,6 +596,30 @@ class AiSettingsPage(QWidget):
 
         self._load_profile_into_editor(current_profile)
 
+    def apply_subscription_catalog(self, result: dict) -> None:
+        """@brief Replace account model hints while preserving every unsaved profile/editor choice."""
+        self._sync_editor_to_owner_profile()
+        self._subscription_catalog = copy.deepcopy(result)
+        current = self._current_profile()
+        if current is not None and current.get("backend_kind") == config.CHATGPT_BACKEND_KIND:
+            self._load_model_options_for_profile(current)
+            self._reload_reasoning_mode_combo(self._current_language, chatgpt_catalog_service.requested_effort(current))
+            self._apply_subscription_context()
+        self._update_catalog_status()
+
+    def _update_catalog_status(self) -> None:
+        """@brief Distinguish live, cached and candidate metadata without implying inference verification."""
+        source = self._subscription_catalog.get("source", "builtin")
+        self._chatgpt_refresh_button.setToolTip(
+            ui_state_service.translate("ai_settings.catalog_" + source, self._current_language)
+        )
+
+    def set_subscription_status(self, text: str, *, visible: bool = True) -> None:
+        """@brief Reserve status rows for active progress or errors, keeping idle details in tooltips."""
+        self._chatgpt_status.setText(text)
+        self._chatgpt_status.setVisible(visible and bool(text))
+        self._chatgpt_browser_button.setToolTip(text)
+
     # LOCAL HELPERS
 
     def _create_default_profile(self, label: str) -> dict[str, object]:
@@ -525,6 +658,9 @@ class AiSettingsPage(QWidget):
         """
         selected_model_name = str(profile.get("model_name", "")).strip()
         discovered_options = self._discovered_model_options.get(str(profile["id"]), [])
+        if profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND:
+            # Candidate labels stay separate from the actual model identifier.
+            discovered_options = [(model["id"], model["id"]) for model in self._subscription_catalog["models"]]
         if not discovered_options:
             discovered_options = [
                 (str(model_name).strip(), str(model_name).strip())
@@ -556,6 +692,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         """
         current_profile_id = self._current_profile_id()
+        scroll_position = self._profile_list.verticalScrollBar().value()
         self._profile_list.blockSignals(True)
         self._profile_list.clear()
         current_row = 0
@@ -567,6 +704,9 @@ class AiSettingsPage(QWidget):
                 current_row = index
         if self._profiles:
             self._profile_list.setCurrentRow(current_row)
+            self._profile_list.doItemsLayout()
+            self._profile_list.verticalScrollBar().setValue(scroll_position)
+            self._profile_list.scrollToItem(self._profile_list.currentItem())
         self._profile_list.blockSignals(False)
 
     def _reload_default_profile_combos(self) -> None:
@@ -635,19 +775,27 @@ class AiSettingsPage(QWidget):
         self._label_edit.setText(str(profile["label"]))
         self._enabled_checkbox.setChecked(bool(profile["enabled"]))
         self._backend_combo.setCurrentText(str(profile["backend_kind"]))
+        self._editor_backend_kind = str(profile["backend_kind"])
         self._base_url_edit.setText(str(profile["base_url"]))
         self._api_key_edit.setText(str(profile["api_key"]))
         self._model_combo.setCurrentText(str(profile["model_name"]))
-        self._context_window_spin.setValue(int(profile["context_window"]))
+        context = int(profile["context_window"])
+        self._context_window_spin.setMaximum(
+            max(1_000_000, context) if profile["backend_kind"] == config.CHATGPT_BACKEND_KIND else 1_000_000
+        )
+        self._context_window_spin.setValue(context)
         self._output_reserve_spin.setValue(int(profile["output_reserve_tokens"]))
         self._timeout_spin.setValue(int(profile["request_timeout_seconds"]))
         self._temperature_spin.setValue(float(profile["temperature"]))
         self._supports_structured_checkbox.setChecked(bool(profile["supports_structured_output"]))
-        self._set_optional_combo(
-            self._reasoning_mode_combo,
-            profile.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE),
-        )
+        selected_reasoning = (chatgpt_catalog_service.requested_effort(profile)
+                              if profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND
+                              else profile.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE))
+        self._reload_reasoning_mode_combo(self._current_language, selected_reasoning)
         self._loading_profile = False
+        self._apply_subscription_context()
+        self._update_subscription_controls()
+        self.set_subscription_status("", visible=False)
 
     def _sync_editor_to_owner_profile(self) -> None:
         """
@@ -664,6 +812,10 @@ class AiSettingsPage(QWidget):
         owner_profile["base_url"] = self._base_url_edit.text().strip()
         owner_profile["api_key"] = self._api_key_edit.text()
         owner_profile["model_name"] = self._model_combo.currentText().strip()
+        if owner_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND:
+            owner_profile["base_url"] = config.CHATGPT_BASE_URL
+            owner_profile["api_key"] = ""
+            owner_profile["credential_ref"] = config.CHATGPT_CREDENTIAL_REF
         owner_profile["context_window"] = self._context_window_spin.value()
         owner_profile["output_reserve_tokens"] = self._output_reserve_spin.value()
         owner_profile["request_timeout_seconds"] = self._timeout_spin.value()
@@ -673,6 +825,9 @@ class AiSettingsPage(QWidget):
             self._optional_combo_value(self._reasoning_mode_combo)
             or config.DEFAULT_LLM_REASONING_MODE
         )
+        if owner_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND:
+            owner_profile["reasoning_effort"] = owner_profile["reasoning_mode"]
+            owner_profile["reasoning_mode"] = chatgpt_catalog_service.reasoning_mode(owner_profile["reasoning_effort"])
         self._reload_profile_list()
         self._reload_default_profile_combos()
 
@@ -688,6 +843,87 @@ class AiSettingsPage(QWidget):
         owner_profile = self._editor_profile()
         if owner_profile is not None:
             owner_profile["user_overrode_model_name"] = True
+            if self._backend_combo.currentText() == config.CHATGPT_BACKEND_KIND:
+                self._apply_subscription_context(reset_override=True)
+                self._reload_reasoning_mode_combo(self._current_language)
+                self._supports_structured_checkbox.setChecked(False)
+                self.set_subscription_status("", visible=False)
+
+    def _on_backend_changed(self, _value: str) -> None:
+        """@brief Refresh subscription-specific controls and defaults on an explicit backend change."""
+        if self._loading_profile:
+            return
+        owner_profile = self._editor_profile()
+        if self._editor_backend_kind == config.CHATGPT_BACKEND_KIND and owner_profile is not None:
+            owner_profile["reasoning_effort"] = self._optional_combo_value(self._reasoning_mode_combo)
+        self._editor_backend_kind = self._backend_combo.currentText()
+        subscription = self._backend_combo.currentText() == config.CHATGPT_BACKEND_KIND
+        if subscription:
+            selected = self._model_combo.currentText()
+            self._model_combo.blockSignals(True)
+            self._model_combo.clear()
+            self._model_combo.addItems([model["id"] for model in self._subscription_catalog["models"]])
+            self._model_combo.setCurrentText(selected)
+            self._model_combo.blockSignals(False)
+            self._supports_structured_checkbox.setChecked(False)
+        selected_effort = owner_profile.get("reasoning_effort") if subscription and owner_profile else None
+        self._reload_reasoning_mode_combo(self._current_language, selected_effort)
+        if subscription:
+            self._apply_subscription_context(reset_override=True)
+        self._update_subscription_controls()
+
+    def _apply_subscription_context(self, *, reset_override: bool = False) -> None:
+        """@brief Apply model default context while retaining manual edits until the model changes."""
+        if self._backend_combo.currentText() != config.CHATGPT_BACKEND_KIND:
+            return
+        profile = self._editor_profile()
+        if profile is None:
+            return
+        if reset_override:
+            profile["user_overrode_context_window"] = False
+        model_name = self._model_combo.currentText().strip()
+        model = next((item for item in self._subscription_catalog["models"] if item["id"] == model_name), {})
+        context = model.get("context_window")
+        if type(context) is not int or not 0 < context <= 2_147_483_647:
+            profile["discovered_context_window"] = None
+            profile["discovered_context_model_name"] = ""
+            return
+        profile["discovered_context_window"] = context
+        profile["discovered_context_model_name"] = model_name
+        if profile.get("user_overrode_context_window", False):
+            return
+        self._context_window_spin.blockSignals(True)
+        self._context_window_spin.setMaximum(max(1_000_000, context))
+        self._context_window_spin.setValue(context)
+        self._context_window_spin.blockSignals(False)
+        profile["context_window"] = context
+
+    def _update_subscription_controls(self) -> None:
+        """@brief Show account controls and disable fields the subscription transport does not use."""
+        subscription = self._backend_combo.currentText() == config.CHATGPT_BACKEND_KIND
+        self._chatgpt_panel.setVisible(subscription)
+        self._chatgpt_refresh_button.setVisible(subscription)
+        self._chatgpt_refresh_button.setEnabled(not self._chatgpt_busy)
+        self._api_key_label.setVisible(not subscription)
+        self._api_key_edit.setVisible(not subscription)
+        self._base_url_edit.setReadOnly(subscription)
+        self._temperature_spin.setEnabled(not subscription)
+        self._supports_structured_checkbox.setEnabled(not subscription)
+        if subscription:
+            self._base_url_edit.setText(config.CHATGPT_BASE_URL)
+            self._api_key_edit.clear()
+        self._connect_button.setText(ui_state_service.translate(
+            "ai_settings.chatgpt_test" if subscription else "ai_settings.connect", self._current_language))
+        self._connect_button.setEnabled(not (subscription and self._chatgpt_busy))
+        self._chatgpt_browser_button.setEnabled(not self._chatgpt_busy)
+        self._chatgpt_device_button.setEnabled(not self._chatgpt_busy)
+        self._chatgpt_session_only.setEnabled(not self._chatgpt_busy)
+        self._chatgpt_cancel_button.setEnabled(self._chatgpt_busy)
+
+    def set_subscription_busy(self, busy: bool) -> None:
+        """@brief Update account worker controls without blocking other profile editing."""
+        self._chatgpt_busy = busy
+        self._update_subscription_controls()
 
     def _on_context_window_edited(self, _value: int) -> None:
         """
@@ -787,16 +1023,39 @@ class AiSettingsPage(QWidget):
             current_mode or config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
         )
 
-    def _reload_reasoning_mode_combo(self, language: str) -> None:
+    def _reload_reasoning_mode_combo(self, language: str, selected: str | None = None) -> None:
         """
         @brief      Rebuild reasoning-mode labels while preserving the stable value.
         @param[in]  language Active UI language code.
         @return     None.
         @exception  None
         """
-        current_mode = self._optional_combo_value(self._reasoning_mode_combo)
+        current_mode = selected if selected is not None else self._optional_combo_value(self._reasoning_mode_combo)
+        subscription = self._backend_combo.currentText() == config.CHATGPT_BACKEND_KIND
+        current_mode = current_mode or config.DEFAULT_LLM_REASONING_MODE
         self._reasoning_mode_combo.blockSignals(True)
         self._reasoning_mode_combo.clear()
+        if subscription:
+            current_mode = {"enabled": "medium", "disabled": "none"}.get(current_mode, current_mode)
+            model = next((item for item in self._subscription_catalog["models"]
+                          if item["id"] == self._model_combo.currentText()), {})
+            default = ui_state_service.translate("ai_settings.reasoning_mode.provider_default", language)
+            if model.get("default_effort"):
+                default += " (" + model["default_effort"] + ")"
+            self._reasoning_mode_combo.addItem(default, "provider_default")
+            for effort in model.get("efforts", []):
+                self._reasoning_mode_combo.addItem(self._effort_label(effort, language), effort)
+            if self._reasoning_mode_combo.findData(current_mode) < 0:
+                label = self._effort_label(current_mode, language)
+                unavailable = ui_state_service.translate("ai_settings.effort_unavailable", language)
+                self._reasoning_mode_combo.addItem(f"{label} ({unavailable})", current_mode)
+            self._reasoning_mode_combo.setCurrentIndex(self._reasoning_mode_combo.findData(current_mode))
+            self._reasoning_mode_combo.blockSignals(False)
+            if hasattr(self, "_reasoning_mode_label"):
+                self._reasoning_mode_label.setText(ui_state_service.translate("ai_settings.reasoning_effort", language))
+            return
+        if current_mode not in config.LLM_REASONING_MODE_OPTIONS:
+            current_mode = chatgpt_catalog_service.reasoning_mode(current_mode)
         for reasoning_mode in config.LLM_REASONING_MODE_OPTIONS:
             self._reasoning_mode_combo.addItem(
                 ui_state_service.translate(
@@ -810,6 +1069,13 @@ class AiSettingsPage(QWidget):
             self._reasoning_mode_combo,
             current_mode or config.DEFAULT_LLM_REASONING_MODE,
         )
+        if hasattr(self, "_reasoning_mode_label"):
+            self._reasoning_mode_label.setText(ui_state_service.translate("ai_settings.reasoning_mode", language))
+
+    def _effort_label(self, effort: str, language: str) -> str:
+        """@brief Localize known effort names and display future provider identifiers verbatim."""
+        known = {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
+        return ui_state_service.translate("ai_settings.effort_" + effort, language) if effort in known else effort
 
     def _add_profile(self) -> None:
         """
@@ -873,7 +1139,11 @@ class AiSettingsPage(QWidget):
             and self._model_combo.count() > 0
             and not self._model_combo.view().isVisible()
         ):
-            QTimer.singleShot(0, self._show_model_popup)
+            QTimer.singleShot(0, self, self._show_model_popup)
+        if watched is self._profile_list and event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            QTimer.singleShot(0, self, self._refresh_layout_metrics)
+        if watched is self._content_scroll.viewport() and event.type() == QEvent.Type.Resize:
+            QTimer.singleShot(0, self, self._adapt_content_columns)
         return super().eventFilter(watched, event)
 
     def _show_model_popup(self) -> None:
@@ -939,9 +1209,22 @@ class AiSettingsPage(QWidget):
         self._add_profile_button.setText(ui_state_service.translate("ai_settings.add_profile", language))
         self._remove_profile_button.setText(ui_state_service.translate("ai_settings.remove_profile", language))
         self._connect_button.setText(ui_state_service.translate("ai_settings.connect", language))
+        for widget, key in (
+            (self._chatgpt_browser_button, "chatgpt_sign_in"),
+            (self._chatgpt_device_button, "chatgpt_device"),
+            (self._chatgpt_disconnect_button, "chatgpt_disconnect"),
+            (self._chatgpt_cancel_button, "chatgpt_cancel"),
+            (self._chatgpt_session_only, "chatgpt_session"),
+        ):
+            widget.setText(ui_state_service.translate("ai_settings." + key, language))
+        self._chatgpt_session_only.setToolTip(ui_state_service.translate("ai_settings.chatgpt_session_hint", language))
+        self._chatgpt_refresh_button.setText(ui_state_service.translate("ai_settings.refresh_models", language))
+        self._update_catalog_status()
+        self._update_subscription_controls()
         self._cancel_button.setText(ui_state_service.translate("ai_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("settings.apply", language))
         self._ok_button.setText(ui_state_service.translate("ai_settings.ok", language))
+        self._refresh_layout_metrics()
         for combo in (
             self._default_cleanup_combo,
             self._default_chunking_combo,

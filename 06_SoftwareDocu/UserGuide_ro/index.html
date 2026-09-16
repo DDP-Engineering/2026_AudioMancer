@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v2.1.0</title>
+    <title>Ghid AudioMancer v2.2.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -44,8 +44,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 2.1.0</p>
-                    <p><strong>Versiune aplicatie:</strong> 2.1.0</p>
+                    <p><strong>Versiune ajutor:</strong> 2.2.0</p>
+                    <p><strong>Versiune aplicatie:</strong> 2.2.0</p>
                     <p><strong>Creator:</strong> Ing. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -219,6 +219,41 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     narator si pentru Blocurile de Vorbire. Aceste profiluri nu genereaza niciodata audio &mdash; de asta se
                     ocupa VoiceWeaver, configurat in Setari TTS.
                 </p>
+                <h3>Folosește un abonament ChatGPT</h3>
+                <p>Setările AI se deschid la 800 &times; 600 pixeli logici, în limita ecranului. Selectoarele implicite compacte, cu lățimi egale, sunt sub lista de profiluri și au etichete pe un singur rând. Editorul apare alături când există spațiu; ferestrele înguste așază secțiunile una sub alta. Lista păstrează poziția derulării și profilul selectat vizibil. Anulează, Aplică și OK rămân vizibile la derulare. Starea inactivă a abonamentului este disponibilă în indicii afișate la trecerea cursorului; progresul și erorile apar când este necesar.</p>
+                <ol>
+                    <li>Adaugă un profil și alege <code>chatgpt_subscription</code>. Adresa serviciului este fixă și nu este necesară o cheie API.</li>
+                    <li>Apasă <strong>Autentificare ChatGPT</strong> și finalizează pagina OpenAI din browser. Dacă portul de întoarcere este ocupat, alege <strong>Cod de dispozitiv</strong>, deschide pagina OpenAI afișată și introdu codul temporar.</li>
+                    <li>Alege un model candidat sau scrie identificatorul, apoi apasă <strong>Testează modelul</strong>. Testul trimite solicitări sintetice foarte mici și verifică separat accesul la text și schema strictă necesară Curățării. Numele candidate sunt sugestii, nu o listă a drepturilor contului.</li>
+                    <li>Lista modelelor principale se actualizează după autentificare și la deschiderea setărilor AI dacă datele memorate sunt mai vechi de o oră. <strong>Actualizează modele</strong> reîncarcă lista fără a trimite un prompt. Indiciul butonului Actualizează modele arată dacă datele sunt actualizate, memorate, expirate sau incluse în aplicație. Modelul ales și modificările nesalvate sunt păstrate.</li>
+                    <li>Alegeți <strong>Efort de raționament</strong> pentru fiecare profil: Implicit furnizor lasă serverul să decidă; nivelurile explicite sunt cele acceptate de model. Efortul mai mare poate afecta timpul de răspuns și consumul abonamentului. Un nivel salvat devenit indisponibil rămâne vizibil și trebuie schimbat înaintea rulării; AudioMancer nu îl înlocuiește automat. Setarea veche Gândire activată devine Mediu, iar Gândire dezactivată devine Fără, care poate fi indisponibil.</li>
+                    <li>Selectarea unui model de abonament completează <strong>Fereastra Context</strong> cu valoarea implicită raportată, nu cu maximul posibil. O poți modifica ulterior; actualizarea listei și redeschiderea setărilor păstrează modificarea până la alegerea altui model. Valorile necunoscute păstrează contextul existent. Alegerea modelelor locale sau a endpointurilor personalizate păstrează contextul manual. Alege profilurile implicite, apoi apasă <strong>Aplică</strong> sau <strong>OK</strong>. Temperatura este controlată de furnizor; catalogul nu înlocuiește testarea modelului sau a schemei. Schimbarea efortului începe o nouă analiză a cărții, păstrând raportul complet anterior.</li>
+                </ol>
+                <p>Conexiunea experimentală folosește limitele abonamentului ChatGPT, separat de facturarea API. Accesul și limitele se pot schimba. Audio și TTS nu sunt incluse. Un model verificat doar pentru text poate folosi celelalte operații JSON; Curățarea AI necesită verificarea reușită a schemei stricte.</p>
+                <p>Datele de autentificare sunt protejate pentru utilizatorul sistemului, în afara setărilor portabile: Windows folosește DPAPI, iar Linux necesită un serviciu nativ Secret Service sau KWallet disponibil. Bifează <strong>Doar sesiunea curentă</strong> înainte de autentificare pentru păstrare doar în memorie. Dacă stocarea indisponibilă împiedică eliminarea unei conexiuni salvate anterior, starea indică acest lucru; deconecteaz-o când stocarea redevine disponibilă. Copierea aplicației portabile nu copiază autentificarea.</p>
+                <p><strong>Deconectare</strong> elimină contul activ și invalidează modelele verificate, păstrând profilurile. Autentificarea și deconectarea se aplică imediat; anularea ferestrei abandonează doar modificările profilurilor. Anularea operației contului, schimbarea profilului sau închiderea ferestrei opresc operațiile în curs. Autorizarea expirată sau revocată necesită reautentificare; erorile de cotă cer reluarea după resetarea limitei abonamentului.</p>
+                <h3>Modele ChatGPT și niveluri de raționament recomandate</h3>
+                <p>Aceste recomandări inițiale echilibrează calitatea cărții audio și consumul abonamentului. Compară rezultatele pe un capitol reprezentativ înainte de a procesa întreaga carte; recomandările nu reprezintă măsurători comparative ale calității. Disponibilitatea și nivelurile de raționament acceptate depind de cont și de catalogul curent de modele.</p>
+                <table>
+                    <thead>
+                        <tr><th>Etapa AudioMancer</th><th>Model recomandat</th><th>Efort de raționament</th><th>Recomandare</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Curățare Text &mdash; asistență AI opțională</td><td>GPT-5.6 Luna</td><td>Scăzut (Low)</td><td>Clasificarea delimitărilor ambigue ale textului. Încearcă Terra dacă deciziile sunt nesigure. Testează modelul trebuie să confirme suportul pentru schema strictă.</td></tr>
+                        <tr><td>Segmentare Text AI</td><td>GPT-5.6 Terra</td><td>Scăzut (Low)</td><td>Identifică scene și delimitări coerente. Folosește Mediu pentru tranziții complicate între scene.</td></tr>
+                        <tr><td>Analiza Cărții</td><td>GPT-5.6 Sol</td><td>Mediu (Medium)</td><td>Rezumarea și consolidarea necesită înțelegerea relațiilor din întreaga carte.</td></tr>
+                        <tr><td>Traducere AI</td><td>GPT-5.6 Sol</td><td>Mediu (Medium)</td><td>Prioritizează sensul, tonul literar și consecvența dialogului. Terra Mediu este alternativa economică.</td></tr>
+                        <tr><td>Personaje &mdash; descoperire și profiluri</td><td>GPT-5.6 Terra</td><td>Mediu (Medium)</td><td>Echilibrează calitatea extragerii și consumul. Folosește Sol Mediu pentru multe personaje, nume alternative sau identități ambigue.</td></tr>
+                        <tr><td>Voce Narator &mdash; descrierea scrisă a vocii</td><td>GPT-5.6 Terra</td><td>Scăzut (Low)</td><td>O sarcină creativă mică, ce necesită de obicei puțin raționament extins.</td></tr>
+                        <tr><td>Voci Personaje &mdash; mostre vocale</td><td>Fără model ChatGPT</td><td>&mdash;</td><td>Generarea audio folosește furnizorul TTS configurat.</td></tr>
+                        <tr><td>Blocuri de Vorbire &mdash; narator și personaje</td><td>GPT-5.6 Terra</td><td>Mediu (Medium)</td><td>Atribuirea vorbitorilor și separarea narațiunii de dialog necesită interpretare atentă. Folosește Sol Mediu pentru dialog dificil.</td></tr>
+                        <tr><td>Blocuri de Vorbire &mdash; același narator</td><td>Fără model ChatGPT</td><td>&mdash;</td><td>Folosește gruparea deterministă a propozițiilor.</td></tr>
+                        <tr><td>Blocuri Audio</td><td>Fără model ChatGPT</td><td>&mdash;</td><td>Folosește furnizorul TTS configurat.</td></tr>
+                        <tr><td>Asamblare Audio / export</td><td>Fără model ChatGPT</td><td>&mdash;</td><td>Procesarea și asamblarea audio nu necesită un LLM.</td></tr>
+                    </tbody>
+                </table>
+                <p>Selectează explicit efortul <strong>Scăzut (Low)</strong> sau <strong>Mediu (Medium)</strong> pentru setări consecvente. Ia în considerare <strong>GPT-6 Astra Mediu</strong> pentru material deosebit de dificil. Raționamentul mai intens folosește mai mulți tokeni și durează mai mult; rezervă nivelul <strong>Ridicat (High)</strong> pentru situațiile în care compararea unui capitol arată o îmbunătățire semnificativă. XHigh, Max și Ultra nu sunt recomandate pentru procesarea obișnuită a cărților audio. Economiile exacte ale abonamentului nu pot fi deduse din prețurile API.</p>
+                <p>Poziționarea modelelor și recomandări despre raționament: <a href="https://learn.chatgpt.com/docs/models">documentația OpenAI despre modele</a>. Aceste recomandări ajută la alegerea profilurilor; AudioMancer nu le aplică automat.</p>
                 <h3>Crearea unui profil</h3>
                 <ol>
                     <li>Deschide <strong>Setari AI</strong> si apasa <strong>Adauga Profil</strong>. Noul profil este adaugat in lista din stanga si selectat.</li>
@@ -281,39 +316,24 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     sau <strong>Context maxim</strong> &mdash; decide cat text citeste segmentarea AI deodata; ferestrele mai
                     largi pot da granite mai naturale, dar costa mai mult timp la fiecare cerere.
                 </p>
-                <h3>Profiluri OpenAI online recomandate</h3>
-                <table>
-                    <thead>
-                        <tr><th>Operatie</th><th>Model recomandat</th><th>Temperatura</th><th>Context</th><th>Iesire maxima</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Curatare AI</td><td><code>gpt-5.4-nano</code></td><td>0.0-0.1</td><td>400000</td><td>32768</td></tr>
-                        <tr><td>Segmentare AI</td><td><code>gpt-5.4-mini</code></td><td>0.1</td><td>400000</td><td>32768</td></tr>
-                        <tr><td>Traducere AI</td><td><code>gpt-5.5</code></td><td>0.2</td><td>1000000</td><td>64000</td></tr>
-                        <tr><td>Descoperire Personaje</td><td><code>gpt-5.4</code></td><td>0.1</td><td>1000000</td><td>64000</td></tr>
-                        <tr><td>Blocuri Vorbire</td><td><code>gpt-5.4</code></td><td>0.0-0.1</td><td>1000000</td><td>64000</td></tr>
-                    </tbody>
-                </table>
                 <h3>Profiluri LM Studio locale recomandate</h3>
+                <p>Exemple de modele locale: <code>Qwen3.8-27B</code>, <code>google/gemma-4-12b</code>, <code>meta/muse-glimmer</code>, <code>openai/gpt-oss-20b</code>. Folosește identificatorul exact afișat de serverul LM Studio. Acestea sunt modele de evaluat, nu un clasament măsurat. Valorile de mai jos sunt puncte de pornire pentru fiecare operație, nu limite ale modelelor sau setări de eșantionare ale producătorului; testează un capitol reprezentativ și respectă documentația modelului dacă impune alte setări.</p>
                 <table>
-                    <thead>
-                        <tr><th>Operatie</th><th>Model recomandat</th><th>Alternativa</th><th>Temperatura</th><th>Context</th><th>Iesire maxima</th></tr>
-                    </thead>
+                    <thead><tr><th>Operație</th><th>Context (tokeni)</th><th>Temperatură</th><th>Raționament în AudioMancer</th></tr></thead>
                     <tbody>
-                        <tr><td>Curatare AI</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td><td>8192</td></tr>
-                        <tr><td>Segmentare AI</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
-                        <tr><td>Traducere AI</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td><td>8192</td></tr>
-                        <tr><td>Descoperire Personaje</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td><td>8192</td></tr>
-                        <tr><td>Blocuri Vorbire</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td><td>8192</td></tr>
+                        <tr><td>Curățare AI</td><td>32768</td><td>0.1</td><td>Implicit furnizor</td></tr>
+                        <tr><td>Segmentare AI</td><td>32768</td><td>0.1</td><td>Implicit furnizor</td></tr>
+                        <tr><td>Analiza Cărții</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.2</td><td>Gândire activată, dacă este acceptată</td></tr>
+                        <tr><td>Traducere AI</td><td>32768</td><td>0.2</td><td>Implicit furnizor</td></tr>
+                        <tr><td>Descoperire Personaje</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.1</td><td>Gândire activată, dacă este acceptată</td></tr>
+                        <tr><td>Descriere Narator</td><td>16384</td><td>0.3</td><td>Implicit furnizor</td></tr>
+                        <tr><td>Blocuri de Vorbire — narator și personaje</td><td>32768</td><td>0.1</td><td>Gândire activată, dacă este acceptată</td></tr>
                     </tbody>
                 </table>
-                <div class="note">
-                    AudioMancer trimite modelul, fereastra de context, bugetul de iesire, temperatura, timeoutul si &mdash;
-                    cand <strong>Iesire structurata</strong> este bifata &mdash; un indiciu de iesire structurata. Pentru
-                    detaliile de esantionare, configureaza top-p, top-k, repeat penalty, seed si reasoning mode in preseturile LM Studio
-                    pentru modelul incarcat. Tine cheile API online private si introdu-le
-                    doar in aceasta fereastra.
-                </div>
+                <p><strong>Context:</strong> încarcă modelul în LM Studio cu contextul dorit, apoi setează Fereastra Context din AudioMancer cel mult la capacitatea încărcată și la limita acceptată de model. Începe cu 32768 pentru majoritatea operațiilor; încearcă 65536 numai dacă modelul și memoria disponibilă permit acest lucru și ferestrele mai largi sunt utile. Mărirea valorii doar în AudioMancer nu reîncarcă modelul din server. Un context mai mare poate necesita mai multă memorie și timp.</p>
+                <p><strong>Raționament:</strong> Implicit furnizor lasă controlul la LM Studio. Gândire activată solicită nivelul Mediu când endpointul acceptă cererea. Dacă modelul sau motorul nu acceptă setarea, folosește Implicit furnizor și configurează controlul acceptat în LM Studio. Pentru curățare, segmentare și descrieri de narator simple, încearcă Scăzut în presetul LM Studio dacă este disponibil; pentru gpt-oss-20b, Scăzut este un punct de pornire util, iar Mediu merită comparat pentru analiză și atribuirea vorbitorilor. Posibilitatea dezactivării gândirii diferă între modele. Profilurile locale nu folosesc selectorul de efort specific modelelor de abonament.</p>
+                <p>Curățarea AI necesită ieșire structurată strictă funcțională; confirmă compatibilitatea înainte de a atribui modelul. Blocurile de Vorbire cu același narator, sinteza audio și asamblarea nu folosesc aceste setări LLM.</p>
+                <p>Referință pentru configurare: <a href="https://lmstudio.ai/docs/python/llm-prediction/parameters">configurarea modelelor în LM Studio</a>; referință pentru raționament: <a href="https://huggingface.co/openai/gpt-oss-20b">fișa modelului gpt-oss-20b</a>.</p>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="Fereastra Setari AI">
                     <figcaption>Setari AI pastreaza profilurile de model de text, limitele lor si profilul implicit al fiecarei operatii asistate de AI.</figcaption>
@@ -623,6 +643,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>AudioMancer acceptă modelele compatibile după capabilități, nu după nume. Contextul și raționarea rămân în <strong>Setări AI</strong>, nu pe această pagină.</li>
                     <li>Cărțile lungi sunt rezumate în ferestre de segmente întregi, apoi consolidate. Un segment canonic nu este tăiat; dacă nu încape, creează segmente mai mici sau selectează un profil cu un context mai larg.</li>
                     <li>O rulare întreruptă, anulată sau eșuată se continuă apăsând din nou <strong>Analizează</strong>, dacă segmentele, limba țintă, profilul și setările sigure ale cererii sunt aceleași.</li>
+                    <li>Dacă modelul returnează un rezumat sau raport cu structură incorectă, AudioMancer îl regenerează o singură dată din dovezile originale. Această cerere suplimentară consumă din resursele modelului. Dacă formatul rămâne invalid, operația se oprește cu o eroare a răspunsului modelului și păstrează punctele de reluare acceptate. Testează modelul în Setări AI sau alege alt profil, apoi apasă din nou Analizează.</li>
                     <li>Selectarea altui profil pornește un candidat nou și păstrează orice raport finalizat. Raportul rămâne vizibil ca <em>învechit</em> și când se schimbă segmentele sau limba țintă, iar Analizează devine disponibil pentru înlocuire.</li>
                     <li>După o finalizare curentă, Analizează este dezactivat. Apasă <strong>Resetează</strong> pentru a elimina numai datele Analizei Cărții și a porni din nou.</li>
                 </ul>

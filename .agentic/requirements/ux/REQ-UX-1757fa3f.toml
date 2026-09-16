@@ -1,16 +1,17 @@
 schema = 1
 id = "REQ-UX-1757fa3f"
-title = "The Settings, AI Settings, and TTS Settings dialogs shall place their"
+title = "Keep settings forms scrollable at large fonts or small screens"
 status = "active"
 
 requirement = """
-The Settings, AI Settings, and TTS Settings dialogs shall place their page inside a resizable scroll area so their forms scroll at large fonts or small screens.
+The Settings, AI Settings, and TTS Settings dialogs shall keep their form content in a resizable scroll area at large fonts or small screens, with AI Settings retaining Cancel, Apply and OK outside that scroll area.
 """
 
-verification = "uv run pytest -q (passed)"
+verification = "Automated: Dialog tests verify resizable scrolling for settings forms and a fixed action footer for AI Settings."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/ui/main_window.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_settings_dialogs_scroll",
@@ -21,4 +22,4 @@ rationale = """
 Modal settings forms are the densest and must stay fully operable when fonts grow.
 """
 created = 2026-07-25
-updated = 2026-07-25
+updated = 2026-09-16

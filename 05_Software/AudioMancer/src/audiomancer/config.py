@@ -619,10 +619,18 @@ DEFAULT_MAIN_WINDOW_MIN_HEIGHT = 560
 
 # AI Provider Profiles
 # @brief Supported AI backend kinds for OpenAI-compatible providers.
-LLM_BACKEND_OPTIONS = ("lmstudio", "ollama", "openai_compatible")
+LLM_BACKEND_OPTIONS = ("lmstudio", "ollama", "openai_compatible", "chatgpt_subscription")
+
+# @brief Subscription profile metadata; transport destinations are independently fixed.
+CHATGPT_BACKEND_KIND = "chatgpt_subscription"
+CHATGPT_BASE_URL = "https://chatgpt.com/backend-api"
+CHATGPT_CREDENTIAL_REF = "chatgpt-default"
 
 # @brief Backend kind treated as an online AI provider for request-window sizing.
 ONLINE_AI_BACKEND_KIND = "openai_compatible"
+
+# @brief Hosted backends sharing conservative remote text budgeting.
+ONLINE_AI_BACKEND_KINDS = frozenset({ONLINE_AI_BACKEND_KIND, CHATGPT_BACKEND_KIND})
 
 # @brief Context-window fraction used as text budget for online AI providers.
 DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION = 0.30

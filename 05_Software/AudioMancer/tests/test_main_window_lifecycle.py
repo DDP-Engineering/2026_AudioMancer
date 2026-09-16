@@ -197,7 +197,7 @@ def test_main_window_places_operation_status_button_under_the_sidebar(
 
 def test_main_window_settings_dialogs_scroll(qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify the settings/AI/TTS dialogs wrap their page in a scroll area.
+    @brief      Verify settings dialogs scroll content while AI Settings retains fixed actions.
     @details    Covers REQ-UX-1757fa3f-cba7-4192-829e-7f7418b70a92 / SPEC-SCROLL-DIALOGS.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  default_settings_payload Default settings fixture.
@@ -214,7 +214,11 @@ def test_main_window_settings_dialogs_scroll(qtbot, default_settings_payload) ->
     ):
         scroll_area = dialog.findChild(QScrollArea)
         assert scroll_area is not None
-        assert scroll_area.widget() is page
+        if page is window._ai_settings_page:
+            assert scroll_area.widget().isAncestorOf(page._profile_list)
+            assert not scroll_area.isAncestorOf(page._ok_button)
+        else:
+            assert scroll_area.widget() is page
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:

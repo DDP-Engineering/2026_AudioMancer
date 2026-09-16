@@ -53,7 +53,7 @@ def _test_profile(profile_id: str, label: str, **overrides: object) -> dict[str,
 
 
 def test_ai_settings_page_round_trips_reasoning_and_book_analysis_default(qtbot) -> None:
-    """Reasoning mode and Book Analysis default live only in AI Settings."""
+    """@brief Reasoning mode and Book Analysis default live only in AI Settings."""
     page = AiSettingsPage()
     qtbot.addWidget(page)
     payload = settings_service.build_default_settings()
@@ -84,9 +84,7 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
-    editor_container = page._default_cleanup_combo.parentWidget()
-    editor_layout = editor_container.layout()
-    form_layout = editor_layout.itemAt(1).layout()
+    form_layout = page._defaults_form
 
     assert isinstance(form_layout, QFormLayout)
 
@@ -126,9 +124,9 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
     assert page._save_button.text() == "Aplica"
 
 
-def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> None:
+def test_ai_settings_page_numeric_profile_options_use_single_pair_rows(qtbot) -> None:
     """
-    @brief      Verify compact numeric AI profile options are arranged in two columns.
+    @brief      Verify the narrow editor stacks numeric fields into aligned label/control rows.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -136,7 +134,7 @@ def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> 
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
-    editor_container = page._default_cleanup_combo.parentWidget()
+    editor_container = page._context_window_spin.parentWidget()
     editor_layout = editor_container.layout()
     form_layout = editor_layout.itemAt(1).layout()
     numeric_layout = None
@@ -149,16 +147,16 @@ def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> 
     assert numeric_layout is not None
     assert numeric_layout.itemAtPosition(0, 0).widget() is page._context_window_label
     assert numeric_layout.itemAtPosition(0, 1).widget() is page._context_window_spin
-    assert numeric_layout.itemAtPosition(0, 2).widget() is page._output_reserve_label
-    assert numeric_layout.itemAtPosition(0, 3).widget() is page._output_reserve_spin
-    assert numeric_layout.itemAtPosition(1, 0).widget() is page._timeout_label
-    assert numeric_layout.itemAtPosition(1, 1).widget() is page._timeout_spin
-    assert numeric_layout.itemAtPosition(1, 2).widget() is page._temperature_label
-    assert numeric_layout.itemAtPosition(1, 3).widget() is page._temperature_spin
+    assert numeric_layout.itemAtPosition(1, 0).widget() is page._output_reserve_label
+    assert numeric_layout.itemAtPosition(1, 1).widget() is page._output_reserve_spin
+    assert numeric_layout.itemAtPosition(2, 0).widget() is page._timeout_label
+    assert numeric_layout.itemAtPosition(2, 1).widget() is page._timeout_spin
+    assert numeric_layout.itemAtPosition(3, 0).widget() is page._temperature_label
+    assert numeric_layout.itemAtPosition(3, 1).widget() is page._temperature_spin
 
 
 def test_ai_settings_page_presents_output_reserve_not_provider_cap(qtbot) -> None:
-    """The profile editor names the local reservation independently of the provider."""
+    """@brief The profile editor names the local reservation independently of the provider."""
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
@@ -167,9 +165,9 @@ def test_ai_settings_page_presents_output_reserve_not_provider_cap(qtbot) -> Non
     assert page._output_reserve_label.text() == "Output Reserve (tokens)"
 
 
-def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
+def test_ai_settings_page_profile_flags_are_below_model_name(qtbot) -> None:
     """
-    @brief      Verify the structured-output checkbox shares the model-name row.
+    @brief      Verify flags share their own row so the model selector can fit a narrow editor.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -177,7 +175,7 @@ def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
-    editor_container = page._default_cleanup_combo.parentWidget()
+    editor_container = page._model_combo.parentWidget()
     editor_layout = editor_container.layout()
     form_layout = editor_layout.itemAt(0).layout()
     model_row_layout = None
@@ -190,7 +188,9 @@ def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
 
     assert model_row_layout is not None
     assert model_row_layout.itemAt(0).widget() is page._model_combo
-    assert model_row_layout.itemAt(1).widget() is page._supports_structured_checkbox
+    flags_row = form_layout.itemAt(row + 1, QFormLayout.ItemRole.SpanningRole).layout()
+    assert flags_row.itemAt(0).widget() is page._enabled_checkbox
+    assert flags_row.itemAt(1).widget() is page._supports_structured_checkbox
     assert page._supports_structured_checkbox.text() == "Structured output"
 
 

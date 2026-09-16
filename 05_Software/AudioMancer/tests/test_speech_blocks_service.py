@@ -3341,12 +3341,16 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
         encoding="utf-8"
     )
 
-    assert "qwen/qwen3.6-27b" in local_model_doc
-    assert "google/gemma-4-31b" in local_model_doc
-    assert "AudioMancer does not send top-p, top-k, repeat penalty, seed, or reasoning mode" in local_model_doc
-    for unsupported_setting in ("top_k", "top_p", "repeat_penalty", "reasoning_mode"):
+    for model in ("Qwen3.8-27B", "google/gemma-4-12b", "meta/muse-glimmer", "openai/gpt-oss-20b"):
+        assert model in local_model_doc
+    assert "Thinking enabled requests Medium" in local_model_doc
+    assert "Provider default leaves reasoning to LM Studio" in local_model_doc
+    assert "Context (tokens) | Temperature | Reasoning in AudioMancer" in local_model_doc
+    assert "reasoning_mode" in ai_settings_source
+    assert "reasoning_mode" in settings_source
+    for unsupported_setting in ("top_k", "top_p", "repeat_penalty"):
         assert unsupported_setting not in ai_settings_source
-        assert unsupported_setting not in settings_source
+
 
 
 def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:

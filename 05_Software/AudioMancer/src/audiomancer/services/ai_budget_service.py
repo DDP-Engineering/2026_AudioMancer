@@ -63,7 +63,7 @@ def uses_online_text_budget(ai_profile_payload: dict[str, object]) -> bool:
     @return     True when the profile backend is the configured online AI backend.
     @exception  None
     """
-    return str(ai_profile_payload.get("backend_kind", "")).strip() == config.ONLINE_AI_BACKEND_KIND
+    return str(ai_profile_payload.get("backend_kind", "")).strip() in config.ONLINE_AI_BACKEND_KINDS
 
 
 def context_budget_metadata(

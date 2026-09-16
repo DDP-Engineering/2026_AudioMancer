@@ -131,19 +131,19 @@ _PROHIBITED_SECRET_FIELDS = frozenset(
 
 
 class BookAnalysisDocumentError(ValueError):
-    """Raised when the sole Book Analysis document is incompatible."""
+    """@brief Raised when the sole Book Analysis document is incompatible."""
 
 
 # PUBLIC API
 
 
 def document_path(project_root: str | Path) -> Path:
-    """Return the authoritative Book Analysis document path."""
+    """@brief Return the authoritative Book Analysis document path."""
     return Path(project_root) / config.BOOK_ANALYSIS_DOCUMENT_FILE_NAME
 
 
 def empty_document() -> dict[str, object]:
-    """Return a new empty document with independent durable slots."""
+    """@brief Return a new empty document with independent durable slots."""
     return {
         "schema_version": BOOK_ANALYSIS_SCHEMA_VERSION,
         "completed_report": None,
@@ -184,7 +184,7 @@ def write_document(project_root: str | Path, document: object) -> Path:
 
 
 def validate_document(payload: object) -> dict[str, object]:
-    """Validate and return a shallowly detached authoritative document."""
+    """@brief Validate and return a shallowly detached authoritative document."""
     if not isinstance(payload, dict) or frozenset(payload) != _ROOT_FIELDS:
         raise _incompatible("the root fields do not match schema version 1")
     if payload.get("schema_version") != BOOK_ANALYSIS_SCHEMA_VERSION:
@@ -200,19 +200,19 @@ def validate_document(payload: object) -> dict[str, object]:
 
 
 def validate_intermediate_summary(payload: object) -> dict[str, object]:
-    """Validate and defensively copy one hierarchical summary payload."""
+    """@brief Validate and defensively copy one hierarchical summary payload."""
     _validate_intermediate_summary(payload)
     return deepcopy(payload)
 
 
 def validate_layered_report(payload: object) -> dict[str, object]:
-    """Validate and defensively copy one final layered report payload."""
+    """@brief Validate and defensively copy one final layered report payload."""
     _validate_report(payload)
     return deepcopy(payload)
 
 
 def canonical_source_descriptor(chunks: list[dict[str, object]]) -> dict[str, object]:
-    """Hash ordered canonical chunk identity, sequence, and text."""
+    """@brief Hash ordered canonical chunk identity, sequence, and text."""
     canonical = [
         {
             "chunk_id": str(chunk.get("chunk_id", "")),
@@ -234,7 +234,7 @@ def canonical_source_descriptor(chunks: list[dict[str, object]]) -> dict[str, ob
 
 
 def safe_profile_fingerprint(profile_payload: dict[str, object]) -> str:
-    """Hash request semantics without API keys or other credential material."""
+    """@brief Hash request semantics without API keys or other credential material."""
     safe_request_fields = {
         field_name: profile_payload.get(field_name)
         for field_name in (
@@ -249,6 +249,10 @@ def safe_profile_fingerprint(profile_payload: dict[str, object]) -> str:
             "reasoning_mode",
         )
     }
+    if profile_payload.get("backend_kind") == "chatgpt_subscription":
+        from audiomancer.services.chatgpt_catalog_service import requested_effort
+
+        safe_request_fields["reasoning_effort"] = requested_effort(profile_payload)
     encoded = json.dumps(
         safe_request_fields,
         ensure_ascii=False,
@@ -266,7 +270,7 @@ def candidate_resume_matches(
     profile_id: str,
     profile_fingerprint: str,
 ) -> bool:
-    """Return whether one candidate can resume with the exact current inputs."""
+    """@brief Return whether one candidate can resume with the exact current inputs."""
     return bool(
         isinstance(candidate, dict)
         and candidate.get("source") == source
@@ -282,7 +286,7 @@ def completed_report_is_stale(
     source: dict[str, object],
     target_language: str,
 ) -> bool:
-    """Compare report freshness using canonical source and project language only."""
+    """@brief Compare report freshness using canonical source and project language only."""
     return not (
         isinstance(completed_report, dict)
         and completed_report.get("source") == source
@@ -291,7 +295,7 @@ def completed_report_is_stale(
 
 
 def derive_operation_state(document: object) -> dict[str, object]:
-    """Project one Book Analysis document into a compact manifest summary."""
+    """@brief Project one Book Analysis document into a compact manifest summary."""
     default = {
         "status": "not_started",
         "progress_current": 0,
@@ -325,6 +329,7 @@ def derive_operation_state(document: object) -> dict[str, object]:
 
 
 def _validate_completed_report(payload: object) -> None:
+    """@brief Validate completed-report identity, report fields and usage."""
     if not isinstance(payload, dict) or frozenset(payload) != _COMPLETED_FIELDS:
         raise _incompatible("completed_report fields are invalid")
     _validate_source(payload.get("source"))
@@ -337,6 +342,7 @@ def _validate_completed_report(payload: object) -> None:
 
 
 def _validate_candidate(payload: object) -> None:
+    """@brief Validate resumable candidate state and ordered checkpoint structures."""
     if not isinstance(payload, dict) or frozenset(payload) != _CANDIDATE_FIELDS:
         raise _incompatible("candidate_run fields are invalid")
     _require_non_empty_strings(
@@ -380,6 +386,7 @@ def _validate_candidate(payload: object) -> None:
 
 
 def _validate_source(payload: object) -> None:
+    """@brief Validate canonical source fingerprint and nonnegative chunk count."""
     if not isinstance(payload, dict) or frozenset(payload) != _SOURCE_FIELDS:
         raise _incompatible("source descriptor fields are invalid")
     _require_non_empty_strings(payload, ("fingerprint",))
@@ -387,6 +394,7 @@ def _validate_source(payload: object) -> None:
 
 
 def _validate_leaf_checkpoint(payload: object, expected_index: int) -> None:
+    """@brief Validate leaf checkpoint ordering, source range, summary and usage."""
     if not isinstance(payload, dict) or frozenset(payload) != _LEAF_FIELDS:
         raise _incompatible("leaf checkpoint fields are invalid")
     if payload.get("index") != expected_index:
@@ -399,6 +407,7 @@ def _validate_leaf_checkpoint(payload: object, expected_index: int) -> None:
 
 
 def _validate_consolidation_checkpoint(payload: object, expected_index: int) -> None:
+    """@brief Validate consolidation ordering, input indices, summary and usage."""
     if not isinstance(payload, dict) or frozenset(payload) != _CONSOLIDATION_FIELDS:
         raise _incompatible("consolidation checkpoint fields are invalid")
     if payload.get("index") != expected_index:
@@ -413,6 +422,7 @@ def _validate_consolidation_checkpoint(payload: object, expected_index: int) -> 
 
 
 def _validate_intermediate_summary(payload: object) -> None:
+    """@brief Validate intermediate summary text, characters and metadata lists."""
     if not isinstance(payload, dict) or frozenset(payload) != _INTERMEDIATE_FIELDS:
         raise _incompatible("intermediate summary fields are invalid")
     if not isinstance(payload.get("summary"), str) or not str(payload["summary"]).strip():
@@ -430,6 +440,7 @@ def _validate_intermediate_summary(payload: object) -> None:
 
 
 def _validate_report(payload: object) -> None:
+    """@brief Validate both report layers, audiobook guidance and source evidence."""
     if not isinstance(payload, dict) or frozenset(payload) != frozenset(("concise", "details")):
         raise _incompatible("layered report fields are invalid")
     concise = payload.get("concise")
@@ -473,6 +484,7 @@ def _validate_report(payload: object) -> None:
 
 
 def _validate_character_list(payload: object, *, supporting: bool) -> None:
+    """@brief Validate character records and supporting-character relationships."""
     if not isinstance(payload, list):
         raise _incompatible("character collection is invalid")
     expected_fields = (
@@ -489,6 +501,7 @@ def _validate_character_list(payload: object, *, supporting: bool) -> None:
 
 
 def _validate_token_usage(payload: object) -> None:
+    """@brief Validate normalized token counts and usage availability."""
     if not isinstance(payload, dict) or frozenset(payload) != _TOKEN_USAGE_FIELDS:
         raise _incompatible("token usage is invalid")
     usage_available = payload.get("usage_available")
@@ -502,6 +515,7 @@ def _validate_token_usage(payload: object) -> None:
 
 
 def _validate_string_list(payload: object, *, allow_empty: bool = True) -> None:
+    """@brief Require a list of nonempty strings with optional empty-list support."""
     if not isinstance(payload, list) or (not allow_empty and not payload):
         raise _incompatible("string collection is invalid")
     if any(not isinstance(value, str) or not value.strip() for value in payload):
@@ -509,17 +523,20 @@ def _validate_string_list(payload: object, *, allow_empty: bool = True) -> None:
 
 
 def _require_non_empty_strings(payload: dict[str, object], field_names: tuple[str, ...]) -> None:
+    """@brief Reject missing or blank required string fields."""
     for field_name in field_names:
         if not isinstance(payload.get(field_name), str) or not str(payload[field_name]).strip():
             raise _incompatible(f"{field_name} is invalid")
 
 
 def _validate_non_negative_int(value: object, field_name: str) -> None:
+    """@brief Reject booleans, nonintegers and negative counts."""
     if type(value) is not int or int(value) < 0:
         raise _incompatible(f"{field_name} is invalid")
 
 
 def _validate_no_secrets(payload: object) -> None:
+    """@brief Recursively reject credential fields before project persistence."""
     if isinstance(payload, dict):
         for field_name, field_value in payload.items():
             if str(field_name).strip().lower() in _PROHIBITED_SECRET_FIELDS:

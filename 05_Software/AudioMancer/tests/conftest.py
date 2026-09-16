@@ -63,12 +63,30 @@ def _is_ui_test_item(item) -> bool:
 
 
 @pytest.fixture(autouse=True)
+def isolate_subscription_account_and_network(monkeypatch):
+    """@brief Keep automatic settings discovery away from the operator's account and live network."""
+    from audiomancer.services import chatgpt_credential_service, chatgpt_http_service
+    from audiomancer.services.chatgpt_storage_service import MemoryStore
+
+    monkeypatch.setattr(
+        chatgpt_credential_service, "_MANAGER", chatgpt_credential_service.CredentialManager(MemoryStore())
+    )
+
+    def unexpected_network(*args, **kwargs):
+        """@brief Require each subscription protocol fixture to inject its own HTTP transport."""
+        pytest.fail("Subscription tests must inject a transport; live ChatGPT access is forbidden.")
+
+    monkeypatch.setattr(chatgpt_http_service, "new_client", unexpected_network)
+
+
+@pytest.fixture(autouse=True)
 def block_live_provider_for_book_analysis_tests(request, monkeypatch):
-    """Fail immediately if any Book Analysis test reaches a real provider transport."""
+    """@brief Fail immediately if any Book Analysis test reaches a real provider transport."""
     if not Path(str(request.fspath)).name.startswith("test_book_analysis"):
         return
 
     def fail_network(*_args, **_kwargs):
+        """@brief Fail if a Book Analysis unit test attempts a live provider call."""
         raise AssertionError("Book Analysis tests must not open network connections")
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", fail_network)
