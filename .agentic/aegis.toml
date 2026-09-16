@@ -30,6 +30,10 @@ logging_coverage = "python 02_Tools/audits/audit_logging_coverage.py --changed-o
 # failure - so raise this line if the suite legitimately grows past an hour.
 test = 3600
 
+[review]
+enabled = true
+max_fix_cycles = 2
+
 [layout]
 # Globs used by the traceability heuristics of `aegis check`.
 source = ["05_Software/AudioMancer/src/"]
