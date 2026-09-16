@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-be219dba"
+title = "Normalize complete subscription Responses streams"
+status = "active"
+requirement = "When a subscription request is made, AudioMancer shall return assistant text only after a complete successful Responses terminal event, with bounded cancellation, parsing and retry behavior."
+verification = "Automated: Fragmented SSE fixtures test UTF-8/CRLF/multiline, terminal while open, incomplete/refusal/malformed/EOF, HTTP error classification, quotas and cancellation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_http_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_provider.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

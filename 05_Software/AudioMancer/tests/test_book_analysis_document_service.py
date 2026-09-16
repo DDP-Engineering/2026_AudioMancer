@@ -27,7 +27,7 @@ from audiomancer.services import token_usage_service
 
 
 def _service():
-    """Return the document service or fail as missing behavior."""
+    """@brief Return the document service or fail as missing behavior."""
     try:
         return import_module("audiomancer.services.book_analysis_document_service")
     except ModuleNotFoundError:
@@ -35,12 +35,12 @@ def _service():
 
 
 def _source(fingerprint: str = "source-a", chunk_count: int = 2) -> dict[str, object]:
-    """Build one source descriptor."""
+    """@brief Build one source descriptor."""
     return {"fingerprint": fingerprint, "chunk_count": chunk_count}
 
 
 def _summary() -> dict[str, object]:
-    """Build one valid intermediate summary."""
+    """@brief Build one valid intermediate summary."""
     return {
         "summary": "Ana discovers the archive.",
         "characters": [{"name": "Ana", "role": "protagonist"}],
@@ -54,7 +54,7 @@ def _summary() -> dict[str, object]:
 
 
 def _report_payload() -> dict[str, object]:
-    """Build one valid layered report payload."""
+    """@brief Build one valid layered report payload."""
     return {
         "concise": {
             "book_type": "novel",
@@ -98,7 +98,7 @@ def _completed_report(
     target_language: str = "ro",
     profile_id: str = "profile-a",
 ) -> dict[str, object]:
-    """Build one valid completed report slot."""
+    """@brief Build one valid completed report slot."""
     return {
         "source": _source(source_fingerprint),
         "target_language": target_language,
@@ -111,7 +111,7 @@ def _completed_report(
 
 
 def _candidate(*, status: str = "running") -> dict[str, object]:
-    """Build one valid candidate slot."""
+    """@brief Build one valid candidate slot."""
     return {
         "run_id": "run-0001",
         "status": status,
@@ -155,7 +155,7 @@ def _candidate(*, status: str = "running") -> dict[str, object]:
 
 
 def test_write_document_preserves_completed_report_while_candidate_changes(tmp_path) -> None:
-    """Candidate work and the last completed report occupy independent slots."""
+    """@brief Candidate work and the last completed report occupy independent slots."""
     service = _service()
     completed = _completed_report()
     document = service.empty_document()
@@ -170,7 +170,7 @@ def test_write_document_preserves_completed_report_while_candidate_changes(tmp_p
 
 
 def test_candidate_resume_requires_source_language_profile_and_config_match() -> None:
-    """Every semantic request input must match before a candidate is resumed."""
+    """@brief Every semantic request input must match before a candidate is resumed."""
     service = _service()
     candidate = _candidate(status="cancelled")
     matching = {
@@ -193,7 +193,7 @@ def test_candidate_resume_requires_source_language_profile_and_config_match() ->
 
 
 def test_completed_report_staleness_ignores_profile_selection() -> None:
-    """Freshness depends on canonical source and project target language only."""
+    """@brief Freshness depends on canonical source and project target language only."""
     service = _service()
     report = _completed_report(profile_id="profile-a")
 
@@ -203,7 +203,7 @@ def test_completed_report_staleness_ignores_profile_selection() -> None:
 
 
 def test_canonical_source_descriptor_changes_with_chunk_content_or_order() -> None:
-    """The source fingerprint covers ordered canonical chunk identity and text."""
+    """@brief The source fingerprint covers ordered canonical chunk identity and text."""
     service = _service()
     chunks = [
         {"chunk_id": "chunk-0001", "sequence_index": 0, "text": "One"},
@@ -220,7 +220,7 @@ def test_canonical_source_descriptor_changes_with_chunk_content_or_order() -> No
 
 
 def test_profile_fingerprint_excludes_api_key_but_tracks_request_configuration() -> None:
-    """Resume fingerprints contain no secret-derived value but track request semantics."""
+    """@brief Resume fingerprints contain no secret-derived value but track request semantics."""
     service = _service()
     profile = {
         "backend_kind": "lmstudio",
@@ -240,8 +240,21 @@ def test_profile_fingerprint_excludes_api_key_but_tracks_request_configuration()
     assert original != service.safe_profile_fingerprint({**profile, "reasoning_mode": "disabled"})
 
 
+def test_subscription_effort_changes_resume_fingerprint_without_changing_local_semantics() -> None:
+    """@brief A resumed analysis cannot combine summaries generated at different subscription efforts."""
+    service = _service()
+    profile = {"backend_kind": "chatgpt_subscription", "model_name": "gpt-5.6-luna", "reasoning_mode": "enabled"}
+    assert service.safe_profile_fingerprint({**profile, "reasoning_effort": "low"}) != service.safe_profile_fingerprint(
+        {**profile, "reasoning_effort": "high"}
+    )
+    local = {**profile, "backend_kind": "lmstudio"}
+    assert service.safe_profile_fingerprint(local) == service.safe_profile_fingerprint(
+        {**local, "reasoning_effort": "high"}
+    )
+
+
 def test_invalid_document_is_rejected(tmp_path) -> None:
-    """Unknown root fields make the sole authoritative document incompatible."""
+    """@brief Unknown root fields make the sole authoritative document incompatible."""
     path = tmp_path / "book_analysis.json"
     path.write_text(
         json.dumps(
@@ -263,7 +276,7 @@ def test_atomic_write_preserves_previous_document_on_replace_failure(
     monkeypatch,
     tmp_path,
 ) -> None:
-    """An atomic writer failure leaves the prior complete document untouched."""
+    """@brief An atomic writer failure leaves the prior complete document untouched."""
     service = _service()
     original = service.empty_document()
     original["completed_report"] = _completed_report()
@@ -271,6 +284,7 @@ def test_atomic_write_preserves_previous_document_on_replace_failure(
     original_bytes = service.document_path(tmp_path).read_bytes()
 
     def fail_write(*_args, **_kwargs) -> None:
+        """@brief Simulate an atomic replacement failure without changing the prior document."""
         raise OSError("simulated replacement failure")
 
     monkeypatch.setattr(service, "write_json_atomic", fail_write)

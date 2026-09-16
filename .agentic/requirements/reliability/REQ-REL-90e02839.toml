@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-REL-90e02839"
+title = "Serialize renewable subscription credentials"
+status = "active"
+requirement = "Before using an expiring subscription credential, AudioMancer shall serialize refresh across callers and processes, recheck its current generation, and persist the rotated envelope before use or report a sanitized failure."
+verification = "Automated: Fake clock/store/token endpoint asserts one rotation, durable write failure, invalid refresh, cancellation, and disconnect ordering."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_credential_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_storage_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_credentials.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

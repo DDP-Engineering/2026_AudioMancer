@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-cdc31a8f"
+title = "Verify subscription model capabilities explicitly"
+status = "active"
+requirement = "When the operator tests a subscription model, AudioMancer shall distinguish catalog candidates from verified inference and enforce model-specific schema support only for the current connected credential generation."
+verification = "Automated: Mock live-test fixtures exercise signed-out state, successful text/schema checks, unsupported schema, model changes and reconnect invalidation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_model_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_credential_service.py", "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_models.py", "05_Software/AudioMancer/tests/test_chatgpt_ui.py::test_subscription_controls_hide_api_key_and_normalize_profile"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

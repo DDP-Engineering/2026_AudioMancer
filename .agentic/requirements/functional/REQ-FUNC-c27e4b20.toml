@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-c27e4b20"
+title = "Sign in to ChatGPT with browser PKCE"
+status = "active"
+requirement = "When the operator starts browser sign-in, AudioMancer shall complete only a matching one-time PKCE authorization callback within a bounded cancellable loopback session."
+verification = "Automated: Fake authorization/token servers verify state, verifier, denial, timeout, occupied port, cancellation and cleanup."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_auth_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_http_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_auth.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

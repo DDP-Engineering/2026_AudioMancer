@@ -10,23 +10,68 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-16
+
+### Fixed
+
+- Closing AI Settings cancels deferred layout and model-popup callbacks, preventing
+  errors from accessing controls after the dialog is destroyed.
+
+- The Windows portable packager prevents host-injected runtime DLLs from entering
+  the bundle, avoiding a Qt startup error on affected Windows hosts.
+
+- Book Analysis describes the required response format even without strict model
+  schema support and retries an incorrectly structured response once. Repeated
+  failures identify the model response rather than reporting an incompatible
+  project document; accepted checkpoints are preserved.
+
 ### Changed
+
+- Model guides focus online recommendations on ChatGPT subscriptions. Local
+  examples cover Qwen3.8-27B, Gemma 4 12B, Muse Glimmer and gpt-oss-20b with
+  simplified context, temperature and reasoning guidance in both help languages.
+
+- AI Settings keeps Cancel, Apply and OK visible while its content scrolls.
+  Workflow defaults sit below a compact, independently scrollable profile list;
+  compact selectors keep the left column narrow and labels on one line. The
+  original 800x600 window size is restored; columns stack on narrow screens.
+  Profile selection preserves list scrolling and stays visible. Idle subscription
+  status lines move to tooltips; progress and errors remain visible. Buttons stay compact, and
+  controls adapt to font changes. The subscription information banner no longer
+  occupies form space.
 
 - Updated the AEGIS workflow to 0.12.0 for focused verification and leaner
   engineering records, preserving project configuration and history.
 
 ### Added
 
+- English and Romanian help include recommended ChatGPT models and reasoning
+  levels for each audiobook workflow, with guidance on quality and subscription consumption.
+
+- Selecting a ChatGPT subscription model fills its default context window. Later
+  manual edits are preserved until another model is selected; local/custom model
+  selection keeps its manually configured context.
+
+- ChatGPT profiles automatically discover primary subscription models after sign-in
+  and periodically when opening AI Settings. Refresh models updates the list on
+  demand; cached results and built-in fallback candidates are clearly identified.
+  Each profile can select the model's supported reasoning effort. Unsupported
+  saved choices remain visible and fail clearly instead of silently changing
+  effort. Existing API-key/local settings keep their behavior.
+
+- AI Settings can connect to a ChatGPT subscription alongside local servers and
+  API-key providers. Browser or device-code sign-in, protected per-user credentials,
+  session-only mode, disconnect, and model testing are available. Verified profiles
+  work with existing text workflows; Cleanup requires a successful strict-schema
+  test. Subscription limits apply separately from API billing. This connection is
+  experimental and model availability depends on the account. Model suggestions
+  include GPT-5.6 Terra and Luna alongside Sol, GPT-5.5 and GPT-6 Astra.
+
 - TTS Settings now exposes the voice-clone sampling controls: Clone Temperature
   and the Sub-talker Temperature, Top-K and Top-P. Audio Blocks sends them with
   every clone request, so a cloned voice that wanders from its reference sample
   can be steadied without touching the runtime. The defaults match the model's
   own values, and changing them keeps existing audio.
-
-### Fixed
-
-- The Windows portable packager now prevents host-injected runtime DLLs from
-  entering the bundle, avoiding a Qt startup error on affected Windows hosts.
 
 ## [2.1.0] - 2026-08-31
 

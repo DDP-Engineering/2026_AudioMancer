@@ -7,14 +7,16 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Text Cleanup
 
-## 1. Purpose
+## Routing
+
+For extraction, canonical text, typed boundary adjudication, resume or manual Cleanup edits, start at `text_cleanup_service.clean_text` and `tests/test_cleanup_service.py`. Provider/OAuth/schema transport belongs to AI Runtime; Cleanup owns domain validation.
+
+## Purpose and boundaries
 
 Text Cleanup converts a supported book source into canonical extracted text and
 then into reviewable text suitable for narration. Deterministic structural
 analysis owns the result; an optional online or offline LLM may adjudicate only
 ambiguous typed boundaries and may never generate replacement book text.
-
-## 2. Responsibilities
 
 - Extract `.txt`, `.md`, `.pdf`, `.rtf`, `.docx`, `.odt`, and `.epub`.
 - Decode text deterministically from signatures and declarations, including
@@ -42,7 +44,167 @@ ambiguous typed boundaries and may never generate replacement book text.
 OCR, model hosting, chunking, translation, voice generation, and audiobook
 assembly are outside this component.
 
-## 3. Implementation Overview
+### Dependencies
+
+Internal dependencies include project lifecycle, operation orchestration,
+source-ledger access, atomic persistence, the provider adapter, token-usage
+normalization, prompt templates, localization, and workflow state.
+
+External packages are PySide6, PyMuPDF, python-docx, EbookLib, odfpy,
+striprtf, markdown-it-py, and langdetect.
+
+## Public interface
+
+Inputs are the active project and manifest, its registered source, optional
+progress/cancellation callbacks, and an optional enabled AI profile.
+
+Extraction writes:
+
+- `extracted_text.txt`
+- `source_ledger.json`
+- `extraction_metadata.json`
+
+Cleanup writes:
+
+- `cleanup.json`
+- `clean_text.txt`
+- optional `ai_cleanup_*.log` transaction logs
+
+The log is operational diagnostics, not Cleanup state. `cleanup.json` is the
+authoritative metadata source, `clean_text.txt` is the text output, and reset
+clears Cleanup-owned artifacts.
+
+```python
+from audiomancer.services import text_cleanup_service, text_extraction_service
+
+text_extraction_service.extract_text(project_root, manifest)
+result = text_cleanup_service.clean_text(
+    project_root,
+    manifest,
+    ai_profile_payload=optional_profile,
+)
+```
+
+## Invariants
+
+`source_ledger.json` contains exact half-open codepoint intervals for every
+unit and boundary. The sorted intervals partition `extracted_text.txt` without
+gaps or overlaps. The ledger includes source/text hashes, adapter/encoding
+metadata, structure quality, units, boundaries, page geometry, and warnings.
+Text and RTF ledgers record the selected declared or evidence-based encoding.
+EPUB ledgers record a normalized uniform label or a deterministic mixed token;
+they no longer claim UTF-8 unconditionally.
+
+Unit operations are restricted to:
+
+- `drop_page_artifact`
+- `set_role`
+
+Boundary choices are restricted to:
+
+- `join_with_space`
+- `set_paragraph_break`
+- `set_semantic_line_break`
+- `dehyphenate`
+- `join_preserving_hyphen`
+- `document_end`
+
+Every unit has exactly one role and every source boundary has exactly one
+decision. Unknown or duplicate targets, unsupported roles/choices, oversized
+artifact removals, empty output, removal of every unit on a page, and new
+alphanumeric adjacency are rejected. When one or more page-artifact units are
+dropped, the renderer collapses their boundary chain to one typed separator
+between the nearest surviving narrative units.
+
+`REQ-FUNC-e42171cc` makes the fusion gate inspect the completed rendered text
+and consecutive retained source spans rather than the original direct unit
+strings. Unicode-alphanumeric endpoints touching across spans are rejected,
+including across dropped-unit chains, unless a projected `dehyphenate`
+decision actually removed the retained left span's source-terminal hyphen at
+that exact join. Preserved hyphens, whitespace, line/paragraph separators,
+punctuation, and adjacency within one source span remain safe. Unsafe output is
+rejected before publication; successful quality reports therefore retain a
+zero introduced-fusion count without treating the metric as constant.
+
+AI is eligible only when a selected profile advertises structured output and
+at least a 16K context window. Batches contain 4 questions at 16-31K, 8 at
+32-127K, and 16 at 128K or above. Oversized requests split recursively.
+
+`REQ-FUNC-644ff463` makes the output reservation local planning data. The profile's
+`output_reserve_tokens` is lowered to the remaining 70% context ceiling after
+estimated input. A reservation below the batch's answer floor splits the batch;
+provider output-limit fields are omitted by AI Runtime.
+Invalid/provider failures retry once and then only that batch falls back to its
+priors. The verifier sees only disagreements between a primary answer and its
+prior; an override is accepted only when both model passes agree. Without a
+compatible model, all ambiguous cases use deterministic priors.
+
+`cleanup.json` has an exact unversioned root containing lifecycle timestamps,
+source/ledger/policy/prompt hashes, a non-secret profile fingerprint, document
+profile, unit operations, boundary decisions, paragraph offsets, resumable
+progress, warnings, normalized token use, runtime quality metrics, output hash,
+and manual-edit/structure flags. Status is `running`, `paused`, `finalizing`,
+`completed`, or `failed`; only `completed` with phase `done`, zero blocking
+quality counters, and a matching `clean_text.txt` hash unlocks Chunking.
+Loaded documents also require the exact Progress field set, non-boolean
+non-negative integer counters, string-only batch target IDs, and a bounded
+next-batch index. Completed blocking quality counters must be present as
+non-boolean integer zeroes. Every violation raises `CleanupDocumentError`; persisted shape
+or value corruption does not leak `TypeError`, `KeyError`, or `AttributeError`
+to consumers.
+
+`REQ-REL-a6bddb67` applies that strict contract before the run path reads any
+nested checkpoint state. Persisted boundary validation covers every outer,
+prior, adjudication, and final field used by policy hashing, question rebuild,
+AI reset, resume, and rendering. It also verifies that question count and
+`batch_order` match the authoritative plan. A readable but invalid checkpoint
+is replaced through fresh deterministic analysis as one unit; the strict loader
+still raises `CleanupDocumentError`, and no field-level salvage is attempted.
+Online disclosure counts every submitted question fragment, including failed
+retry attempts, separately from completed resumable responses.
+
+A compatible resume reuses deterministic analysis and completed model passes.
+A model, context, request-policy, or prompt change preserves deterministic
+analysis but clears all AI answers and regenerates the AI batch plan.
+`finalizing/rendering` recovery rerenders from persisted decisions without
+calling a model. The first resume update reports the persisted request fraction
+before any new model request is submitted.
+A reusable completed checkpoint also verifies that `clean_text.txt` exists and
+matches `output_hash`; missing or mismatched output rerenders the same persisted
+decisions without a model request.
+
+Cleanup publication does not promise cross-file rollback, but any artifact or
+manifest persistence failure propagates before the service returns or reports
+100% progress. Only a fully successful publication is a completed logical
+transition.
+
+Paragraph `reason_codes` remain complete decision provenance. Runtime
+`warning_flags` contain only `deterministic_fallback`,
+`unknown_line_boundary`, and `page_transition_repaired`, so user-edit and
+LLM-override provenance does not become a downstream warning.
+
+### Operational limits
+
+- Image-only PDFs fail because OCR is intentionally out of scope.
+- RTF exposes text but not dependable native style/list structure.
+- Ambiguous multi-column PDF reading order is preserved with warnings.
+- A weak or unavailable model may leave more low-confidence deterministic
+  choices; the source-ledger projection and operator edit controls remain the
+  safety boundary.
+
+## Change map
+
+| Change requested | Start with | Focused verification |
+| --- | --- | --- |
+| Canonical extraction/rendering | text_extraction_service, cleanup_renderer_service | test_text_extraction_service.py, test_cleanup_quality_contract.py |
+| AI boundary and remote reporting | cleanup_ai_adjudication_service, text_cleanup_service | test_cleanup_adjudication_contract.py, test_chatgpt_facade.py |
+
+## Key behaviors
+
+- `REQ-FUNC-0cbc8cba`: subscription requests count as hosted fragment submissions in Cleanup reports.
+- `REQ-FUNC-85b20482`: the existing exact-answer schema, no-unconstrained-fallback, no-model-repair and zero connector-retry policy applies to subscription profiles. The domain still owns its bounded batch retry and deterministic fallback.
+
+### Implementation behavior
 
 The production boundary is:
 
@@ -153,141 +315,7 @@ PDF geometry distinguishes indentation, dedentation, enlarged gaps, full-width
 sentence continuation, and column changes; uncertain terminal-line cases are
 eligible for adjudication instead of becoming strong paragraph assumptions.
 
-## 4. Dependencies
-
-Internal dependencies include project lifecycle, operation orchestration,
-source-ledger access, atomic persistence, the provider adapter, token-usage
-normalization, prompt templates, localization, and workflow state.
-
-External packages are PySide6, PyMuPDF, python-docx, EbookLib, odfpy,
-striprtf, markdown-it-py, and langdetect.
-
-## 5. Inputs And Outputs
-
-Inputs are the active project and manifest, its registered source, optional
-progress/cancellation callbacks, and an optional enabled AI profile.
-
-Extraction writes:
-
-- `extracted_text.txt`
-- `source_ledger.json`
-- `extraction_metadata.json`
-
-Cleanup writes:
-
-- `cleanup.json`
-- `clean_text.txt`
-- optional `ai_cleanup_*.log` transaction logs
-
-The log is operational diagnostics, not Cleanup state. `cleanup.json` is the
-authoritative metadata source, `clean_text.txt` is the text output, and reset
-clears Cleanup-owned artifacts.
-
-## 6. Data Contracts
-
-`source_ledger.json` contains exact half-open codepoint intervals for every
-unit and boundary. The sorted intervals partition `extracted_text.txt` without
-gaps or overlaps. The ledger includes source/text hashes, adapter/encoding
-metadata, structure quality, units, boundaries, page geometry, and warnings.
-Text and RTF ledgers record the selected declared or evidence-based encoding.
-EPUB ledgers record a normalized uniform label or a deterministic mixed token;
-they no longer claim UTF-8 unconditionally.
-
-Unit operations are restricted to:
-
-- `drop_page_artifact`
-- `set_role`
-
-Boundary choices are restricted to:
-
-- `join_with_space`
-- `set_paragraph_break`
-- `set_semantic_line_break`
-- `dehyphenate`
-- `join_preserving_hyphen`
-- `document_end`
-
-Every unit has exactly one role and every source boundary has exactly one
-decision. Unknown or duplicate targets, unsupported roles/choices, oversized
-artifact removals, empty output, removal of every unit on a page, and new
-alphanumeric adjacency are rejected. When one or more page-artifact units are
-dropped, the renderer collapses their boundary chain to one typed separator
-between the nearest surviving narrative units.
-
-`REQ-FUNC-e42171cc` makes the fusion gate inspect the completed rendered text
-and consecutive retained source spans rather than the original direct unit
-strings. Unicode-alphanumeric endpoints touching across spans are rejected,
-including across dropped-unit chains, unless a projected `dehyphenate`
-decision actually removed the retained left span's source-terminal hyphen at
-that exact join. Preserved hyphens, whitespace, line/paragraph separators,
-punctuation, and adjacency within one source span remain safe. Unsafe output is
-rejected before publication; successful quality reports therefore retain a
-zero introduced-fusion count without treating the metric as constant.
-
-AI is eligible only when a selected profile advertises structured output and
-at least a 16K context window. Batches contain 4 questions at 16-31K, 8 at
-32-127K, and 16 at 128K or above. Oversized requests split recursively.
-
-`REQ-FUNC-644ff463` makes each request's output-token reservation the selected
-profile's own configured `max_output_tokens`, lowered to whatever the 70%
-context ceiling leaves free once the estimated input is subtracted. One resolver
-returns the value that both the budget decision and the request use, so the two
-can no longer disagree. A reservation below the batch's answer floor - the
-largest answer document that batch could produce, counted at one token per UTF-8
-byte - is context-oversized and splits as before, which means a profile
-configured with a small output limit reaches a smaller batch instead of a
-truncated response. Reasoning models charge their thinking to the same limit,
-so a fixed reservation was spent before the answer began.
-Invalid/provider failures retry once and then only that batch falls back to its
-priors. The verifier sees only disagreements between a primary answer and its
-prior; an override is accepted only when both model passes agree. Without a
-compatible model, all ambiguous cases use deterministic priors.
-
-`cleanup.json` has an exact unversioned root containing lifecycle timestamps,
-source/ledger/policy/prompt hashes, a non-secret profile fingerprint, document
-profile, unit operations, boundary decisions, paragraph offsets, resumable
-progress, warnings, normalized token use, runtime quality metrics, output hash,
-and manual-edit/structure flags. Status is `running`, `paused`, `finalizing`,
-`completed`, or `failed`; only `completed` with phase `done`, zero blocking
-quality counters, and a matching `clean_text.txt` hash unlocks Chunking.
-Loaded documents also require the exact Progress field set, non-boolean
-non-negative integer counters, string-only batch target IDs, and a bounded
-next-batch index. Completed blocking quality counters must be present as
-non-boolean integer zeroes. Every violation raises `CleanupDocumentError`; persisted shape
-or value corruption does not leak `TypeError`, `KeyError`, or `AttributeError`
-to consumers.
-
-`REQ-REL-a6bddb67` applies that strict contract before the run path reads any
-nested checkpoint state. Persisted boundary validation covers every outer,
-prior, adjudication, and final field used by policy hashing, question rebuild,
-AI reset, resume, and rendering. It also verifies that question count and
-`batch_order` match the authoritative plan. A readable but invalid checkpoint
-is replaced through fresh deterministic analysis as one unit; the strict loader
-still raises `CleanupDocumentError`, and no field-level salvage is attempted.
-Online disclosure counts every submitted question fragment, including failed
-retry attempts, separately from completed resumable responses.
-
-A compatible resume reuses deterministic analysis and completed model passes.
-A model, context, request-policy, or prompt change preserves deterministic
-analysis but clears all AI answers and regenerates the AI batch plan.
-`finalizing/rendering` recovery rerenders from persisted decisions without
-calling a model. The first resume update reports the persisted request fraction
-before any new model request is submitted.
-A reusable completed checkpoint also verifies that `clean_text.txt` exists and
-matches `output_hash`; missing or mismatched output rerenders the same persisted
-decisions without a model request.
-
-Cleanup publication does not promise cross-file rollback, but any artifact or
-manifest persistence failure propagates before the service returns or reports
-100% progress. Only a fully successful publication is a completed logical
-transition.
-
-Paragraph `reason_codes` remain complete decision provenance. Runtime
-`warning_flags` contain only `deterministic_fallback`,
-`unknown_line_boundary`, and `page_transition_repaired`, so user-edit and
-LLM-override provenance does not become a downstream warning.
-
-## 7. Workflow Integration
+### Workflow integration
 
 Extraction is mandatory before Cleanup.
 `config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES` defines the supported
@@ -364,20 +392,63 @@ invalid, and completed state from `cleanup.json` is composed by the page and
 read through the shell's operation-status dialog rather than a pane on the
 page; progress and cancellation continue through the existing operation dialog.
 
-## 8. Usage
 
-```python
-from audiomancer.services import text_cleanup_service, text_extraction_service
 
-text_extraction_service.extract_text(project_root, manifest)
-result = text_cleanup_service.clean_text(
-    project_root,
-    manifest,
-    ai_profile_payload=optional_profile,
-)
+## Architecture
+
+```mermaid
+flowchart LR
+    source([Book source]) --> extract[text_extraction_service]
+    extract --> ledger[(source_ledger.json)]
+    ledger --> cleanup[text_cleanup_service]
+    cleanup --> analysis[cleanup_analysis_service]
+    analysis --> adjudicate[cleanup_ai_adjudication_service]
+    adjudicate --> provider([llm_provider_service.chat_json])
+    cleanup --> render[cleanup_renderer_service]
+    render --> metadata[cleanup_metadata_service]
+    metadata --> output[(cleanup.json / clean_text.txt)]
+    cleanup --> reset([Operation / project reset])
 ```
 
-## 9. Validation And Tests
+The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
+
+## Files
+
+- `05_Software/AudioMancer/prompts/text_cleanup_*.txt`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
+  - renders span/boundary projections and enforces introduced-fusion safety
+- `05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
+  - persists conservative paragraph-local provenance after manual whitespace edits
+- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
+- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
+- `05_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
+- `05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py`
+- `05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
+- `05_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
+- `05_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
+  - covers rendered-span fusion, valid joins, and manual-edit structure/provenance
+- `05_Software/AudioMancer/tests/test_cleanup_service.py`
+  - covers unique, mixed, merge/split, duplicate, warning, role, chunk, and offset cases
+- `05_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `05_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
+- `05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_home_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_localization_parity.py`
+- `05_Software/AudioMancer/tests/test_text_extraction_service.py`
+
+### Focused verification
 
 Primary coverage:
 
@@ -417,50 +488,3 @@ Run `uv run ruff check src tests` and `uv run pytest`. Format-specific changes
 must include exact ledger/hash/role assertions. AI changes must verify strict
 output, selective verification, retry isolation, context tiers, recursive
 splitting, cancellation checkpoints, and resume invalidation.
-
-## 10. Limitations And Future Work
-
-- Image-only PDFs fail because OCR is intentionally out of scope.
-- RTF exposes text but not dependable native style/list structure.
-- Ambiguous multi-column PDF reading order is preserved with warnings.
-- A weak or unavailable model may leave more low-confidence deterministic
-  choices; the source-ledger projection and operator edit controls remain the
-  safety boundary.
-
-## Files
-
-From the adopted component map:
-
-- `05_Software/AudioMancer/prompts/text_cleanup_*.txt`
-- `05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/cleanup_metadata_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py`
-  - renders span/boundary projections and enforces introduced-fusion safety
-- `05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/source_ledger_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`
-  - persists conservative paragraph-local provenance after manual whitespace edits
-- `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_adapters.py`
-- `05_Software/AudioMancer/src/audiomancer/services/text_extraction_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/main_window.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
-- `05_Software/AudioMancer/tests/fixtures/cleanup_corpus.json`
-- `05_Software/AudioMancer/tests/test_cleanup_acceptance_corpus.py`
-- `05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py`
-- `05_Software/AudioMancer/tests/test_cleanup_metadata_service.py`
-- `05_Software/AudioMancer/tests/test_cleanup_quality_contract.py`
-  - covers rendered-span fusion, valid joins, and manual-edit structure/provenance
-- `05_Software/AudioMancer/tests/test_cleanup_service.py`
-  - covers unique, mixed, merge/split, duplicate, warning, role, chunk, and offset cases
-- `05_Software/AudioMancer/tests/test_text_cleanup_page.py`
-- `05_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
-- `05_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
-- `05_Software/AudioMancer/tests/test_home_ui_controller.py`
-- `05_Software/AudioMancer/tests/test_localization_parity.py`
-- `05_Software/AudioMancer/tests/test_text_extraction_service.py`

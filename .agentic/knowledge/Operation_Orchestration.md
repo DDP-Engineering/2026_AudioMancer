@@ -1,14 +1,16 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Operation Orchestration
 
-## 1. Purpose
+## Routing
+
+For project operation progress, cancellation, reset or worker shutdown, start at `operation_runner_controller` and `tests/test_operation_runner_controller.py`. Account sign-in and model-test jobs belong to AI Runtime and do not create project operation artifacts.
+
+## Purpose and boundaries
 
 Operation Orchestration supplies the shared runtime contract for cancellable
 workflow work. It owns safe project-local operation artifacts and state
 envelopes, progress reporting, selective downstream invalidation, and the Qt
 worker lifecycle used by all long-running workflow pages.
-
-## 2. Responsibilities
 
 - Resolve and validate project-relative artifact paths, read optional JSON,
   persist operation state/artifacts atomically, and construct default compact
@@ -39,7 +41,87 @@ worker lifecycle used by all long-running workflow pages.
 It does not define individual workflow algorithms, domain artifact schemas,
 or the project workspace/manifest persistence implementation.
 
-## 3. Implementation Overview
+### Dependencies
+
+Internal dependencies include `audiomancer.config`, atomic JSON persistence,
+logging, project-workspace manifest helpers, Text Cleanup's normalized manifest
+operations, Home presentation, UI state, and common dialog helpers. All domain
+controllers depend on this component for operations but remain owners of their
+worker callables and post-operation effects.
+
+External dependencies are PySide6 `QThread`, signals/slots, dialogs, and the
+Python filesystem/JSON/runtime primitives. No provider SDK is used directly.
+
+## Public interface
+
+Inputs are an active project root and manifest, stable operation kind, optional
+state/artifact paths, cancellation event, worker callable, and UI callbacks.
+Outputs include root-level JSON artifacts, compact state payloads, impact
+summaries, safe deletion summaries, signal payloads with bounded percent and
+optional token usage, and refreshed manifest/page state.
+
+Domain controllers call `workflow_controller_service.start_operation(...)` with
+a worker callable and success/failure/cancel handlers. Workers call
+`emit_progress_update(...)` and `raise_if_cancelled(...)`, then persist their
+domain artifacts through their own services or the operation-runtime helpers.
+Use `build_selective_invalidation_summary(...)` before invalidating edited
+speech data, and `sync_manifest_operation_from_disk(...)` after a persisted
+state transition. That helper does not reconstruct a manifest from the window
+snapshot: Project Lifecycle reloads the current file, refreshes the requested
+summary, and only promotes a requested workflow stage.
+
+## Invariants
+
+Operation kinds must be present in `config.WORKFLOW_OPERATION_ORDER`. Relative
+artifact paths must be nonempty, nonabsolute, and traversal-free; conversion
+to a manifest-relative string rejects paths outside the project. Operation
+state uses the shared compact envelope; workflow-specific state belongs in
+`metadata` and resumable work in `resume_checkpoint`.
+
+Progress payloads contain a clamped `percent`, a message, and optional token
+usage. Selective invalidation identifies blocks by stable identity fields, not
+display sequence numbers. Artifact collection/deletion rejects paths outside
+the active project and requires exact affected identities where appropriate.
+
+Chunking reset owns `chunks_text.json` and matching
+`log_ai_chunking_*.log` files. When reset begins at Chunking with
+`include_current=True`, the same allowlisted deletion proceeds through every
+configured downstream operation; Extraction and Cleanup artifacts are outside
+that scope. `REQ-FUNC-2ab78634` requires automatic and manual Cleanup
+publication to pair this exact artifact reset with the Project Lifecycle
+compact-summary reset before reporting success.
+
+Root-level operation artifact names are reserved independently of whether a
+file currently exists. Project Lifecycle compares them case-insensitively when
+choosing a stored source name, which is conservative on case-sensitive hosts
+and consistent with Windows behavior.
+
+The shared `append_required_extension` helper preserves a complete requested
+filename, compares extensions case-insensitively, and appends only a missing
+required extension. Project Lifecycle uses it for export and snapshot paths
+before containment checks, avoiding dotted-name truncation.
+
+### Operational limits
+
+The component intentionally relies on window private attributes as its current
+Qt integration contract; a future UI architecture may replace that with a
+typed operation-session object. It cannot forcibly terminate a noncooperative
+worker: shutdown waits only for the configured timeout after setting the
+cancellation event. Domain services remain responsible for checkpoints and
+for translating their own failure state into operator-facing outcomes.
+
+## Change map
+
+| Change requested | Start with | Focused verification |
+| --- | --- | --- |
+| Worker lifetime and cancellation | operation_runner_controller | test_operation_runner_controller.py, test_main_window_operation_shutdown.py |
+| Operation artifact/reset rules | operation_runtime_service | test_operation_runtime_service.py |
+
+## Key behaviors
+
+- `REQ-UX-3d0aeaec`: MainWindow waits independently for the account controller during shutdown; account jobs preserve the project runner's modal state and operation documents.
+
+### Implementation behavior
 
 `operation_runtime_service` is the low-level runtime boundary. It validates
 relative paths against traversal and absolute-path forms (including Windows
@@ -104,57 +186,7 @@ dialogs ignore Escape and title-bar close requests. MainWindow retains ownership
 of application-close protection and the operation runner retains ownership of
 worker cancellation and shutdown waiting.
 
-## 4. Dependencies
-
-Internal dependencies include `audiomancer.config`, atomic JSON persistence,
-logging, project-workspace manifest helpers, Text Cleanup's normalized manifest
-operations, Home presentation, UI state, and common dialog helpers. All domain
-controllers depend on this component for operations but remain owners of their
-worker callables and post-operation effects.
-
-External dependencies are PySide6 `QThread`, signals/slots, dialogs, and the
-Python filesystem/JSON/runtime primitives. No provider SDK is used directly.
-
-## 5. Inputs And Outputs
-
-Inputs are an active project root and manifest, stable operation kind, optional
-state/artifact paths, cancellation event, worker callable, and UI callbacks.
-Outputs include root-level JSON artifacts, compact state payloads, impact
-summaries, safe deletion summaries, signal payloads with bounded percent and
-optional token usage, and refreshed manifest/page state.
-
-## 6. Data Contracts
-
-Operation kinds must be present in `config.WORKFLOW_OPERATION_ORDER`. Relative
-artifact paths must be nonempty, nonabsolute, and traversal-free; conversion
-to a manifest-relative string rejects paths outside the project. Operation
-state uses the shared compact envelope; workflow-specific state belongs in
-`metadata` and resumable work in `resume_checkpoint`.
-
-Progress payloads contain a clamped `percent`, a message, and optional token
-usage. Selective invalidation identifies blocks by stable identity fields, not
-display sequence numbers. Artifact collection/deletion rejects paths outside
-the active project and requires exact affected identities where appropriate.
-
-Chunking reset owns `chunks_text.json` and matching
-`log_ai_chunking_*.log` files. When reset begins at Chunking with
-`include_current=True`, the same allowlisted deletion proceeds through every
-configured downstream operation; Extraction and Cleanup artifacts are outside
-that scope. `REQ-FUNC-2ab78634` requires automatic and manual Cleanup
-publication to pair this exact artifact reset with the Project Lifecycle
-compact-summary reset before reporting success.
-
-Root-level operation artifact names are reserved independently of whether a
-file currently exists. Project Lifecycle compares them case-insensitively when
-choosing a stored source name, which is conservative on case-sensitive hosts
-and consistent with Windows behavior.
-
-The shared `append_required_extension` helper preserves a complete requested
-filename, compares extensions case-insensitively, and appends only a missing
-required extension. Project Lifecycle uses it for export and snapshot paths
-before containment checks, avoiding dotted-name truncation.
-
-## 7. Workflow Integration
+### Workflow integration
 
 Text extraction/cleanup, chunking, translation, character, voice, speech, TTS,
 and assembly controllers use this component to start/cancel work and invalidate
@@ -166,19 +198,45 @@ an operation writes its artifacts. Text Cleanup uses the same scoped Chunking
 reset for both automatic and manual canonical-text publication, then delegates
 summary reset construction to Project Lifecycle before success is returned.
 
-## 8. Usage
 
-Domain controllers call `workflow_controller_service.start_operation(...)` with
-a worker callable and success/failure/cancel handlers. Workers call
-`emit_progress_update(...)` and `raise_if_cancelled(...)`, then persist their
-domain artifacts through their own services or the operation-runtime helpers.
-Use `build_selective_invalidation_summary(...)` before invalidating edited
-speech data, and `sync_manifest_operation_from_disk(...)` after a persisted
-state transition. That helper does not reconstruct a manifest from the window
-snapshot: Project Lifecycle reloads the current file, refreshes the requested
-summary, and only promotes a requested workflow stage.
 
-## 9. Validation And Tests
+## Architecture
+
+```mermaid
+flowchart TD
+    controller([Domain controllers]) --> facade[workflow_controller_service]
+    facade --> runner[operation_runner_controller]
+    runner --> worker[ThreadedOperationWorker]
+    worker --> service([Domain service])
+    worker --> bridge[ThreadedOperationUiBridge]
+    bridge --> progress[OperationProgressDialog]
+    service --> runtime[operation_runtime_service]
+    runtime --> files[(Project operation artifacts)]
+    shell([MainWindow.closeEvent]) --> runner
+    shell --> account([ChatGPTAuthUiController.shutdown])
+```
+
+The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
+
+## Files
+
+- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
+- `05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
+- `05_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
+- `05_Software/AudioMancer/tests/test_operation_progress_dialog.py`
+- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_operation_runner_controller.py`
+- `05_Software/AudioMancer/tests/test_operation_runtime_service.py`
+- `05_Software/AudioMancer/tests/test_cleanup_service.py`
+- `05_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller synchronization and final-window-manifest regressions.
+- `05_Software/AudioMancer/tests/test_workflow_impact_service.py`
+- `05_Software/AudioMancer/tests/test_workflow_order_consistency.py`
+
+### Focused verification
 
 Primary automated coverage:
 
@@ -209,32 +267,3 @@ Primary automated coverage:
 
 After changes, run the focused modules above with `uv run pytest`, plus
 `uv run python -m py_compile` and `uv run ruff check` on changed files.
-
-## 10. Limitations And Future Work
-
-The component intentionally relies on window private attributes as its current
-Qt integration contract; a future UI architecture may replace that with a
-typed operation-session object. It cannot forcibly terminate a noncooperative
-worker: shutdown waits only for the configured timeout after setting the
-cancellation event. Domain services remain responsible for checkpoints and
-for translating their own failure state into operator-facing outcomes.
-
-## Files
-
-From the adopted component map:
-
-- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
-- `05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/operation_runner_controller.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/workflow_controller_service.py` - controller facade that delegates manifest summary and stage persistence to Project Lifecycle.
-- `05_Software/AudioMancer/tests/test_main_window_operation_shutdown.py`
-- `05_Software/AudioMancer/tests/test_operation_progress_dialog.py`
-- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
-- `05_Software/AudioMancer/tests/test_operation_runner_controller.py`
-- `05_Software/AudioMancer/tests/test_operation_runtime_service.py`
-- `05_Software/AudioMancer/tests/test_cleanup_service.py`
-- `05_Software/AudioMancer/tests/test_workflow_controller_service.py` - controller synchronization and final-window-manifest regressions.
-- `05_Software/AudioMancer/tests/test_workflow_impact_service.py`
-- `05_Software/AudioMancer/tests/test_workflow_order_consistency.py`

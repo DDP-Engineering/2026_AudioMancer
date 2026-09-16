@@ -22,7 +22,12 @@ prompts, semantic response validation and project-local artifacts.
 
 ## Supported operation
 
-The LLM backend options are LM Studio, Ollama and OpenAI-compatible endpoints.
+The LLM backend options are LM Studio, Ollama, OpenAI-compatible endpoints and
+experimental ChatGPT subscription profiles. Subscription text/model capabilities
+are verified separately from sign-in. Account-scoped model discovery supplies primary
+text models and per-model reasoning choices, with cached fallback and explicit effort
+persisted per subscription profile. Subscription model selection applies its reported
+default context while allowing manual edits until a different model is selected.
 The operator interface supports English and Romanian.
 
 ## Established constraints
@@ -30,7 +35,9 @@ The operator interface supports English and Romanian.
 The shared `chat_json()` facade returns parsed JSON plus normalized usage and
 request metadata. Cleanup requires provider-enforced response schemas and
 disables unconstrained fallback and model repair. API credentials currently
-belong to settings profiles; project artifacts belong to workflow services.
+belong to API-key settings profiles. Subscription credentials belong to a
+separate protected OS-user store or explicitly selected memory-only session;
+project artifacts belong to workflow services.
 
 ## Implementation orientation
 

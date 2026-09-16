@@ -7,12 +7,14 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Platform Settings UI
 
-## 1. Purpose
+## Routing
+
+For settings normalization, per-user paths, themes, localization or logging, start at `settings_service.validate_settings` and `tests/test_settings_service.py`. Subscription protocol and credential lifecycle belong to AI Runtime.
+
+## Purpose and boundaries
 
 Platform Settings UI owns shared configuration, settings validation, logging,
 locale/theme state, and settings-page integration used by every workflow page.
-
-## 2. Responsibilities
 
 - Define application paths, defaults, resource identity, and configuration constants.
 - Resolve the writable data root that owns per-user settings and application logs, separately from the read-only packaged resource root.
@@ -26,61 +28,7 @@ locale/theme state, and settings-page integration used by every workflow page.
   Romanian catalog, including visible labels for stable option data.
 - Resolve the operator completion-beep preference and expose the shared emitter that consumes it.
 
-## 3. Implementation Overview
-
-`config.py` supplies constants and packaged-resource resolution. It also exposes
-`resolve_user_documents_root()`, which keeps the folder operators browse for
-their own content separate from `APP_ROOT`: that root owns read-only packaged
-resources and is a system directory for a frozen build installed into
-`C:\Program Files\AudioMancer`, `/opt`, or `/usr/share`. The resolver is pure
-standard library, because `config` is imported by every module and by every
-headless test and therefore must not import PySide6. The services
-normalize settings and theme payloads before the app shell consumes them;
-`settings_ui_controller` and `settings_page` render operator changes. This
-component provides cross-cutting platform behavior but does not own any domain
-workflow artifact.
-
-The Settings page rebuilds its theme selector from the normalized merged theme
-catalog whenever settings load. Built-ins retain their catalog order and
-localized labels; valid persisted custom themes follow them with their
-operator-authored display names. The page keeps the normalized custom
-collection only for selection and preview resolution. It never replaces the
-caller-owned `ui_themes` payload, so Apply or OK preserves custom fields outside
-this page's responsibilities.
-
-`ui_state_service` owns the complete operator-facing English/Romanian string
-catalog. Persistent pages call `apply_language()` for captions, empty states,
-dynamic choices, and list markers; controllers translate popup and progress
-text before passing it to Qt. `settings_ui_controller.apply_current_ui_settings`
-also rebuilds the currently visible project page after a language change so
-derived notes do not retain the previous locale.
-
-Startup passes both validated persisted font-size steps into the early theme
-application before constructing `MainWindow`, so newly created widgets inherit
-the operator's interface and text-window size choices from their first layout
-(`REQ-UX-f9cbdc8c`).
-
-`config.py` keeps two roots apart. `APP_ROOT` owns read-only packaged resources
-(prompts, help, licences, icon, `pyproject.toml`). `APP_USER_DATA_ROOT`, produced
-by `resolve_user_data_root()`, owns everything the application writes: the active
-`settings.json` and the `Logs/` directory. The resolver takes the
-`AUDIOMANCER_DATA_DIR` override first, then `APP_ROOT` when a probe file proves
-it writable and it is not the PyInstaller `_MEIPASS` extraction folder, and
-otherwise the per-user OS location (`%LOCALAPPDATA%` on Windows,
-`~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share`
-elsewhere). Portable and source-tree layouts keep data beside the application,
-while installations under non-writable prefixes such as `C:\Program Files` or
-`/opt` use the per-user location. See
-`.agentic/specs/user_data_location.spec.md`.
-
-Offline Help resolution checks packaged `help/<language>/index.html` content
-before the source-checkout English/Romanian guides. The source fallback root is
-built with depth-safe `Path.parent` traversal rather than indexed ancestors, so
-configuration import also succeeds when a frozen or portable `APP_ROOT` is only
-one level below its filesystem anchor. This behavior is covered by
-`REQ-PLAT-7cd89b15`.
-
-## 4. Dependencies
+### Dependencies
 
 - Internal: `config.py` supplies paths/defaults; settings, logging, time, URL,
   scroll, UI-state and theme services provide the shared runtime contracts;
@@ -89,7 +37,7 @@ one level below its filesystem anchor. This behavior is covered by
   font and widget APIs. All other components depend on these contracts, but this
   component does not own their project or operation state.
 
-## 5. Inputs And Outputs
+## Public interface
 
 - Inputs: the configured settings path, persisted JSON payload, operator edits,
   built-in/custom theme payloads, runtime language, wheel-step setting, and
@@ -100,7 +48,12 @@ one level below its filesystem anchor. This behavior is covered by
   component logs, translated strings, a Qt palette/stylesheet/font state, and
   one global scroll-step event filter.
 
-## 6. Data Contracts
+Use the shell Settings action to edit shared appearance/language preferences.
+Services call `load_settings()` at startup and `save_settings(payload)` after
+deliberate changes; UI code uses `translate` and `apply_ui_settings` rather
+than maintaining separate language or theme state.
+
+## Invariants
 
 AI profile and context-budget settings remain application settings, not fields
 in `chunks_text.json`. A resumable AI Chunking run uses the currently selected
@@ -245,7 +198,103 @@ instructions from the Chunking document.
   `QFileDialog` silently falls back to the process working directory when given
   one. It records nothing: no settings field remembers a last-used folder.
 
-## 7. Workflow Integration
+### Operational limits
+
+- Settings are stored as a plaintext UTF-8 JSON object, including AI provider
+  API keys; secret hygiene remains the operator's responsibility and is not
+  scrubbed by validation.
+- Corruption backups preserve the original plaintext bytes and can therefore
+  contain the same AI provider keys as the active settings file; operators should keep
+  those backups private and delete them only after recovering any needed values.
+- Settings and themes are dictionary-based and not yet modeled with typed
+  classes.
+- Settings can select and preview valid custom themes already present in
+  `ui_themes`, but custom-theme creation, editing, deletion, import, and export
+  are not exposed by the current Settings page.
+- Unknown extra settings keys are preserved rather than strictly validated.
+- The writable data root is resolved once at `config` import time, so changing
+  `AUDIOMANCER_DATA_DIR` or the writability of the application root requires a
+  process restart to take effect.
+- Writability is decided by a probe file rather than `os.access`, which costs one
+  transient file creation per process start. `os.access` is not usable here
+  because on Windows it ignores directory ACLs.
+
+## Change map
+
+| Change requested | Start with | Focused verification |
+| --- | --- | --- |
+| Settings and path normalization | settings_service, config | test_settings_service.py, test_chatgpt_settings.py |
+| Locale and theme | ui_state_service, ui_theme_service | test_localization_parity.py, test_ui_localization_coverage.py |
+
+## Key behaviors
+
+AI Settings binds deferred geometry and popup callbacks to its QObject lifetime so
+destroying the page cancels pending access to its child controls.
+
+
+- `REQ-FUNC-92819b45`, `REQ-FUNC-cfd856fa`: subscription model discovery runs in the account worker after sign-in, on settings opening when stale, or through Refresh models. Catalog replacement preserves unsaved profile choices. Subscription effort choices follow the selected model, retain unsupported saved values visibly, and normalize a legacy reasoning-mode summary for workflow budgeting.
+
+- `REQ-UX-3e905eaa`: AI Settings owns a scrollable two-column body and fixed Cancel/Apply/OK footer. A compact profile list scrolls independently above workflow defaults in a compact left column, whose labels remain on one line and default selectors have equal font-derived widths. The editor stacks numeric fields and places profile flags below the model. Font-derived action widths remain compact; the initial 800x600 dialog is bounded by available screen space. Columns stack when they cannot fit side by side. Profile-list rebuilds preserve scroll position and ensure selection visibility. Idle account/catalog details use tooltips; active progress and errors remain visible.
+- `REQ-FUNC-dbf2ccce`: subscription model changes apply catalog default context and reset the prior model override. Manual edits persist across refresh/profile switching/settings reload; local/custom model selection leaves context unchanged.
+- `REQ-FUNC-bb149fc8`: subscription profiles retain a canonical informational URL and non-secret credential reference; token fields are excluded.
+- `REQ-UX-3d0aeaec`: English and Romanian catalogs include account controls and capability status.
+- `REQ-SEC-5317d6ae`: the protected account store has a separate OS-user location independent of portable settings.
+
+### Implementation behavior
+
+`config.py` supplies constants and packaged-resource resolution. It also exposes
+`resolve_user_documents_root()`, which keeps the folder operators browse for
+their own content separate from `APP_ROOT`: that root owns read-only packaged
+resources and is a system directory for a frozen build installed into
+`C:\Program Files\AudioMancer`, `/opt`, or `/usr/share`. The resolver is pure
+standard library, because `config` is imported by every module and by every
+headless test and therefore must not import PySide6. The services
+normalize settings and theme payloads before the app shell consumes them;
+`settings_ui_controller` and `settings_page` render operator changes. This
+component provides cross-cutting platform behavior but does not own any domain
+workflow artifact.
+
+The Settings page rebuilds its theme selector from the normalized merged theme
+catalog whenever settings load. Built-ins retain their catalog order and
+localized labels; valid persisted custom themes follow them with their
+operator-authored display names. The page keeps the normalized custom
+collection only for selection and preview resolution. It never replaces the
+caller-owned `ui_themes` payload, so Apply or OK preserves custom fields outside
+this page's responsibilities.
+
+`ui_state_service` owns the complete operator-facing English/Romanian string
+catalog. Persistent pages call `apply_language()` for captions, empty states,
+dynamic choices, and list markers; controllers translate popup and progress
+text before passing it to Qt. `settings_ui_controller.apply_current_ui_settings`
+also rebuilds the currently visible project page after a language change so
+derived notes do not retain the previous locale.
+
+Startup passes both validated persisted font-size steps into the early theme
+application before constructing `MainWindow`, so newly created widgets inherit
+the operator's interface and text-window size choices from their first layout
+(`REQ-UX-f9cbdc8c`).
+
+`config.py` keeps two roots apart. `APP_ROOT` owns read-only packaged resources
+(prompts, help, licences, icon, `pyproject.toml`). `APP_USER_DATA_ROOT`, produced
+by `resolve_user_data_root()`, owns general application data: the active
+`settings.json` and the `Logs/` directory. The resolver takes the
+`AUDIOMANCER_DATA_DIR` override first, then `APP_ROOT` when a probe file proves
+it writable and it is not the PyInstaller `_MEIPASS` extraction folder, and
+otherwise the per-user OS location (`%LOCALAPPDATA%` on Windows,
+`~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share`
+elsewhere). Portable and source-tree layouts keep data beside the application,
+while installations under non-writable prefixes such as `C:\Program Files` or
+`/opt` use the per-user location. See
+`.agentic/specs/user_data_location.spec.md`.
+
+Offline Help resolution checks packaged `help/<language>/index.html` content
+before the source-checkout English/Romanian guides. The source fallback root is
+built with depth-safe `Path.parent` traversal rather than indexed ancestors, so
+configuration import also succeeds when a frozen or portable `APP_ROOT` is only
+one level below its filesystem anchor. This behavior is covered by
+`REQ-PLAT-7cd89b15`.
+
+### Workflow integration
 
 App startup loads settings before main-window construction. Settings changes
 flow from the Settings page/controller through `save_settings`, then apply UI
@@ -256,14 +305,66 @@ navigated to.
 AI and TTS settings surfaces consume the same normalized payload but retain
 their runtime-domain behavior.
 
-## 8. Usage
+### Book Analysis Profile Controls
 
-Use the shell Settings action to edit shared appearance/language preferences.
-Services call `load_settings()` at startup and `save_settings(payload)` after
-deliberate changes; UI code uses `translate` and `apply_ui_settings` rather
-than maintaining separate language or theme state.
+Each AI profile now stores a reasoning preference: provider default, enabled,
+or disabled. The AI Settings profile editor is the only place this preference
+and the profile context size are displayed. Workflow defaults include a Book
+Analysis profile selector. The Book Analysis page itself shows only its profile
+selector plus Analyze and Reset, keeping provider-tuning controls out of the
+reader-facing report page.
 
-## 9. Validation And Tests
+## Architecture
+
+```mermaid
+flowchart LR
+    app([app.main]) --> settings[settings_service]
+    settings --> config[config]
+    settings --> data[(settings.json)]
+    settings_ui([SettingsPage]) --> controller[settings_ui_controller]
+    controller --> settings
+    controller --> ui[ui_state_service]
+    ui --> theme[ui_theme_service]
+    ui --> locale[(English / Romanian catalog)]
+    ai([AiSettingsPage]) --> settings
+    ai --> account([AI Runtime account store])
+```
+
+The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
+
+## Files
+
+- `05_Software/AudioMancer/settings.example.json`
+- `05_Software/AudioMancer/settings.json`
+- `05_Software/AudioMancer/src/audiomancer/app.py`
+- `05_Software/AudioMancer/src/audiomancer/config.py`
+- `05_Software/AudioMancer/src/audiomancer/services/logging_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/settings_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/time_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/url_service.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
+- `05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
+- `05_Software/AudioMancer/tests/test_app_entrypoint.py`
+- `05_Software/AudioMancer/tests/test_config_contract.py`
+- `05_Software/AudioMancer/tests/test_localization_parity.py`
+- `05_Software/AudioMancer/tests/test_logging_service.py`
+- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
+- `05_Software/AudioMancer/tests/test_operator_status_font_role.py`
+- `05_Software/AudioMancer/tests/test_settings_page.py`
+- `05_Software/AudioMancer/tests/test_settings_service.py`
+- `05_Software/AudioMancer/tests/test_ui_scroll_service.py`
+- `05_Software/AudioMancer/tests/test_ui_state_service.py`
+- `05_Software/AudioMancer/tests/test_ui_theme_service.py`
+- `05_Software/AudioMancer/tests/test_ui_localization_coverage.py`
+- `05_Software/AudioMancer/tests/test_url_service.py`
+- `06_SoftwareDocu/UserGuide/index.html`
+- `06_SoftwareDocu/UserGuide_ro/index.html`
+- `05_Software/AudioMancer/tests/test_user_data_location.py`
+
+### Focused verification
 
 Primary automated coverage:
 
@@ -295,67 +396,3 @@ Settings dynamic labels, every audited persistent page, runtime current-page
 refresh, and direct popup/progress API calls. Minimum
 validation after a change: run the focused modules above with `uv run pytest`,
 plus `uv run python -m py_compile` and `uv run ruff check` on changed files.
-
-## 10. Limitations And Future Work
-
-- Settings are stored as a plaintext UTF-8 JSON object, including AI provider
-  API keys; secret hygiene remains the operator's responsibility and is not
-  scrubbed by validation.
-- Corruption backups preserve the original plaintext bytes and can therefore
-  contain the same AI provider keys as the active settings file; operators should keep
-  those backups private and delete them only after recovering any needed values.
-- Settings and themes are dictionary-based and not yet modeled with typed
-  classes.
-- Settings can select and preview valid custom themes already present in
-  `ui_themes`, but custom-theme creation, editing, deletion, import, and export
-  are not exposed by the current Settings page.
-- Unknown extra settings keys are preserved rather than strictly validated.
-- The writable data root is resolved once at `config` import time, so changing
-  `AUDIOMANCER_DATA_DIR` or the writability of the application root requires a
-  process restart to take effect.
-- Writability is decided by a probe file rather than `os.access`, which costs one
-  transient file creation per process start. `os.access` is not usable here
-  because on Windows it ignores directory ACLs.
-
-## Book Analysis Profile Controls
-
-Each AI profile now stores a reasoning preference: provider default, enabled,
-or disabled. The AI Settings profile editor is the only place this preference
-and the profile context size are displayed. Workflow defaults include a Book
-Analysis profile selector. The Book Analysis page itself shows only its profile
-selector plus Analyze and Reset, keeping provider-tuning controls out of the
-reader-facing report page.
-
-## Files
-
-From the adopted component map:
-
-- `05_Software/AudioMancer/settings.example.json`
-- `05_Software/AudioMancer/settings.json`
-- `05_Software/AudioMancer/src/audiomancer/app.py`
-- `05_Software/AudioMancer/src/audiomancer/config.py`
-- `05_Software/AudioMancer/src/audiomancer/services/logging_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/settings_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/time_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/ui_scroll_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/ui_theme_service.py`
-- `05_Software/AudioMancer/src/audiomancer/services/url_service.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py`
-- `05_Software/AudioMancer/src/audiomancer/ui/pages/settings_page.py`
-- `05_Software/AudioMancer/tests/test_app_entrypoint.py`
-- `05_Software/AudioMancer/tests/test_config_contract.py`
-- `05_Software/AudioMancer/tests/test_localization_parity.py`
-- `05_Software/AudioMancer/tests/test_logging_service.py`
-- `05_Software/AudioMancer/tests/test_misc_ui_controller.py`
-- `05_Software/AudioMancer/tests/test_operator_status_font_role.py`
-- `05_Software/AudioMancer/tests/test_settings_page.py`
-- `05_Software/AudioMancer/tests/test_settings_service.py`
-- `05_Software/AudioMancer/tests/test_ui_scroll_service.py`
-- `05_Software/AudioMancer/tests/test_ui_state_service.py`
-- `05_Software/AudioMancer/tests/test_ui_theme_service.py`
-- `05_Software/AudioMancer/tests/test_ui_localization_coverage.py`
-- `05_Software/AudioMancer/tests/test_url_service.py`
-- `06_SoftwareDocu/UserGuide/index.html`
-- `06_SoftwareDocu/UserGuide_ro/index.html`
-- `05_Software/AudioMancer/tests/test_user_data_location.py`

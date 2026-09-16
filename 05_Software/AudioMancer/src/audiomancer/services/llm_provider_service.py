@@ -59,6 +59,13 @@ _SENSITIVE_LOG_FIELD_NAMES = frozenset(
         "token",
         "access_token",
         "refresh_token",
+        "id_token",
+        "device_auth_id",
+        "user_code",
+        "code_verifier",
+        "code_challenge",
+        "state",
+        "authorization_code",
     }
 )
 
@@ -123,6 +130,12 @@ def chat_json(
     @exception  ValueError Raised on invalid or non-object JSON output.
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     """
+    if profile_payload.get("backend_kind") == config.CHATGPT_BACKEND_KIND:
+        return _chat_subscription_json(
+            profile_payload, system_prompt, user_prompt, log_path, log_context, cancel_requested,
+            structured_output, response_schema, response_schema_name, require_response_schema,
+            allow_unconstrained_fallback, allow_model_json_repair, retry_count_override,
+        )
     if require_response_schema and (
         response_schema is None or not bool(profile_payload.get("supports_structured_output", False))
     ):
@@ -330,6 +343,65 @@ def chat_json(
 
 
 # LOCAL HELPERS
+
+
+def _chat_subscription_json(profile, system, user, log_path, log_context, cancel,
+                            structured, schema, schema_name, require_schema,
+                            allow_fallback, allow_repair, retry_count):
+    """@brief Adapt completed subscription text to the shared JSON, repair and usage contract.
+    @details The account generation is pinned across the original request and repair.
+             Transport validation precedes parsing, so failed streams never reach repair.
+    @return Existing chat_json result shape with canonical usage and effective reasoning.
+    """
+    from audiomancer.services import chatgpt_credential_service, chatgpt_provider_service
+    manager = chatgpt_credential_service.get_manager()
+    generation, _ = manager.acquire(cancel)
+    required = require_schema or (structured and schema is not None and not allow_fallback)
+    if required and (schema is None or not structured):
+        raise ValueError("This operation requires verified ChatGPT JSON Schema output.")
+    context = dict(log_context or {})
+    _append_ai_log(log_path, {**context, "exchange_event": "request", "parsed_status": "pending",
+        "profile_id": str(profile.get("id", "")), "backend_kind": config.CHATGPT_BACKEND_KIND,
+        "base_url": config.CHATGPT_BASE_URL, "model_name": str(profile.get("model_name", "")),
+        "system_prompt": system, "user_prompt": user})
+    try:
+        completion = chatgpt_provider_service.complete(
+            profile, system, user, cancel=cancel, manager=manager, generation=generation,
+            schema=schema if structured else None, schema_name=schema_name,
+            require_schema=required, allow_schema_fallback=allow_fallback, retry_count=retry_count,
+        )
+        usage = completion.usage
+        status = "parsed_success"
+        try:
+            payload = _parse_json_content(completion.text)
+        except ValueError:
+            if not allow_repair or not completion.text.strip():
+                raise
+            repaired = chatgpt_provider_service.complete(
+                profile, "You repair malformed JSON. Return one valid JSON object only. "
+                "Preserve original keys and values. Do not translate or summarize.",
+                "Repair this malformed JSON; return only the repaired object.\nMALFORMED_JSON_BEGIN\n"
+                + completion.text + "\nMALFORMED_JSON_END",
+                cancel=cancel, manager=manager, generation=generation, retry_count=retry_count,
+                schema=schema if structured else None, schema_name=schema_name, require_schema=required,
+                allow_schema_fallback=allow_fallback,
+            )
+            payload = _parse_json_content(repaired.text)
+            usage = token_usage_service.merge_token_usage(usage, repaired.usage)
+            status = "parsed_success_after_repair"
+        manager.assert_current(generation, cancel)
+        _append_ai_log(log_path, {**context, "exchange_event": "response", "parsed_status": status,
+                                  "raw_message_content": completion.text, "usage": usage})
+        return {"payload": payload, "usage": usage,
+                "request_metadata": {"reasoning_mode_effective": completion.reasoning_mode_effective,
+                                     "reasoning_effort_effective": completion.reasoning_effort_effective}}
+    except OperationCancelledError:
+        raise
+    except Exception:
+        # Detailed OAuth/HTTP exceptions must never be serialized to an operation artifact.
+        _append_ai_log(log_path, {**context, "exchange_event": "failure", "parsed_status": "parsed_failure",
+                                  "error_text": "ChatGPT request failed; see the operation error for recovery."})
+        raise
 
 
 def _wait_for_retry_backoff(delay_seconds: float, cancel_requested=None) -> None:
@@ -600,7 +672,7 @@ def _reasoning_effort_for_profile(profile_payload: dict[str, object]) -> str | N
 def _build_without_reasoning_mode_payload(
     request_payload: dict[str, object],
 ) -> dict[str, object]:
-    """Return one call-local compatibility payload without reasoning_effort."""
+    """@brief Return one call-local compatibility payload without reasoning_effort."""
     compatibility_payload = dict(request_payload)
     compatibility_payload.pop("reasoning_effort", None)
     return compatibility_payload

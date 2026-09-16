@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-0cbc8cba"
+title = "Account for subscription usage and remote text workflows"
+status = "active"
+requirement = "When a subscription workflow runs, AudioMancer shall normalize Responses usage into existing token counters and apply online text budgeting and remote-fragment reporting."
+verification = "Automated: Usage tests distinguish unknown/zero/cached/reasoning totals; budgeting/cleanup tests classify subscription as online while preserving local behavior."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/token_usage_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py", "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py", "05_Software/AudioMancer/src/audiomancer/config.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_facade.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

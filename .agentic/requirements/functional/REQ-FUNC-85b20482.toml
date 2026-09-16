@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-85b20482"
+title = "Preserve subscription JSON and repair contracts"
+status = "active"
+requirement = "When chat_json uses a subscription profile, AudioMancer shall preserve its JSON contract and caller-specific schema, fallback and repair policy through the selected backend for both initial and repair requests."
+verification = "Automated: Facade tests verify schema-required failure before inference, same-backend repair, rejection of incomplete text, effective reasoning and legacy regressions."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py", "05_Software/AudioMancer/src/audiomancer/services/chatgpt_provider_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_facade.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

@@ -48,8 +48,8 @@ def normalize_provider_usage(response_payload: dict[str, object]) -> TokenUsageP
         return empty_token_usage()
     normalized_values = _normalize_usage_values(
         raw_usage,
-        input_field="prompt_tokens",
-        output_field="completion_tokens",
+        input_field="input_tokens" if "input_tokens" in raw_usage else "prompt_tokens",
+        output_field="output_tokens" if "output_tokens" in raw_usage else "completion_tokens",
         total_field="total_tokens",
     )
     if normalized_values is None:

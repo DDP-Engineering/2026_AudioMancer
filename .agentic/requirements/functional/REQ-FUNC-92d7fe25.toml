@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-92d7fe25"
+title = "Sign in to ChatGPT with a device code"
+status = "active"
+requirement = "When the operator selects device sign-in, AudioMancer shall display the provider verification code and complete bounded cancellable polling according to provider intervals and pending or slow-down responses."
+verification = "Automated: Simulated code/poll/token responses cover successful exchange, pending, slow-down, denial, timeout and cancellation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chatgpt_auth_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_auth.py"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

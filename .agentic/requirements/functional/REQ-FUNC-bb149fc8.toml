@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-bb149fc8"
+title = "Persist subscription profiles alongside existing backends"
+status = "active"
+requirement = "When AI profiles are loaded or saved, AudioMancer shall retain subscription profiles with a non-secret account reference and trusted canonical URL alongside unchanged existing backend profiles."
+verification = "Automated: Round-trip old/new settings; invalid reference and injected token fields cannot survive subscription normalization."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/config.py", "05_Software/AudioMancer/src/audiomancer/services/settings_service.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chatgpt_settings.py::test_subscription_profile_round_trip_excludes_secrets"]
+spec = "specs/REQ-FUNC-be219dba.md"
+priority = "high"
+created = 2026-09-16
+updated = 2026-09-16

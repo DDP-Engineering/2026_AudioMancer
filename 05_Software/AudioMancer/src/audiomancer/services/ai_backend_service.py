@@ -93,6 +93,9 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
     @exception  None
     """
     backend_kind = str(profile_payload.get("backend_kind", "")).strip()
+    if backend_kind == config.CHATGPT_BACKEND_KIND:
+        from audiomancer.services.chatgpt_model_service import verify_profile
+        return verify_profile(profile_payload)
     base_url = str(profile_payload.get("base_url", "")).strip()
     selected_model_name = str(profile_payload.get("model_name", "")).strip()
     timeout_seconds = config.DEFAULT_AI_CONNECT_TIMEOUT_SECONDS

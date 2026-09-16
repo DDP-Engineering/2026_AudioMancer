@@ -371,6 +371,28 @@ def _validate_llm_profile(
             )
             normalized_profile[field_name] = copy.deepcopy(field_value)
 
+    if normalized_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND:
+        from . import chatgpt_catalog_service
+
+        try:
+            effort = chatgpt_catalog_service.requested_effort(normalized_profile)
+        except ValueError:
+            effort = "provider_default"
+            _log_settings_repair(
+                "Repaired invalid subscription reasoning effort.",
+                f"llm_profiles[{profile_index}].reasoning_effort",
+                func_name="_validate_llm_profile", repair_tracker=repair_tracker,
+            )
+        # Credentials belong exclusively to the OS-protected account store.
+        normalized_profile = {
+            key: value for key, value in normalized_profile.items()
+            if key in default_profile or key == "credential_ref"
+        }
+        normalized_profile["api_key"] = ""
+        normalized_profile["credential_ref"] = config.CHATGPT_CREDENTIAL_REF
+        normalized_profile["base_url"] = config.CHATGPT_BASE_URL
+        normalized_profile["reasoning_effort"] = effort
+        normalized_profile["reasoning_mode"] = chatgpt_catalog_service.reasoning_mode(effort)
     return normalized_profile
 
 

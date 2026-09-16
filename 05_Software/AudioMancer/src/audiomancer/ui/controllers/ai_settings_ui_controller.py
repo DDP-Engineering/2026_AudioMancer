@@ -34,6 +34,7 @@ def show_ai_settings_dialog(window) -> None:
     window._ai_settings_dialog.show()
     window._ai_settings_dialog.raise_()
     window._ai_settings_dialog.activateWindow()
+    window._chatgpt_auth_controller.start("status")
 
 
 def _persist_ai_settings_from_dialog(window, *, close_dialog: bool) -> None:
@@ -89,6 +90,10 @@ def connect_ai_profile_from_dialog(window) -> None:
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     current_profile = window._ai_settings_page.build_current_profile_payload()
     if current_profile is None:
+        return
+
+    if current_profile.get("backend_kind") == "chatgpt_subscription":
+        window._chatgpt_auth_controller.start("verify")
         return
 
     probe_result = ai_backend_service.probe_profile(current_profile)

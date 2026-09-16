@@ -1,0 +1,33 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-UX-3e905eaa"
+
+title = "Keep AI Settings actions visible with compact aligned profile defaults"
+
+status = "active"
+
+requirement = """
+Deferred layout and model-popup callbacks are cancelled when their page is destroyed. When AI Settings is resized or its font sizes change, AudioMancer shall keep Cancel, Apply and OK visible outside scrolling content, with workflow defaults below a compact independently scrollable profile list in a compact left column. Default labels remain on one line; default selectors share a font-derived compact width and the right editor uses stacked fields and action groups use font-derived natural widths. The initial dialog is 800x600 logical pixels bounded by the available screen. Columns stack when they cannot fit side by side; scrolling remains available for larger fonts or smaller windows. Rebuilding the profile list preserves its scroll offset and keeps the selected item visible. Idle subscription guidance and catalog status occupy no form rows; tooltips retain catalog/account details while progress and errors remain visible.
+"""
+
+verification = "Automated: English/Romanian geometry checks at 10, 16 and 22 point fonts and 480/780 pixel heights verify fixed reachable equal-width footer buttons, compact scrollable profiles and defaults below the list. Actual-theme geometry at 980x740 with 12 point controls fits without body scrollbars, retains single-line labels, compact selectors and actions for local and subscription profiles. Widths from 480 through 1400 verify compact selector widths, responsive columns and no horizontal overflow at normal fonts; profile-list tests verify stable scrolling. Legacy profile editing tests remain green. Inspection: offscreen rendered settings confirm aligned columns and no experimental subscription text block."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/chatgpt_auth_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_settings_layout.py::test_pending_layout_refresh_is_cancelled_when_page_is_destroyed", "05_Software/AudioMancer/tests/test_ai_settings_layout.py", "05_Software/AudioMancer/tests/test_chatgpt_ui.py", "05_Software/AudioMancer/tests/test_ai_settings_page.py", "05_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_settings_dialogs_scroll"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-09-16
+updated = 2026-09-16

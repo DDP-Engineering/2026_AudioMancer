@@ -61,6 +61,7 @@ from audiomancer.ui.controllers import (
     book_analysis_ui_controller,
     character_voices_ui_controller,
     characters_ui_controller,
+    chatgpt_auth_ui_controller,
     home_ui_controller,
     misc_ui_controller,
     narator_voice_ui_controller,
@@ -501,7 +502,7 @@ class MainWindow(QMainWindow):
         manifest: dict[str, object] | None,
         current_language: str,
     ) -> None:
-        """Refresh the optional Book Analysis page from chunks and its durable document."""
+        """@brief Refresh the optional Book Analysis page from chunks and its durable document."""
         selected_profile_id = self._book_analysis_page.current_profile_id()
         self._book_analysis_page.set_project_active(project_root is not None)
         state = book_analysis_state_service.build_book_analysis_state(
@@ -1284,9 +1285,13 @@ class MainWindow(QMainWindow):
             ui_state_service.translate("dialog.ai_settings_title", current_language)
         )
         self._ai_settings_dialog.setMinimumSize(640, 480)
-        self._ai_settings_dialog.resize(800, 600)
+        available = self.screen().availableGeometry()
+        self._ai_settings_dialog.resize(min(800, available.width() - 32), min(600, available.height() - 64))
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
+        self._chatgpt_auth_controller = chatgpt_auth_ui_controller.ChatGPTAuthUiController(
+            self._ai_settings_page, self._ai_settings_dialog, self,
+        )
         self._ai_settings_page._connect_button.clicked.connect(
             lambda _checked=False: ai_settings_ui_controller.connect_ai_profile_from_dialog(self)
         )
@@ -1298,7 +1303,7 @@ class MainWindow(QMainWindow):
             lambda _checked=False: ai_settings_ui_controller.save_ai_settings_from_dialog(self)
         )
         self._ai_settings_page.load_settings(self._settings_payload)
-        ai_layout.addWidget(self._build_scrollable_container(self._ai_settings_page))
+        ai_layout.addWidget(self._ai_settings_page)
 
         self._tts_settings_dialog = QDialog(self)
         self._tts_settings_dialog.setWindowTitle(
@@ -1438,6 +1443,9 @@ class MainWindow(QMainWindow):
             self,
             self._operation_shutdown_wait_timeout_ms,
         ):
+            event.ignore()
+            return
+        if not self._chatgpt_auth_controller.shutdown():
             event.ignore()
             return
         self._ai_translation_page.flush_pending_translation_edit()

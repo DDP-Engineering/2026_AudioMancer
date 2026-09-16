@@ -1,7 +1,14 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Book Analysis
 
-## Purpose
+## Routing
+
+For resumable book summaries, context packing or the Book Analysis page, start
+at `book_analysis_service` and its scripted-provider tests. Credential-free
+request changes belong to `book_analysis_document_service.safe_profile_fingerprint`.
+Provider model discovery and effort enforcement belong to AI Runtime.
+
+## Purpose and boundaries
 
 Book Analysis is an optional supporting operation shown immediately after Text
 Chunking. It reads only a completed, valid `chunks_text.json` and produces a
@@ -9,7 +16,14 @@ short reader-facing summary plus expandable literary and audiobook details in
 the project's selected translation target language. It does not advance a
 workflow stage, block Translation, or supply canonical character/voice data.
 
-## Runtime Design
+## Public interface
+
+The service consumes completed canonical chunks, the project target language and
+one enabled AI profile. It writes `book_analysis.json`; document/state services
+validate checkpoints and project operation summaries. The page/controller expose
+Analyze and Reset through the shared operation runner.
+
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -36,17 +50,18 @@ The request budget requires at least 16,384 configured context tokens. Source
 text uses at most 50 percent of local LM Studio/Ollama context or 30 percent of
 an online OpenAI-compatible context, and is further reduced by prompt, output,
 reasoning, and safety reserves. Model names are never allowlisted. The profile's
-reasoning preference is provider default, enabled, or disabled; a compatible
-provider may reject that control, in which case the shared provider retries
-without it.
+reasoning budget summary is provider default, enabled, or disabled. API-key/local
+providers may reject explicit reasoning, in which case the shared provider can
+retry without it. Subscription profiles select exact model-supported effort;
+the subscription adapter rejects unavailable explicit levels without changing effort.
 
-## Durable Contract And Resume
+## Invariants
 
 `book_analysis.json` has two independent slots: `completed_report` and
 `candidate_run`. A completed report remains visible while a new candidate is
 incomplete or failed. Resume requires the exact canonical source descriptor,
 target language, profile ID, and credential-free request-configuration
-fingerprint. Selecting a different profile starts a new candidate while
+fingerprint, including subscription reasoning effort. Selecting a different profile starts a new candidate while
 preserving the completed report. A completed report becomes stale only when
 the chunks or target language change; current profile selection does not make
 it stale.
@@ -57,7 +72,20 @@ AI logs. If Reset is pressed while the worker is active, the controller requests
 cooperative cancellation and deletes only after the worker reaches a terminal
 callback, preventing a late checkpoint from recreating the document.
 
-## UI Contract
+## Key behaviors
+
+Each leaf, consolidation and final request includes its canonical JSON Schema in
+the prompt, independently of provider enforcement. A parsed response with invalid
+fields or types is regenerated once from the original source, using the same
+profile and language. Both responses' usage is merged on successful recovery;
+each request remains in the AI exchange log. A second invalid response produces a
+model-format error while accepted checkpoints and completed reports remain intact.
+Cancellation and transport failures propagate without format regeneration.
+Prompt budgets include the schema and retry reminder. Resuming refreshes these
+reserves while retaining any smaller source allowance from an overflow reduction.
+
+`REQ-FUNC-cfd856fa` includes subscription effort in the request fingerprint;
+changing it preserves completed reports but starts a new analysis candidate.
 
 The page contains one AI-profile selector and exactly two action buttons:
 Analyze and Reset. Context size and reasoning preference remain on AI Settings.
@@ -73,7 +101,16 @@ perspective and structure, tone, pacing, diction, emotional range, audiobook
 guidance, uncertainties, and source evidence. Model strings are rendered as
 plain text.
 
-## Validation
+## Change map
+
+| Change | Entry point | Verification |
+| --- | --- | --- |
+| Request budget | book_analysis_budget_service | test_book_analysis_budget_service.py |
+| Resume identity or persistence | book_analysis_document_service | test_book_analysis_document_service.py |
+| Summary consolidation | book_analysis_service | test_book_analysis_service.py |
+| Operator state and controls | BookAnalysisPage, book_analysis_ui_controller | Page and controller tests |
+
+### Validation
 
 Automated coverage uses scripted in-process provider results and an autouse
 transport guard for every `test_book_analysis*` module. It reads no API keys,

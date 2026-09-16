@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# Licensed under AGPL-3.0 with additional Non-Commercial restriction.
+# See LICENSE.txt and LICENSE_NC.txt for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file test_book_analysis_service.py
+@brief Verify Book Analysis checkpoints, response contracts and recovery.
+@details Scripted providers exercise cancellation, budgets and schema validation
+         without network access or changes to operator projects.
+"""
+
+# IMPORTS
+
 import json
 
 import pytest
@@ -10,6 +24,7 @@ from audiomancer.services.operation_runtime_service import OperationCancelledErr
 
 
 def _profile(profile_id: str = "profile-a") -> dict[str, object]:
+    """@brief Provide test fixture behavior for profile."""
     return {
         "id": profile_id,
         "backend_kind": "lmstudio",
@@ -25,6 +40,7 @@ def _profile(profile_id: str = "profile-a") -> dict[str, object]:
 
 
 def _write_completed_chunks(project_root, texts: list[str]) -> None:
+    """@brief Provide test fixture behavior for write completed chunks."""
     chunks = [
         {
             "chunk_id": f"chunk-{index:04d}",
@@ -48,6 +64,7 @@ def _write_completed_chunks(project_root, texts: list[str]) -> None:
 
 
 def _intermediate(summary: str = "Summary") -> dict[str, object]:
+    """@brief Provide test fixture behavior for intermediate."""
     return {
         "summary": summary,
         "characters": [{"name": "Ana", "role": "protagonist"}],
@@ -61,6 +78,7 @@ def _intermediate(summary: str = "Summary") -> dict[str, object]:
 
 
 def _report() -> dict[str, object]:
+    """@brief Provide test fixture behavior for report."""
     return {
         "concise": {
             "book_type": "novel",
@@ -93,6 +111,7 @@ def _report() -> dict[str, object]:
 
 
 def _usage() -> dict[str, object]:
+    """@brief Provide test fixture behavior for usage."""
     return {
         "input_tokens": 10,
         "output_tokens": 5,
@@ -102,6 +121,7 @@ def _usage() -> dict[str, object]:
 
 
 def _install_budget(monkeypatch, source_budget: int = 2, item_tokens: int = 1) -> None:
+    """@brief Provide test fixture behavior for install budget."""
     monkeypatch.setattr(
         book_analysis_service.book_analysis_budget_service,
         "build_request_budget",
@@ -123,6 +143,7 @@ def _install_budget(monkeypatch, source_budget: int = 2, item_tokens: int = 1) -
 
 
 def _install_successful_provider(monkeypatch) -> dict[str, list[object]]:
+    """@brief Provide test fixture behavior for install successful provider."""
     calls: dict[str, list[object]] = {
         "leaf_chunk_ids": [],
         "consolidation_sizes": [],
@@ -132,6 +153,7 @@ def _install_successful_provider(monkeypatch) -> dict[str, list[object]]:
     }
 
     def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **kwargs):
+        """@brief Provide test fixture behavior for fake chat json."""
         schema_name = kwargs["response_schema_name"]
         marker = "SOURCE_JSON:\n"
         source_items = json.loads(user_prompt.split(marker, maxsplit=1)[1])
@@ -154,6 +176,7 @@ def test_analyze_book_resumes_after_validated_leaf_without_repeating_it(
     monkeypatch,
     tmp_path,
 ) -> None:
+    """@brief Verify analyze book resumes after validated leaf without repeating it."""
     _write_completed_chunks(tmp_path, ["one", "two", "three", "four"])
     cancelled = {"value": False}
     leaf_chunk_ids: list[list[str]] = []
@@ -161,6 +184,7 @@ def test_analyze_book_resumes_after_validated_leaf_without_repeating_it(
     _install_budget(monkeypatch)
 
     def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **kwargs):
+        """@brief Provide test fixture behavior for fake chat json."""
         schema_name = kwargs["response_schema_name"]
         if schema_name == "book_analysis_leaf":
             marker = "SOURCE_JSON:\n"
@@ -197,6 +221,7 @@ def test_analyze_book_resumes_after_validated_leaf_without_repeating_it(
 
 
 def test_analyze_book_covers_every_chunk_once_in_order(monkeypatch, tmp_path) -> None:
+    """@brief Verify analyze book covers every chunk once in order."""
     _write_completed_chunks(tmp_path, ["one", "two", "three", "four", "five"])
     _install_budget(monkeypatch)
     calls = _install_successful_provider(monkeypatch)
@@ -209,6 +234,7 @@ def test_analyze_book_covers_every_chunk_once_in_order(monkeypatch, tmp_path) ->
 
 
 def test_ai_requests_share_candidate_transaction_log(monkeypatch, tmp_path) -> None:
+    """@brief Verify ai requests share candidate transaction log."""
     _write_completed_chunks(tmp_path, ["one", "two", "three", "four"])
     _install_budget(monkeypatch)
     calls = _install_successful_provider(monkeypatch)
@@ -232,6 +258,7 @@ def test_ai_requests_share_candidate_transaction_log(monkeypatch, tmp_path) -> N
 
 
 def test_analyze_book_builds_recursive_consolidation_levels(monkeypatch, tmp_path) -> None:
+    """@brief Verify analyze book builds recursive consolidation levels."""
     _write_completed_chunks(tmp_path, [str(index) for index in range(8)])
     _install_budget(monkeypatch)
     calls = _install_successful_provider(monkeypatch)
@@ -248,6 +275,7 @@ def test_invalid_leaf_response_is_checkpointed_as_failure_not_success(
     monkeypatch,
     tmp_path,
 ) -> None:
+    """@brief Verify invalid leaf response is checkpointed as failure not success."""
     _write_completed_chunks(tmp_path, ["one"])
     _install_budget(monkeypatch)
     monkeypatch.setattr(
@@ -256,7 +284,7 @@ def test_invalid_leaf_response_is_checkpointed_as_failure_not_success(
         lambda *_args, **_kwargs: {"payload": {"summary": "incomplete"}, "usage": _usage()},
     )
 
-    with pytest.raises(book_analysis_document_service.BookAnalysisDocumentError):
+    with pytest.raises(ValueError, match="model response.*required format"):
         book_analysis_service.analyze_book(tmp_path, _profile(), "ro")
 
     document = book_analysis_document_service.load_document(tmp_path)
@@ -269,6 +297,7 @@ def test_different_profile_replaces_candidate_but_preserves_completed_report(
     monkeypatch,
     tmp_path,
 ) -> None:
+    """@brief Verify different profile replaces candidate but preserves completed report."""
     _write_completed_chunks(tmp_path, ["old source"])
     _install_budget(monkeypatch)
     _install_successful_provider(monkeypatch)
@@ -280,6 +309,7 @@ def test_different_profile_replaces_candidate_but_preserves_completed_report(
     cancelled = {"value": False}
 
     def cancel_after_leaf(_profile_payload, _system_prompt, _user_prompt, **kwargs):
+        """@brief Provide test fixture behavior for cancel after leaf."""
         if kwargs["response_schema_name"] == "book_analysis_leaf":
             cancelled["value"] = True
         return {"payload": _intermediate(), "usage": _usage()}
@@ -299,6 +329,7 @@ def test_different_profile_replaces_candidate_but_preserves_completed_report(
 
 
 def test_context_overflow_repacks_once_with_smaller_budget(monkeypatch, tmp_path) -> None:
+    """@brief Verify context overflow repacks once with smaller budget."""
     _write_completed_chunks(tmp_path, ["one", "two"])
     _install_budget(monkeypatch, source_budget=4, item_tokens=2)
     monkeypatch.setattr(
@@ -310,6 +341,7 @@ def test_context_overflow_repacks_once_with_smaller_budget(monkeypatch, tmp_path
     successful_leaf_windows: list[list[str]] = []
 
     def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **kwargs):
+        """@brief Provide test fixture behavior for fake chat json."""
         schema_name = kwargs["response_schema_name"]
         source_items = json.loads(user_prompt.split("SOURCE_JSON:\n", maxsplit=1)[1])
         if schema_name == "book_analysis_leaf":
@@ -334,11 +366,13 @@ def test_context_overflow_repacks_once_with_smaller_budget(monkeypatch, tmp_path
 
 
 def test_oversized_single_chunk_sends_no_provider_request(monkeypatch, tmp_path) -> None:
+    """@brief Verify oversized single chunk sends no provider request."""
     _write_completed_chunks(tmp_path, ["oversized"])
     _install_budget(monkeypatch, source_budget=2, item_tokens=3)
     provider_called = {"value": False}
 
     def fail_if_called(*_args, **_kwargs):
+        """@brief Provide test fixture behavior for fail if called."""
         provider_called["value"] = True
         raise AssertionError("provider must not be called")
 
@@ -351,6 +385,7 @@ def test_oversized_single_chunk_sends_no_provider_request(monkeypatch, tmp_path)
 
 
 def test_completed_report_uses_project_target_language(monkeypatch, tmp_path) -> None:
+    """@brief Verify completed report uses project target language."""
     _write_completed_chunks(tmp_path, ["one"])
     _install_budget(monkeypatch)
     calls = _install_successful_provider(monkeypatch)
@@ -363,6 +398,7 @@ def test_completed_report_uses_project_target_language(monkeypatch, tmp_path) ->
 
 
 def test_final_report_has_every_concise_and_detail_field(monkeypatch, tmp_path) -> None:
+    """@brief Verify final report has every concise and detail field."""
     _write_completed_chunks(tmp_path, ["one"])
     _install_budget(monkeypatch)
     _install_successful_provider(monkeypatch)
@@ -391,3 +427,110 @@ def test_final_report_has_every_concise_and_detail_field(monkeypatch, tmp_path) 
         "uncertainties",
         "source_evidence",
     }
+
+
+@pytest.mark.parametrize("phase", ["leaf", "consolidation", "report"])
+def test_response_contract_and_one_format_retry(monkeypatch, tmp_path, phase):
+    """@brief Supply schema in text and recover wrong-shaped JSON once in every phase."""
+    calls = []
+    valid = _report() if phase == "report" else _intermediate()
+
+    def provider(profile, system, prompt, **kwargs):
+        """@brief Capture the request and simulate valid JSON with incompatible fields."""
+        calls.append((profile, system, prompt, kwargs))
+        return {"payload": {"summary": {"text": "wrong shape"}} if len(calls) == 1 else valid,
+                "usage": _usage()}
+
+    monkeypatch.setattr(book_analysis_service.llm_provider_service, "chat_json", provider)
+    profile = _profile()
+    profile["supports_structured_output"] = False
+    if phase == "report":
+        response = book_analysis_service._request_report(profile, [], "ro", None, tmp_path / "ai.log", {})
+    else:
+        response = book_analysis_service._request_intermediate(
+            profile, "book_analysis_" + ("leaf" if phase == "leaf" else "consolidate"),
+            "book_analysis_" + phase, [], "ro", None, tmp_path / "ai.log", {})
+    assert response["payload"] == valid
+    assert response["usage"]["total_tokens"] == 30
+    assert len(calls) == 2
+    for _, _, prompt, kwargs in calls:
+        schema = json.loads(prompt.split("RESPONSE_SCHEMA_JSON:\n", 1)[1].split("\nEND_RESPONSE_SCHEMA", 1)[0])
+        assert schema == kwargs["response_schema"]
+        assert kwargs["retry_count_override"] == 0
+    assert calls[1][3]["log_context"]["format_retry"] is True
+    assert "previous response" in calls[1][2].lower()
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_response_format_retry_is_bounded_and_cancellable(monkeypatch, tmp_path, cancel):
+    """@brief Reject repeated invalid structures and check cancellation before regeneration."""
+    calls = []
+
+    def provider(*args, **kwargs):
+        """@brief Return wrong-shaped but syntactically valid JSON."""
+        calls.append(kwargs)
+        return {"payload": {"summary": {}}, "usage": _usage()}
+
+    monkeypatch.setattr(book_analysis_service.llm_provider_service, "chat_json", provider)
+    error = OperationCancelledError if cancel else ValueError
+    with pytest.raises(error) as caught:
+        book_analysis_service._request_report(
+            _profile(), [], "ro", lambda: cancel and bool(calls), tmp_path / "ai.log", {})
+    assert len(calls) == (1 if cancel else 2)
+    if not cancel:
+        assert "model response" in str(caught.value)
+        assert "document is incompatible" not in str(caught.value)
+
+
+def test_response_format_retry_does_not_repeat_transport_failures(monkeypatch, tmp_path):
+    """@brief Format recovery never repeats a failed provider request."""
+    calls = []
+
+    def provider(*args, **kwargs):
+        """@brief Fail before any usable model response exists."""
+        calls.append(kwargs)
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(book_analysis_service.llm_provider_service, "chat_json", provider)
+    with pytest.raises(RuntimeError, match="connection lost"):
+        book_analysis_service._request_report(_profile(), [], "ro", None, tmp_path / "ai.log", {})
+    assert len(calls) == 1
+
+
+def test_response_contract_budget_refresh_preserves_checkpoint_and_reduction(monkeypatch, tmp_path):
+    """@brief Include schemas in the budget and refresh older resumes without expanding source."""
+    _write_completed_chunks(tmp_path, ["one"])
+    _install_budget(monkeypatch)
+    budget_builder = book_analysis_service.book_analysis_budget_service.build_request_budget
+    shells = []
+
+    def capture_budget(profile, shell):
+        """@brief Capture the actual prompt overhead used by the planner."""
+        shells.append(shell)
+        return budget_builder(profile, shell)
+
+    monkeypatch.setattr(book_analysis_service.book_analysis_budget_service, "build_request_budget", capture_budget)
+    calls = _install_successful_provider(monkeypatch)
+    with pytest.raises(OperationCancelledError):
+        book_analysis_service.analyze_book(
+            tmp_path, _profile(), "ro", cancel_requested=lambda: bool(calls["leaf_chunk_ids"]))
+    document = book_analysis_document_service.load_document(tmp_path)
+    candidate = document["candidate_run"]
+    saved_leaf = candidate["leaf_summaries"][0]
+    candidate["budget"]["source_budget_tokens"] = 1
+    candidate["budget"]["prompt_reserve_tokens"] = 0
+    candidate["budget"]["overflow_retry_used"] = True
+    book_analysis_document_service.write_document(tmp_path, document)
+    result = book_analysis_service.analyze_book(tmp_path, _profile(), "ro")
+    resumed = book_analysis_document_service.load_document(tmp_path)["candidate_run"]
+    assert result["resumed"] is True
+    assert resumed["leaf_summaries"] == [saved_leaf]
+    assert resumed["budget"]["source_budget_tokens"] == 1
+    assert resumed["budget"]["prompt_reserve_tokens"] == 100
+    assert resumed["budget"]["overflow_retry_used"] is True
+    assert calls["leaf_chunk_ids"] == [["chunk-0001"]]
+    for schema in (book_analysis_service._INTERMEDIATE_SCHEMA, book_analysis_service._FINAL_REPORT_SCHEMA):
+        assert json.dumps(schema, ensure_ascii=False, separators=(",", ":")) in shells[0]
+    assert book_analysis_service._FORMAT_RETRY_INSTRUCTION in shells[0]
+
+# END OF FILE
