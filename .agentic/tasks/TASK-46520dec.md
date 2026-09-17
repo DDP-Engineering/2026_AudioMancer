@@ -9,7 +9,7 @@ SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
 # TASK-46520dec - Skip Speech Block chunks the provider refuses and surface incomplete coverage
 
-stage: deliver
+stage: done
 type: feature
 path: full
 interaction: autopilot
@@ -21,15 +21,13 @@ opened: 2026-09-17
 
 ## Done checklist (current stage)
 
-- [x] diff reviewed semantically against scope, requirements, design and error paths
-- [x] component knowledge and project context reconciled with the built candidate
-- [x] every requirement re-read; status, prose, affected paths and linked tests current
-- [x] manual and inspection verifications completed and recorded
-- [x] two independent review verdicts recorded for the current candidate
-- [x] `evolution` refreshed and every changed path reviewed
-- [x] final proof run on the current candidate, with command and exit recorded
-- [x] consolidated validation result logged
-- [x] `stage: deliver`
+- [x] validated candidate confirmed unchanged; otherwise returned to validate
+- [x] validation evidence, diff, exclusions, and outcome presented
+- [x] delivery confirmed by the human
+- [x] journal and report included in the delivery commit
+- [x] agreed outcome delivered, normally a PR
+- [x] close-out committed after the outcome succeeded, or carried by the
+      delivery commit where nothing could fail after it
 
 ## Frame
 
@@ -392,6 +390,13 @@ counterpart.
   tests/test_localization_parity.py tests/test_ui_localization_coverage.py`; exit=0; 159 passed.
   `uv run ruff check` and `uv run python -m py_compile` clean on every changed file.
   The targeted-verification deviation recorded above still stands for this candidate.
+- 2026-09-17 deliver: the user exercised the application by hand against the candidate and approved
+  delivery. Delivery commit 831ae0f on `master` carries all fourteen files, including this journal,
+  the four requirements, the knowledge page and the CHANGELOG Unreleased entry.
+- 2026-09-17 done: task closed at the user's request. The commit and the push are the user's own
+  actions on `master`; no push, PR, release or deployment was performed or observed from here, so
+  none is claimed. The close-out edits in this journal are uncommitted and belong to the user's next
+  commit. `.agentic/rtm.csv` and `.agentic/rtm.md` remain untracked, as they were before this task.
 
 ## Rulings
 
@@ -399,22 +404,22 @@ counterpart.
 ## Handoff
 
 
-current: deliver
+current: done
 status: ready
-next: write the CHANGELOG Unreleased entry, run the delivery report, stage the files and hand back a commit message without committing
-must_read: .agentic/steps/6_deliver.md, CHANGELOG.md, .agentic/PROJECT.md
+next: none - task closed; the user owns the push of commit 831ae0f
+must_read: .agentic/tasks/TASK-46520dec.md
 blockers: none
 
 ## Stage report
 
-stage: validate
+stage: deliver
 result: completed
-current: deliver
-changed: 05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py, 05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py, 05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py, 05_Software/AudioMancer/tests/test_speech_blocks_service.py, 05_Software/AudioMancer/tests/test_speech_blocks_state_service.py, CHANGELOG.md, .agentic/knowledge/Speech_Blocks.md, 4 requirement files, .agentic/tasks/TASK-46520dec.md
-evidence: uv run pytest -q on the seven targeted modules, exit=0, 159 passed; the ambience regression proved red without its guard and green with it; ruff check and py_compile clean on all changed files; aegis check --task TASK-46520dec --strict, errors=0, strict: ok
-issues: full impacted set (63 files) not run - the user limited verification to targeted tests and will exercise the application by hand
-next: deliver - present the corrected candidate, stage the files and hand back a commit message without committing
-needs_user: yes
+current: done
+changed: delivered in commit 831ae0f - speech_blocks_service.py, speech_blocks_state_service.py, ui_state_service.py, test_speech_blocks_service.py, test_speech_blocks_state_service.py, CHANGELOG.md, .agentic/knowledge/Speech_Blocks.md, 4 requirement files, .agentic/tasks/TASK-46520dec.md and its anchor/evolution records
+evidence: uv run pytest -q on the seven targeted modules, exit=0, 159 passed; the scene-ambience regression proved red without its guard and green with it; ruff check and py_compile clean on all changed files; aegis check --task TASK-46520dec --strict, errors=0, strict: ok; the user verified the application by hand before approving
+issues: full impacted set (63 files) not run - the user limited verification to targeted tests and verified the application by hand; push of commit 831ae0f is the user's own action and is not claimed here
+next: none - task closed
+needs_user: no
 spec_compliance: approved
 implementation_quality: approved
 review_round: 2
@@ -430,5 +435,20 @@ review_round: 2
   - frame: working on `master` instead of a task branch, standing repository instruction from the user.
 - explicit review: enabled; spec_compliance=approved; implementation_quality=approved; review_round=1
 - diff vs task base dd7d245: 16 file(s) changed, 3045 line(s) added; 2 file(s) not content-scanned
+- checks: errors=0 warnings=10 notes=1
+- checklist: 9/9 done
+
+## Delivery report (2026-09-17)
+
+- stage: deliver; type: feature; path: full; branch: master
+- requirements:
+  - REQ-REL-a54e058d - Continue Speech Blocks generation past a refused source chunk
+  - REQ-DATA-2caf6e05 - Persist skipped Speech Block source chunks in the authoritative document
+  - REQ-FUNC-27de7656 - Withhold Speech Blocks completion while source coverage is incomplete
+  - REQ-UX-4260d6a4 - Name the skipped Speech Block source chunks to the operator
+- deviations: 1 recorded
+  - frame: working on `master` instead of a task branch, standing repository instruction from the user.
+- explicit review: enabled; spec_compliance=approved; implementation_quality=approved; review_round=2
+- diff vs task base dd7d245: 16 file(s) changed, 3200 line(s) added; 2 file(s) not content-scanned
 - checks: errors=0 warnings=10 notes=1
 - checklist: 9/9 done
