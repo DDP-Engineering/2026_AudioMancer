@@ -1,0 +1,40 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-REL-a54e058d"
+
+title = "Continue Speech Blocks generation past a refused source chunk"
+
+status = "active"
+
+requirement = """
+If the AI provider fails for one source chunk during Speech Blocks generation, whether on its block-splitting request or on its scene-ambience analysis, then generation shall discard that chunk's blocks, continue with the next source chunk through the last one, and leave the failed chunk with no persisted blocks.
+"""
+
+verification = "A service regression generates a multi-chunk document with a provider that raises a provider error for one middle chunk, then proves every other source chunk is covered, the failed chunk has no persisted blocks even when an earlier segment of it already checkpointed rows, a refusal raised by that chunk's scene-ambience analysis skips it the same way, and an operator cancellation raised from either seam still aborts the run instead of being skipped."
+
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_generation_skips_a_refused_source_chunk_and_continues",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_refused_chunk_discards_its_checkpointed_segment_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_generation_aborts_when_the_provider_seam_cancels",
+]
+
+
+spec = ""
+
+priority = "high"
+rationale = "A single provider refusal previously ended the whole run: a 142-chunk book stopped after 93 chunks and left 49 unattempted. Leaving the refused chunk wholly uncovered is what lets the existing first-uncovered-chunk resume regenerate it later."
+
+created = 2026-09-17
+updated = 2026-09-17

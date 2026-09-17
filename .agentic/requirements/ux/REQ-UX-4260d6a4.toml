@@ -1,0 +1,39 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-UX-4260d6a4"
+
+title = "Name the skipped Speech Block source chunks to the operator"
+
+status = "active"
+
+requirement = """
+When the Speech Blocks document records skipped source chunks, the Speech Blocks state notes shall tell the operator how many source chunks have no blocks and name them.
+"""
+
+verification = "A state regression builds notes from a document recording two skipped chunk identifiers and proves the notes carry the uncovered count and both identifiers; notes built from a fully covered document carry no such entry."
+
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_notes_name_the_skipped_source_chunks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_notes_omit_skipped_entries_for_a_covered_document",
+]
+
+
+spec = ""
+
+priority = "normal"
+rationale = "The operator asked not to be misled that everything is split; a withheld completion status alone does not say which passages are missing."
+
+created = 2026-09-17
+updated = 2026-09-17

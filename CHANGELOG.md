@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Speech Blocks generation no longer stops when the AI provider refuses a source
+  chunk. That chunk is left without blocks and the run carries on to the end of
+  the book, so one refusal no longer costs the rest of the run.
+- Speech Blocks stays in progress until every source chunk has blocks, even when
+  the blocks already generated are all approved, so a part-finished plan is never
+  presented as ready for audio.
+
+### Added
+
+- Speech Blocks notes report how many source chunks have no blocks and name each
+  one, so it is clear which passages still need splitting with another AI profile
+  or by hand. Generating again picks up exactly those chunks and leaves the rest
+  untouched.
+
 ## [2.2.0] - 2026-09-16
 
 ### Fixed

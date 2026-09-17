@@ -687,4 +687,71 @@ def _create_chunked_project(tmp_path, name: str):
     return project_root, project_workspace_service.load_manifest(project_root)
 
 
+def test_build_speech_blocks_notes_name_the_skipped_source_chunks() -> None:
+    """
+    @brief      Verify notes report the uncovered source chunk count and name every skipped chunk.
+    @return     None.
+    @exception  None
+    """
+    notes = speech_blocks_state_service.build_speech_blocks_notes(
+        manifest={"source_document": {"original_name": "story.txt"}},
+        source_chunks=[
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Chunk one"},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Chunk two"},
+            {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "Chunk three"},
+        ],
+        report={
+            "speech_blocks_stage_status": "in_progress",
+            "processed_chunk_count": 1,
+            "speech_block_count": 1,
+            "approved_block_count": 1,
+            "warning_count": 0,
+            "warnings": [],
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+        },
+        operation_state={
+            "status": "review_pending",
+            "progress_current": 1,
+            "progress_total": 3,
+            "metadata": {"skipped_chunk_ids": ["chunk-0002", "chunk-0003"]},
+        },
+        has_ai_profiles=True,
+        language="en",
+    )
+
+    assert any("2" in note and "without speech blocks" in note for note in notes)
+    assert any("chunk-0002" in note for note in notes)
+    assert any("chunk-0003" in note for note in notes)
+
+
+def test_build_speech_blocks_notes_omit_skipped_entries_for_a_covered_document() -> None:
+    """
+    @brief      Verify a fully covered document adds no skipped-chunk notes.
+    @return     None.
+    @exception  None
+    """
+    notes = speech_blocks_state_service.build_speech_blocks_notes(
+        manifest={"source_document": {"original_name": "story.txt"}},
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Chunk one"}],
+        report={
+            "speech_blocks_stage_status": "completed",
+            "processed_chunk_count": 1,
+            "speech_block_count": 1,
+            "approved_block_count": 1,
+            "warning_count": 0,
+            "warnings": [],
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+        },
+        operation_state={
+            "status": "review_pending",
+            "progress_current": 1,
+            "progress_total": 1,
+            "metadata": {"skipped_chunk_ids": []},
+        },
+        has_ai_profiles=True,
+        language="en",
+    )
+
+    assert not any("without speech blocks" in note for note in notes)
+
 # END OF FILE

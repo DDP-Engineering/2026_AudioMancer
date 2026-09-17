@@ -3992,4 +3992,429 @@ def test_projected_completed_state_does_not_fabricate_timestamp() -> None:
     assert second["completed_at"] is None
 
 
+def test_generation_skips_a_refused_source_chunk_and_continues(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a refused source chunk is left uncovered while the remaining chunks are generated.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksRefusedChunk")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    _write_source_chunks(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "The council opened the hearing."},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Residents asked for a crossing."},
+            {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        _refusing_chat_json({"chunk-0002"}),
+    )
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    covered_chunk_ids = {
+        str(block["chunk_id"]) for block in speech_blocks_service.load_speech_blocks(project_root)
+    }
+    assert covered_chunk_ids == {"chunk-0001", "chunk-0003"}
+    assert report["processed_chunk_count"] == 2
+    assert report["total_chunk_count"] == 3
+
+
+def test_refused_chunk_discards_its_checkpointed_segment_blocks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a chunk refused on a later segment keeps no blocks from its earlier segments.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksRefusedSegment")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    long_chunk_text = " ".join(f"Sentence {index}." for index in range(1, 700))
+    _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_chunk_text}])
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+    segment_calls: list[str] = []
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Answer the first segment and refuse every later segment of the same chunk.
+        @return     Fake Speech Blocks response payload.
+        @exception  RuntimeError Raised for every segment after the first.
+        """
+        segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
+        segment_calls.append(segment_text)
+        if len(segment_calls) > 1:
+            raise RuntimeError("ChatGPT returned an invalid or incomplete response.")
+        return {
+            "payload": {
+                "blocks": [
+                    {
+                        "text": segment_text,
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "confidence": "high",
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    profile_payload = {**_profile_payload(), "context_window": 2048, "output_reserve_tokens": 512}
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
+
+    assert len(segment_calls) > 1
+    assert speech_blocks_service.load_speech_blocks(project_root) == []
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert document is not None
+    assert document["failure"] == {"skipped_chunk_ids": ["chunk-0001"]}
+
+
+def test_generation_aborts_when_the_provider_seam_cancels(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify operator cancellation raised at the provider seam still aborts the run.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksCancelSeam")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+
+    def _cancelling_chat_json(_profile, _system_prompt, _user_prompt, **_kwargs):
+        """
+        @brief      Raise operator cancellation from the provider seam.
+        @return     None.
+        @exception  OperationCancelledError Always raised.
+        """
+        raise speech_blocks_service.OperationCancelledError("Speech Blocks generation cancelled.")
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _cancelling_chat_json)
+
+    with pytest.raises(speech_blocks_service.OperationCancelledError):
+        speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+
+def test_refused_source_chunks_are_recorded_in_the_persisted_document(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify skipped source chunk identifiers survive reload and a clean run records none.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSkipRecord")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    _write_source_chunks(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "The council opened the hearing."},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Residents asked for a crossing."},
+            {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
+            {"chunk_id": "chunk-0004", "sequence_index": 4, "text": "The works began in autumn."},
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        _refusing_chat_json({"chunk-0002", "chunk-0004"}),
+    )
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert document is not None
+    assert document["failure"] == {"skipped_chunk_ids": ["chunk-0002", "chunk-0004"]}
+    state = speech_blocks_service.load_operation_state(project_root)
+    assert state is not None
+    assert state["metadata"]["skipped_chunk_ids"] == ["chunk-0002", "chunk-0004"]
+
+    speech_blocks_service.reset_speech_blocks(project_root)
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        _refusing_chat_json(set()),
+    )
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    clean_document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert clean_document is not None
+    assert clean_document["failure"] is None
+    clean_state = speech_blocks_service.load_operation_state(project_root)
+    assert clean_state is not None
+    assert clean_state["metadata"]["skipped_chunk_ids"] == []
+
+
+def test_stage_status_withholds_completion_while_a_source_chunk_has_no_blocks() -> None:
+    """
+    @brief      Verify an approved but incompletely covered document does not project a completed stage.
+    @return     None.
+    @exception  None
+    """
+    covered = speech_blocks_service._project_speech_blocks_report(  # noqa: SLF001
+        _coverage_document(["chunk-0001", "chunk-0002", "chunk-0003"]),
+        3,
+    )
+    with_hole = speech_blocks_service._project_speech_blocks_report(  # noqa: SLF001
+        _coverage_document(["chunk-0001", "chunk-0003"]),
+        3,
+    )
+
+    assert covered["speech_blocks_stage_status"] == speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED
+    assert with_hole["speech_blocks_stage_status"] != speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED
+    assert with_hole["processed_chunk_count"] == 2
+    assert with_hole["total_chunk_count"] == 3
+
+
+def _refusal_render_prompt(_name, variables):
+    """
+    @brief      Render a test prompt that carries the chunk identifier and text.
+    @param[in]  _name Ignored prompt template name.
+    @param[in]  variables Prompt template variables.
+    @return     Rendered prompt text.
+    @exception  None
+    """
+    if "chunk_text" not in variables:
+        return "system prompt"
+    return f"Chunk id: {variables['chunk_id']}\nChunk text:\n{variables['chunk_text']}"
+
+
+def _refusing_chat_json(refused_chunk_ids: set[str]):
+    """
+    @brief      Build a fake provider that refuses the named chunks and answers the rest.
+    @param[in]  refused_chunk_ids Chunk identifiers the fake provider refuses.
+    @return     Fake `chat_json` callable.
+    @exception  None
+    """
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Answer one Speech Blocks request unless its chunk is refused.
+        @return     Fake Speech Blocks response payload.
+        @exception  RuntimeError Raised for a refused chunk.
+        """
+        prompt_text = str(user_prompt)
+        chunk_id = prompt_text.split("Chunk id: ", maxsplit=1)[1].split("\n", maxsplit=1)[0]
+        if chunk_id in refused_chunk_ids:
+            raise RuntimeError("ChatGPT returned an invalid or incomplete response.")
+        segment_text = prompt_text.split("Chunk text:\n", maxsplit=1)[1]
+        return {
+            "payload": {
+                "blocks": [
+                    {
+                        "text": segment_text,
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "confidence": "high",
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 5, "output_tokens": 4, "total_tokens": 9, "usage_available": True},
+        }
+
+    return _fake_chat_json
+
+
+def _coverage_document(chunk_ids: list[str]) -> dict[str, object]:
+    """
+    @brief      Build one valid Speech Blocks document whose blocks cover the named chunks.
+    @param[in]  chunk_ids Chunk identifiers to cover with one approved block each.
+    @return     Speech Blocks document payload.
+    @exception  None
+    """
+    return {
+        "status": "review_pending",
+        "source": {"kind": "original", "language": "en", "fingerprint": "fingerprint"},
+        "ai_profile_id": "profile-1",
+        "instructions": "",
+        "scene_ambience": {},
+        "response_contract": "direct_blocks",
+        "token_usage": {},
+        "budget_metadata": {},
+        "checkpoint": {},
+        "failure": None,
+        "blocks": [
+            {
+                "speech_block_id": f"{index:04d}-000001",
+                "sequence_index": 1,
+                "chunk_id": chunk_id,
+                "text": "Covered text.",
+                "warning_flags": [],
+                "approved": True,
+            }
+            for index, chunk_id in enumerate(chunk_ids, start=1)
+        ],
+    }
+
+
+def test_regenerating_a_skipped_chunk_clears_it_from_the_record(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify regenerating one skipped chunk covers it and leaves the record naming only the rest.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSkipRecovery")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    _write_source_chunks(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "The council opened the hearing."},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Residents asked for a crossing."},
+            {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        _refusing_chat_json({"chunk-0002", "chunk-0003"}),
+    )
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        _refusing_chat_json(set()),
+    )
+    speech_blocks_service.regenerate_chunk_speech_blocks(
+        project_root,
+        manifest,
+        "chunk-0002",
+        _profile_payload(),
+    )
+
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert document is not None
+    assert document["failure"] == {"skipped_chunk_ids": ["chunk-0003"]}
+    covered_chunk_ids = {
+        str(block["chunk_id"]) for block in speech_blocks_service.load_speech_blocks(project_root)
+    }
+    assert covered_chunk_ids == {"chunk-0001", "chunk-0002"}
+
+
+def test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify a refused scene-ambience request skips its source chunk and lets the run finish.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksAmbienceRefusal")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    _write_source_chunks(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "The council opened the hearing."},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Residents asked for a crossing."},
+            {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        _refusal_render_prompt,
+    )
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **kwargs):
+        """
+        @brief      Answer every request except the scene-ambience analysis of one chunk.
+        @return     Fake Speech Blocks or Scene Ambience response payload.
+        @exception  RuntimeError Raised for the refused scene-ambience request.
+        """
+        log_context = kwargs.get("log_context") or {}
+        usage = {"input_tokens": 5, "output_tokens": 4, "total_tokens": 9, "usage_available": True}
+        if str(log_context.get("response_contract", "")) == "scene_ambience_blocks":
+            if str(log_context.get("chunk_id", "")) == "chunk-0002":
+                raise RuntimeError("ChatGPT returned an invalid or incomplete response.")
+            return {"payload": {"scene_ambience_blocks": []}, "usage": usage}
+        segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
+        return {
+            "payload": {
+                "blocks": [
+                    {
+                        "text": segment_text,
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "confidence": "high",
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": usage,
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    speech_blocks_service.start_or_continue_generation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        settings_payload={
+            "scene_ambience_placement": "openers_closers_and_scene_changes",
+            "scene_ambience_duration_seconds": 5,
+            "scene_ambience_max_blocks_per_sequence": 6,
+        },
+    )
+
+    covered_chunk_ids = {
+        str(block["chunk_id"]) for block in speech_blocks_service.load_speech_blocks(project_root)
+    }
+    assert covered_chunk_ids == {"chunk-0001", "chunk-0003"}
+    document = speech_blocks_service.load_speech_blocks_document(project_root)
+    assert document is not None
+    assert document["failure"] == {"skipped_chunk_ids": ["chunk-0002"]}
+
 # END OF FILE

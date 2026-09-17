@@ -1,0 +1,39 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-FUNC-27de7656"
+
+title = "Withhold Speech Blocks completion while source coverage is incomplete"
+
+status = "active"
+
+requirement = """
+While any current source chunk has no Speech Blocks, the Speech Blocks stage status shall report the stage as in progress rather than completed, even when every persisted block is approved.
+"""
+
+verification = "A state regression projects a document whose blocks are all approved but whose source snapshot contains one chunk with no blocks, and proves the stage status is the in-progress token; the same projection with every chunk covered and approved reports completed."
+
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_report_state_service.py",
+]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_stage_status_withholds_completion_while_a_source_chunk_has_no_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_generation_skips_a_refused_source_chunk_and_continues",
+]
+
+
+spec = ""
+
+priority = "high"
+rationale = "Approval count alone cannot see a missing chunk, so an otherwise fully approved plan with holes would present itself as ready and release the downstream TTS stages on an incomplete book."
+
+created = 2026-09-17
+updated = 2026-09-17

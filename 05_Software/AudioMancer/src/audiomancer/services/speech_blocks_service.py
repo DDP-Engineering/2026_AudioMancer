@@ -148,6 +148,20 @@ class SpeechBlocksDocumentError(ValueError):
     """Raised when the authoritative single Speech Blocks document is invalid."""
 
 
+class _ChunkGenerationRefusedError(RuntimeError):
+    """Raised when the AI provider fails one Speech Blocks source chunk."""
+
+    def __init__(self, chunk_id: str) -> None:
+        """
+        @brief      Carry the refused source chunk identifier.
+        @param[in]  chunk_id Source chunk identifier the provider refused.
+        @return     None.
+        @exception  None
+        """
+        self.chunk_id = str(chunk_id).strip()
+        super().__init__(self.chunk_id)
+
+
 def _validate_speech_blocks_document(payload: object) -> None:
     """Validate the strict, hard-break single Speech Blocks document contract."""
     if not isinstance(payload, dict) or set(payload) != set(_SPEECH_BLOCKS_DOCUMENT_FIELDS):
@@ -265,6 +279,56 @@ def _document_checkpoint(operation_state: OperationStatePayload) -> dict[str, ob
     return checkpoint
 
 
+def _coerce_skipped_chunk_ids(value: object) -> list[str]:
+    """Return the normalized skipped source chunk identifiers carried by a payload value."""
+    if not isinstance(value, list):
+        return []
+    return [str(chunk_id).strip() for chunk_id in value if str(chunk_id).strip()]
+
+
+def _document_skipped_chunk_ids(document: SpeechBlocksDocumentPayload) -> list[str]:
+    """Return the skipped source chunk identifiers recorded on a Speech Blocks document."""
+    failure = document.get("failure")
+    if not isinstance(failure, dict):
+        return []
+    return _coerce_skipped_chunk_ids(failure.get("skipped_chunk_ids"))
+
+
+def _restore_skipped_chunk_ids(operation_state: dict[str, object] | None) -> list[str]:
+    """Return the skipped source chunk identifiers carried by a projected operation state."""
+    if not isinstance(operation_state, dict):
+        return []
+    metadata = operation_state.get("metadata")
+    if not isinstance(metadata, dict):
+        return []
+    return _coerce_skipped_chunk_ids(metadata.get("skipped_chunk_ids"))
+
+
+def _uncovered_skipped_chunk_ids(
+    operation_state: dict[str, object] | None,
+    speech_blocks: list[SpeechBlockPayload],
+) -> list[str]:
+    """Return recorded skipped source chunk identifiers that still carry no Speech Blocks."""
+    covered_chunk_ids = {str(block.get("chunk_id", "")).strip() for block in speech_blocks}
+    return [
+        chunk_id
+        for chunk_id in _restore_skipped_chunk_ids(operation_state)
+        if chunk_id not in covered_chunk_ids
+    ]
+
+
+def _ordered_skipped_chunk_ids(
+    source_chunks: list[dict[str, object]],
+    skipped_chunk_ids: set[str],
+) -> list[str]:
+    """Return the skipped source chunk identifiers in canonical source order."""
+    return [
+        chunk_id
+        for chunk_id in (str(chunk.get("chunk_id", "")).strip() for chunk in source_chunks)
+        if chunk_id in skipped_chunk_ids
+    ]
+
+
 def _compose_speech_blocks_document(
     speech_blocks: list[SpeechBlockPayload],
     report: SpeechBlocksReportPayload,
@@ -291,6 +355,7 @@ def _compose_speech_blocks_document(
     if not isinstance(budget_metadata, dict):
         budget_metadata = metadata.get("budget_metadata")
     status = str(operation_state.get("status", "not_started")) if isinstance(operation_state, dict) else "not_started"
+    skipped_chunk_ids = _coerce_skipped_chunk_ids(metadata.get("skipped_chunk_ids"))
     return {
         "status": status,
         "source": source,
@@ -303,7 +368,7 @@ def _compose_speech_blocks_document(
         "token_usage": token_usage_service.coerce_token_usage(report.get("token_usage", metadata.get("token_usage"))),
         "budget_metadata": dict(budget_metadata) if isinstance(budget_metadata, dict) else {},
         "checkpoint": _document_checkpoint(operation_state),
-        "failure": None,
+        "failure": {"skipped_chunk_ids": skipped_chunk_ids} if skipped_chunk_ids else None,
         "blocks": [dict(block) for block in speech_blocks],
     }
 
@@ -408,6 +473,7 @@ def _project_operation_state(
         "scene_ambience_generation": dict(scene_ambience),
         "speech_blocks_response_contract": str(document.get("response_contract", ""))
         or _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
+        "skipped_chunk_ids": _document_skipped_chunk_ids(document),
     }
     budget_metadata = document.get("budget_metadata")
     if isinstance(budget_metadata, dict) and budget_metadata:
@@ -726,6 +792,11 @@ def start_or_continue_generation(
         additional_speech_block_instructions_fingerprint,
     )
     start_segment_index = _restore_next_speech_blocks_segment_index(existing_state, source_chunks, start_chunk_index)
+    skipped_chunk_ids = (
+        set(_restore_skipped_chunk_ids(existing_state))
+        if start_chunk_index > 0 or existing_blocks
+        else set()
+    )
     token_usage = (
         token_usage_service.restore_token_usage(
             None if existing_report is None else existing_report.get("token_usage"),
@@ -785,6 +856,7 @@ def start_or_continue_generation(
             additional_speech_block_instructions=additional_speech_block_instructions,
             scene_ambience_settings=scene_ambience_settings,
             speech_blocks_response_contract=speech_blocks_response_contract,
+            skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
             active_chunk_id=(
                 str(source_chunks[start_chunk_index].get("chunk_id", ""))
                 if start_chunk_index < len(source_chunks) and start_segment_index > 0
@@ -883,66 +955,79 @@ def start_or_continue_generation(
                     additional_speech_block_instructions=additional_speech_block_instructions,
                     scene_ambience_settings=scene_ambience_settings,
                     speech_blocks_response_contract=speech_blocks_response_contract,
+                    skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
                     active_chunk_id=current_chunk_id if not chunk_complete else "",
                     next_segment_index=next_segment_index if not chunk_complete else None,
                     completed_segment_count=next_segment_index if not chunk_complete else None,
                 ),
             )
 
-        chunk_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
-            ai_profile_payload,
-            system_prompt,
-            source_chunk,
-            source_language,
-            speaker_catalog,
-            resolved_voice_assignment_mode,
-            tts_budget,
-            prompt_names[1],
-            budget_metadata,
-            additional_speech_block_instructions,
-            log_path,
-            {
-                "operation_kind": "speech_blocks",
-                "stage_label": "speech_blocks_chunk",
-                "profile_id": profile_id,
-                "chunk_index": chunk_index + 1,
-                "chunk_total": len(source_chunks),
-                "chunk_id": str(source_chunk.get("chunk_id", "")),
-            },
-            cancel_requested,
-            "Speech Blocks generation cancelled while waiting for the model response.",
-            start_segment_index=start_segment_index if chunk_index == start_chunk_index else 0,
-            segment_progress_callback=(
-                _persist_segment_progress
-                if str(resolved_voice_assignment_mode).strip() != "same_narrator"
-                else None
-            ),
-        )
-        token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
-        if bool(scene_ambience_settings["enabled"]):
-            ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
+        try:
+            chunk_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
                 ai_profile_payload,
+                system_prompt,
                 source_chunk,
                 source_language,
-                chunk_blocks,
-                scene_ambience_settings,
+                speaker_catalog,
+                resolved_voice_assignment_mode,
+                tts_budget,
+                prompt_names[1],
+                budget_metadata,
+                additional_speech_block_instructions,
                 log_path,
                 {
                     "operation_kind": "speech_blocks",
-                    "stage_label": "scene_ambience_chunk",
+                    "stage_label": "speech_blocks_chunk",
                     "profile_id": profile_id,
                     "chunk_index": chunk_index + 1,
                     "chunk_total": len(source_chunks),
                     "chunk_id": str(source_chunk.get("chunk_id", "")),
                 },
                 cancel_requested,
+                "Speech Blocks generation cancelled while waiting for the model response.",
+                start_segment_index=start_segment_index if chunk_index == start_chunk_index else 0,
+                segment_progress_callback=(
+                    _persist_segment_progress
+                    if str(resolved_voice_assignment_mode).strip() != "same_narrator"
+                    else None
+                ),
             )
-            token_usage = token_usage_service.merge_token_usage(token_usage, ambience_token_usage)
-            chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
+            if bool(scene_ambience_settings["enabled"]):
+                ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
+                    ai_profile_payload,
+                    source_chunk,
+                    source_language,
+                    chunk_blocks,
+                    scene_ambience_settings,
+                    log_path,
+                    {
+                        "operation_kind": "speech_blocks",
+                        "stage_label": "scene_ambience_chunk",
+                        "profile_id": profile_id,
+                        "chunk_index": chunk_index + 1,
+                        "chunk_total": len(source_chunks),
+                        "chunk_id": str(source_chunk.get("chunk_id", "")),
+                    },
+                    cancel_requested,
+                )
+                chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, ambience_token_usage)
+                chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
+            skipped_chunk_ids.discard(chunk_id)
+            chunk_refused = False
+        except _ChunkGenerationRefusedError:
+            chunk_blocks, chunk_refused = [], True
+            chunk_token_usage = token_usage_service.empty_token_usage()
+            skipped_chunk_ids.add(chunk_id)
+            all_blocks = [
+                block for block in all_blocks if str(block.get("chunk_id", "")).strip() != chunk_id
+            ]
+            covered_chunk_ids.discard(chunk_id)
+        token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
         chunk_blocks = _continue_chunk_sequence_indices(chunk_blocks, existing_chunk_block_count)
         all_blocks.extend(chunk_blocks)
         all_blocks = _renumber_speech_blocks(source_chunks, all_blocks)
-        covered_chunk_ids.add(chunk_id)
+        if not chunk_refused:
+            covered_chunk_ids.add(chunk_id)
         report = _rebuild_report_with_prompt_rules(
             all_blocks,
             source_language,
@@ -977,6 +1062,7 @@ def start_or_continue_generation(
                 additional_speech_block_instructions=additional_speech_block_instructions,
                 scene_ambience_settings=scene_ambience_settings,
                 speech_blocks_response_contract=speech_blocks_response_contract,
+                skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
             ),
         )
         _emit_progress(
@@ -994,7 +1080,7 @@ def start_or_continue_generation(
         source_kind,
         profile_id,
         len(source_chunks),
-        len(source_chunks),
+        len({str(block.get("chunk_id", "")).strip() for block in all_blocks} - {""}),
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
@@ -1018,6 +1104,7 @@ def start_or_continue_generation(
         additional_speech_block_instructions=additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
         speech_blocks_response_contract=speech_blocks_response_contract,
+        skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
     )
     _persist_state(
         resolved_project_root,
@@ -1579,6 +1666,7 @@ def regenerate_chunk_speech_blocks(
         additional_speech_block_instructions=additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
         speech_blocks_response_contract=speech_blocks_response_contract,
+        skipped_chunk_ids=_uncovered_skipped_chunk_ids(existing_state, all_blocks),
     )
     _persist_state(
         resolved_project_root,
@@ -2048,6 +2136,7 @@ def _generate_budgeted_chunk_blocks(
     @param[in]  cancellation_message Message used when the request is cancelled.
     @return     Generated Speech Blocks, warning entries, and provider token usage for this chunk.
     @exception  OperationCancelledError Raised when the operator cancels the run.
+    @exception  _ChunkGenerationRefusedError Raised when the AI provider fails this chunk.
     """
     if str(voice_assignment_mode).strip() == "same_narrator":
         raise_if_cancelled(cancel_requested)
@@ -2100,6 +2189,8 @@ def _generate_budgeted_chunk_blocks(
             )
         except OperationCancelledError as error:
             raise OperationCancelledError(cancellation_message) from error
+        except RuntimeError as error:
+            raise _ChunkGenerationRefusedError(str(source_chunk.get("chunk_id", "")).strip()) from error
         chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, response_result.get("usage"))
         segment_blocks, segment_warnings = _normalize_chunk_blocks(
             segment_chunk,
@@ -2334,6 +2425,7 @@ def _generate_scene_ambience_blocks(
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Scene ambience blocks and provider token usage.
     @exception  OperationCancelledError Raised when the operator cancels the run.
+    @exception  _ChunkGenerationRefusedError Raised when the AI provider fails this chunk.
     """
     if not speech_blocks:
         return [], token_usage_service.empty_token_usage()
@@ -2357,6 +2449,8 @@ def _generate_scene_ambience_blocks(
         raise OperationCancelledError(
             "Speech Blocks generation cancelled while waiting for scene ambience analysis."
         ) from error
+    except RuntimeError as error:
+        raise _ChunkGenerationRefusedError(str(source_chunk.get("chunk_id", "")).strip()) from error
     return (
         _normalize_scene_ambience_response(
             dict(response_result.get("payload", {})),
@@ -2841,6 +2935,7 @@ def _build_operation_state_with_prompt_rules(
     next_segment_index: int | None = None,
     completed_segment_count: int | None = None,
     source_chunk_count: int | None = None,
+    skipped_chunk_ids: list[str] | None = None,
 ) -> OperationStatePayload:
     """
     @brief      Build Speech Blocks operation state with operator prompt-rule metadata.
@@ -2861,6 +2956,7 @@ def _build_operation_state_with_prompt_rules(
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @param[in]  speech_blocks_response_contract Active model response contract token.
     @param[in]  source_chunk_count Optional shared projection count when source rows are unavailable.
+    @param[in]  skipped_chunk_ids Source chunk identifiers the provider refused during this run.
     @return     Persisted operation-state payload.
     @exception  None
     """
@@ -2905,6 +3001,7 @@ def _build_operation_state_with_prompt_rules(
     metadata["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
     metadata["scene_ambience_generation"] = dict(scene_settings)
     metadata["speech_blocks_response_contract"] = response_contract
+    metadata["skipped_chunk_ids"] = _coerce_skipped_chunk_ids(skipped_chunk_ids)
     state["metadata"] = metadata
     resume_checkpoint = state.get("resume_checkpoint")
     if isinstance(resume_checkpoint, dict):
@@ -3178,6 +3275,7 @@ def _persist_report_update(
         scene_ambience_settings=scene_ambience_settings,
         speech_blocks_response_contract=_restore_persisted_speech_blocks_response_contract(operation_state),
         source_chunk_count=source_chunk_count,
+        skipped_chunk_ids=_uncovered_skipped_chunk_ids(operation_state, renumbered_blocks),
     )
     _persist_state(
         project_root,

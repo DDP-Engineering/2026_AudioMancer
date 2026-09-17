@@ -1,0 +1,39 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details.
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+
+
+schema = 1
+
+id = "REQ-DATA-2caf6e05"
+
+title = "Persist skipped Speech Block source chunks in the authoritative document"
+
+status = "active"
+
+requirement = """
+When Speech Blocks generation skips one or more source chunks after a provider failure, the authoritative Speech Blocks document shall record those source chunk identifiers so they survive reload.
+"""
+
+verification = "A service regression runs generation with a provider that fails two named chunks, reloads the persisted document from disk, and proves it reports exactly those two chunk identifiers in source order, while a run with no failure records none."
+
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_refused_source_chunks_are_recorded_in_the_persisted_document",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_refused_chunk_discards_its_checkpointed_segment_blocks",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_regenerating_a_skipped_chunk_clears_it_from_the_record",
+]
+
+
+spec = ""
+
+priority = "normal"
+rationale = "The operator recovers skipped chunks in a later session with a different profile or by hand, so the record has to outlive the process that produced it."
+
+created = 2026-09-17
+updated = 2026-09-17

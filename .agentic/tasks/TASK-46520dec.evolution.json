@@ -1,0 +1,110 @@
+{
+  "reports": [
+    {
+      "anchor_created_at": "2026-09-17T06:13:57.202482Z",
+      "anchor_head": "dd7d24509d04bd1a0e3a8d82e1a73bc066aa15bb",
+      "anchor_id": "f4654259fe1d5492",
+      "anchor_stage": "build",
+      "changes": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "0f61103aa3dd45fc85cc064a20c6a4a7e2c92dc5e59be992f44eade9db9a4b9e"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "3464cb888a0445daadc2b79fd329bbbdac522dd4f95cfaf93960f86691d0e84d"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "3c92527f5cdcb9bb8598f04692ead3a229e2ab45f8142e13741d72710c18bbdc"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "4f033ba414a58a24b38e2d709a22100f9db1f5c98baeff293b53b17487528230"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "755552235d5c58fedf7d93b29cf912cc1f72575f9a53783464b833259308586c"
+          },
+          "area": "source",
+          "before": {
+            "kind": "file",
+            "sha256": "301ec51193b6334fde3e935b68ec69fc092daa23fefc93c5b6052b85382d6d2f"
+          },
+          "path": "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "301cf6b50608272243a667d4e6a3947a6b346444f99c8ef22f34aefcefd68837"
+          },
+          "area": "tests",
+          "before": {
+            "kind": "file",
+            "sha256": "2026d02002b2dc86681bfeda2496bc47e8f20bcf2314f67ac0d95c1d7110154b"
+          },
+          "path": "05_Software/AudioMancer/tests/test_speech_blocks_service.py",
+          "status": "modified"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "b047d28c6587cc814aa29cbb68b63dc2217c945f8336e67932904290bc738a75"
+          },
+          "area": "other",
+          "before": {
+            "kind": "file",
+            "sha256": "8802ec3ad102563e13ee7e689071792f521c6e75400a40abfd42ca66ce238c86"
+          },
+          "path": "CHANGELOG.md",
+          "status": "modified"
+        }
+      ],
+      "counts": {
+        "area": {
+          "other": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 104
+          },
+          "source": {
+            "added": 0,
+            "modified": 3,
+            "removed": 0,
+            "unchanged": 114
+          },
+          "tests": {
+            "added": 0,
+            "modified": 1,
+            "removed": 0,
+            "unchanged": 135
+          }
+        },
+        "status": {
+          "added": 0,
+          "modified": 5,
+          "removed": 0,
+          "unchanged": 353
+        }
+      },
+      "current_head": "dd7d24509d04bd1a0e3a8d82e1a73bc066aa15bb",
+      "evolution_stage": "deliver",
+      "evolved_at": "2026-09-17T06:56:44.856417Z"
+    }
+  ],
+  "schema": 1,
+  "task": "TASK-46520dec"
+}

@@ -91,6 +91,20 @@ otherwise it uses the original Chunking document text through its shared reader.
   (REQ-REL-63e230dd). Generated output remains `review_pending` until every
   persisted block is approved, and resumptions require a compatible source
   snapshot and response-contract marker.
+- A source chunk whose AI request fails - its block-splitting request or its
+  scene-ambience analysis - is left with no blocks, recorded by
+  identifier in the document's `failure` field, and generation continues with the
+  next chunk to the end of the book; operator cancellation raised at the same
+  request seam still aborts the run (REQ-REL-a54e058d, REQ-DATA-2caf6e05). A chunk
+  refused on a later segment keeps none of its earlier checkpointed rows, so the
+  review resume above treats it as missing and regenerates it exactly once on the
+  next run. Regenerating or re-splitting one chunk carries the record forward and
+  drops the identifiers that have since gained blocks. Because processed chunks
+  are counted from the chunk identifiers present in the blocks, a document whose
+  blocks are all approved but whose source snapshot still has an uncovered chunk
+  stays in progress rather than completed (REQ-FUNC-27de7656), and the state notes
+  give the operator the uncovered count and every skipped identifier
+  (REQ-UX-4260d6a4).
 - Multi-segment generation assigns contiguous chunk-local order before every
   checkpoint. Resuming an active segment continues after the already persisted
   rows, including when Scene Ambience insertion renumbers the new chunk-local

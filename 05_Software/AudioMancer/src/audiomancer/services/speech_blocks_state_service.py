@@ -261,6 +261,17 @@ def build_speech_blocks_notes(
                     reason=str(warning_entry.get("reason", "")),
                 )
             )
+    skipped_chunk_ids = _skipped_chunk_ids(operation_state)
+    if skipped_chunk_ids:
+        notes.append(
+            ui_state_service.translate("speech_blocks.note_skipped_summary", language).format(
+                skipped_count=max(0, len(source_chunks) - processed_chunk_count)
+            )
+        )
+        notes.extend(
+            ui_state_service.translate("speech_blocks.note_skipped_entry", language).format(chunk_id=chunk_id)
+            for chunk_id in skipped_chunk_ids
+        )
     if not has_ai_profiles:
         notes.append(ui_state_service.translate("speech_blocks.note_no_profile", language))
         return notes
@@ -292,6 +303,22 @@ def build_speech_blocks_notes(
     else:
         notes.append(ui_state_service.translate("speech_blocks.note_ready", language))
     return notes
+
+
+def _skipped_chunk_ids(operation_state: dict[str, object] | None) -> list[str]:
+    """
+    @brief      Return the source chunk identifiers the AI provider refused during generation.
+    @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
+    @return     Ordered skipped source chunk identifiers.
+    @exception  None
+    """
+    metadata = {} if operation_state is None else operation_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return []
+    recorded = metadata.get("skipped_chunk_ids", [])
+    if not isinstance(recorded, list):
+        return []
+    return [str(chunk_id).strip() for chunk_id in recorded if str(chunk_id).strip()]
 
 
 def _merge_audio_preview_state(project_root: Path, speech_blocks: list[dict[str, object]]) -> list[dict[str, object]]:
