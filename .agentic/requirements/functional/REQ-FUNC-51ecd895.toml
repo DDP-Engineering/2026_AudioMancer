@@ -1,0 +1,15 @@
+schema = 1
+id = "REQ-FUNC-51ecd895"
+title = "Preserve text on artifact-only pages during Cleanup"
+status = "active"
+requirement = """
+When every extracted text unit on a page is a recognized page artifact, Cleanup shall retain those units with their artifact roles so the page remains valid under the whole-page deletion safeguard.
+"""
+verification = "Synthetic PDF ledgers with number-only pages at the beginning, middle or end and repeated header/footer-only pages complete Cleanup, preserve their artifact text/roles, remove artifacts on mixed pages, reload successfully and reject explicit whole-page deletions."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_cleanup_preserves_artifact_only_pages"]
+spec = "specs/cleanup_chunking.spec.md"
+priority = "high"
+rationale = "Illustrated covers and otherwise text-empty pages can contain only a page number or running header/footer."
+created = 2026-10-29
+updated = 2026-10-29

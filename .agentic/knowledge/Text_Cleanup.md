@@ -116,6 +116,11 @@ alphanumeric adjacency are rejected. When one or more page-artifact units are
 dropped, the renderer collapses their boundary chain to one typed separator
 between the nearest surviving narrative units.
 
+When all extracted units on a page are recognized artifacts, analysis retains
+them with their `page_artifact` roles. Artifact removal proceeds on pages with
+other surviving units, and the renderer independently enforces whole-page
+deletion safety (`REQ-FUNC-51ecd895`).
+
 `REQ-FUNC-e42171cc` makes the fusion gate inspect the completed rendered text
 and consecutive retained source spans rather than the original direct unit
 strings. Unicode-alphanumeric endpoints touching across spans are rejected,

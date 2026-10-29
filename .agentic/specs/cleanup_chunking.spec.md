@@ -218,8 +218,12 @@ relative line length, terminal punctuation, font signature, column, body band,
 vertical isolation, blank lines, and page transition.
 
 Page artifacts are removable only when they are bounded page numbers or repeat
-at a compatible page edge. After removal, the nearest surviving narrative
-units receive an explicit boundary decision. Two alphanumeric source slices
+at a compatible page edge. Removal also requires other text units to survive
+on the page. Pages made
+entirely of recognized artifacts retain all their units with page_artifact roles,
+preserving the renderer's safeguard against deleting every text unit on a page.
+After removal, the nearest surviving narrative units receive an explicit
+boundary decision. Two alphanumeric source slices
 may never become newly adjacent.
 
 Verse detection for non-native sources requires at least three consecutive

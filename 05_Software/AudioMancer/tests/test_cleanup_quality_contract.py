@@ -696,6 +696,123 @@ def test_removed_page_artifact_keeps_a_typed_safe_gap() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("artifact_only_page", "with_header"),
+    [(0, False), (2, False), (5, False), (2, True)],
+)
+def test_cleanup_preserves_artifact_only_pages(
+    tmp_path,
+    artifact_only_page,
+    with_header,
+) -> None:
+    """
+    @brief Cover REQ-FUNC-51ecd895 through Cleanup publication and strict reload.
+    @details Keep number-only and header/footer-only pages at document edges
+             or between narrative pages while enforcing whole-page safety.
+    @param[in] tmp_path Isolated project directory supplied by pytest.
+    @param[in] artifact_only_page Page with no narrative text.
+    @param[in] with_header Include a repeated header alongside each page number.
+    """
+    texts = []
+    layouts = []
+    locators = []
+    protected_indexes = []
+    artifact_indexes = []
+    for page_index in range(6):
+        page_items = []
+        if with_header:
+            page_items.append(("Running header", 0.05, True))
+        if page_index != artifact_only_page:
+            page_items.append((f"Narrative on page {page_index + 1}.", 0.5, False))
+        page_items.append((str(page_index + 1), 0.98, True))
+        for text, position, is_artifact in page_items:
+            if is_artifact:
+                artifact_indexes.append(len(texts))
+            if page_index == artifact_only_page:
+                protected_indexes.append(len(texts))
+            texts.append(text)
+            layouts.append({"relative_vertical_position": position})
+            locators.append({"page_index": page_index})
+    boundaries = [
+        ("\n\n\f\n\n", "page")
+        if left["page_index"] != right["page_index"]
+        else ("\n", "visual_line")
+        for left, right in zip(locators, locators[1:], strict=False)
+    ]
+    canonical_text, ledger = build_ledger(
+        texts,
+        source_format="pdf",
+        boundaries=boundaries,
+        layouts=layouts,
+        locators=locators,
+        origins=["layout"] * len(texts),
+        structure_quality="geometry_full",
+    )
+    project_root, manifest = build_project(
+        tmp_path, "ArtifactOnlyPage", canonical_text, ledger,
+    )
+
+    document = text_cleanup_service.clean_text(project_root, manifest)
+
+    assert document["status"] == "completed"
+    assert document["phase"] == "done"
+    assert text_cleanup_service.load_cleanup_document(project_root) == document
+    cleaned_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    protected_ids = {ledger["units"][index]["unit_id"] for index in protected_indexes}
+    expected_drops = {
+        ledger["units"][index]["unit_id"]
+        for index in artifact_indexes
+        if index not in protected_indexes
+    }
+    assert {
+        item["target_id"] for item in document["unit_operations"]
+        if item["action"] == "drop_page_artifact"
+    } == expected_drops
+    assert {
+        item["target_id"]: item["role"]
+        for item in document["unit_operations"]
+        if item["action"] == "set_role" and item["target_id"] in protected_ids
+    } == dict.fromkeys(protected_ids, "page_artifact")
+    retained_artifact_text = (
+        f"Running header {artifact_only_page + 1}"
+        if with_header else str(artifact_only_page + 1)
+    )
+    assert retained_artifact_text in cleaned_text.splitlines()
+    assert cleaned_text.count("Running header") == int(with_header)
+    for page_index in range(6):
+        if page_index != artifact_only_page:
+            assert f"Narrative on page {page_index + 1}." in cleaned_text
+            assert str(page_index + 1) not in cleaned_text.splitlines()
+
+    # A caller-supplied deletion must still be rejected by the independent guard.
+    unsafe_operations = [
+        *document["unit_operations"],
+        *[
+            {"action": "drop_page_artifact", "target_id": target_id}
+            for target_id in protected_ids
+        ],
+    ]
+    with pytest.raises(
+        cleanup_renderer_service.CleanupRenderError,
+        match="may not remove every text unit on a page",
+    ):
+        cleanup_renderer_service.render_cleanup(
+            canonical_text, ledger, unsafe_operations, document["boundaries"],
+        )
+
+    # A checkpoint written by the older policy must be rebuilt on retry.
+    document["unit_operations"] = unsafe_operations
+    document["status"] = "finalizing"
+    document["phase"] = "rendering"
+    (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
+        json.dumps(document), encoding="utf-8",
+    )
+    recovered = text_cleanup_service.clean_text(project_root, manifest)
+    assert recovered["status"] == "completed"
+    assert text_cleanup_service.load_cleanup_document(project_root) == recovered
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == cleaned_text
+
+
 def test_non_native_verse_uses_semantic_line_breaks_and_excludes_dialogue() -> None:
     """Cover S-0003/S-0004 and REQ-FUNC-8034d33d-df7f-412f-ae51-45e3dc8cb017."""
     canonical_text, ledger = build_ledger(
