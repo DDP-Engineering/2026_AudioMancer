@@ -524,6 +524,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     read-only, and <strong>Cleaned Text Preview</strong> on the right.
                 </p>
                 <h3>Running It</h3>
+                <p>
+                    If a page contains only recognized page numbers, headers or footers, Cleanup keeps
+                    that text so the page is not emptied. This also lets illustrated covers with only
+                    a page number pass cleanup. Artifacts on pages with other text are removed as usual.
+                </p>
                 <ol>
                     <li>Press <strong>Extract Text</strong>. If a completed extraction already exists, AudioMancer asks first, because a new extraction deletes the current extraction and every later result.</li>
                     <li>Choose an <strong>AI Profile (optional)</strong>. Leave it at <strong>(none)</strong> for a purely deterministic pass using local rules &mdash; the safest first attempt. Choose an enabled profile to let a model help with broken OCR, page artifacts and poor paragraph formatting.</li>

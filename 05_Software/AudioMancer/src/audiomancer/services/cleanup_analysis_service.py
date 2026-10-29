@@ -24,7 +24,7 @@ from audiomancer import config
 from audiomancer.services import cleanup_text_analysis_service
 from audiomancer.services.source_ledger_service import unit_text
 
-ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-08-06"
+ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-10-29"
 UNIT_ROLES = frozenset(
     (
         "body",
@@ -119,6 +119,13 @@ def analyze_cleanup(
     boundaries = [dict(item) for item in ledger["boundaries"]]
     warnings = [str(item) for item in ledger.get("warnings", [])]
     artifact_evidence = _page_artifact_evidence(canonical_text, units)
+    # Keep all artifact text on otherwise text-empty pages, such as illustrated
+    # covers with just a page number. The renderer requires a surviving unit.
+    pages_with_non_artifacts = {
+        _page_index(unit)
+        for unit in units
+        if str(unit["unit_id"]) not in artifact_evidence
+    }
     roles = {
         str(unit["unit_id"]): (
             "page_artifact"
@@ -141,7 +148,10 @@ def analyze_cleanup(
                 role=role,
             )
         )
-        if unit_id in artifact_evidence:
+        if (
+            unit_id in artifact_evidence
+            and _page_index(unit) in pages_with_non_artifacts
+        ):
             unit_operations.append(
                 _unit_operation(
                     "drop_page_artifact",

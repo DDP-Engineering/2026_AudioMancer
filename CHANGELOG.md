@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Text Cleanup completes for books with pages containing only a page number,
+  header or footer, such as illustrated covers. It keeps that page's artifact
+  text to preserve the safeguard against deleting an entire page.
+
 ### Changed
 
 - Speech Blocks generation no longer stops when the AI provider refuses a source
