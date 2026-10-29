@@ -9,7 +9,7 @@ SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
 # TASK-c6bc0143 - Preserve artifact-only pages during Cleanup
 
-stage: deliver
+stage: done
 type: fix
 path: full
 interaction: autopilot
@@ -26,7 +26,7 @@ opened: 2026-10-29
 - [x] New code follows binding style; all 65 whole-file audit findings verified identical to HEAD.
 - [x] User explicitly approved commit and push after requesting rebuilt packages at the same version.
 - [x] Journal and delivery report prepared for the approved commit.
-- [ ] Approved publication outcome completed and close-out committed.
+- [x] Approved delivery commit 37aa433 pushed and remote hash verified; journal close-out prepared for its own commit/push.
 
 ## Frame
 
@@ -83,6 +83,8 @@ Expected paths: analyzer, test_cleanup_quality_contract.py, component knowledge/
 - 2026-10-29 deliver authorization: User requested rebuilding delivery packages while preserving 2.2.0, then explicitly approved commit followed by push. Agreed outcome: commit the scoped source/docs and already-tracked rebuilt Windows ZIP, Linux ZIP/AppImage and checksum manifest to ddp/fix-cleanup-artifact-only-pages; push to the existing private origin. Public GitHub publication and PR creation are outside this requested outcome. The Public GitHub Delivery Notes apply to that separate executable-only repository; this internal repository already tracks these archives, including prior commit be8b8a7.
 - 2026-10-29 deliver packaging evidence: Existing Windows and WSL Ubuntu scripts rebuilt all three archives. Embedded bytecode in both ZIPs contains the new cleanup policy and artifact-only-page logic; packaged version 2.2.0, current guides/changelog and sanitized settings verified. Windows startup loads packaged settings unchanged and initializes Qt; existing Linux validator passed ZIP integrity, AppImage shared-library resolution and offscreen startup. All three SHA256SUMS entries verified again before commit. Version metadata unchanged. Source candidate unchanged since prior scoped verification; full-check limits remain recorded above.
 
+- 2026-10-29 deliver outcome: Commit 37aa433 created with the fix, regression, documentation, unchanged-version rebuilt packages and checksums (13 files). `git push --set-upstream origin ddp/fix-cleanup-artifact-only-pages` succeeded; remote branch hash verified equal to the delivery commit. No PR or public release created. Stage closed after the approved push succeeded; this journal-only close-out is committed and pushed separately as required by the delivery procedure.
+
 ## Rulings
 
 
@@ -90,21 +92,21 @@ Expected paths: analyzer, test_cleanup_quality_contract.py, component knowledge/
 
 ## Handoff
 
-current: deliver
+current: done
 status: ready
-next: Commit reviewed files and push ddp/fix-cleanup-artifact-only-pages to origin.
-must_read: .agentic/tasks/TASK-c6bc0143.md
-blockers: none for approved push; full-suite limitations remain recorded.
+next: None; approved commit and push completed.
+must_read:
+blockers: none for the requested delivery.
 
 ## Stage report
 
 stage: deliver
-result: in_progress
-current: deliver
-changed: Approved fix, regression, docs and rebuilt packages at version 2.2.0.
-evidence: 1543 service tests pass; package startup/integrity and all SHA256 checks pass.
-issues: Full check limited by unchanged UI timeout and existing style findings.
-next: Commit and push the reviewed task branch to private origin.
+result: completed
+current: done
+changed: Fix, regression, docs and version-2.2.0 packages committed and pushed.
+evidence: Delivery commit 37aa433 pushed to origin task branch; remote hash verified.
+issues: Full-check UI timeout and existing style findings remain documented; service/package checks passed.
+next: None; requested delivery completed.
 needs_user: no
 spec_compliance: approved
 implementation_quality: approved
