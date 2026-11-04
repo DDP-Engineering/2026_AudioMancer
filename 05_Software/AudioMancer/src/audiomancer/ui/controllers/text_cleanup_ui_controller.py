@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
 """
 @file text_cleanup_ui_controller.py
 @brief UI orchestration for Extraction and the single hybrid Cleanup action.
+@details Confirms reruns and delegates cancellable work and durable publication to services.
 """
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -26,22 +35,24 @@ if TYPE_CHECKING:
 
 
 def handle_extract_text_requested(window: MainWindow) -> None:
-    """Start a fresh structural Extraction run."""
+    """@brief Start a fresh structural Extraction run."""
     if window._current_project_root is None or window._current_manifest is None:
         return
+    if getattr(window, "_active_operation_kind", None) is not None:
+        return
     language = ui_state_service.current_language_from_settings(window._settings_payload)
-    if _completed_extraction_available(window._current_project_root):
-        if not _confirm(
-            window,
-            ui_state_service.translate("dialog.confirm_extraction_rerun_title", language),
-            ui_state_service.translate("project.confirm_extraction_rerun", language),
-        ):
-            return
-        text_extraction_service.reset_extraction_and_downstream(window._current_project_root)
-        window._current_manifest = text_cleanup_state_service.build_manifest_after_extraction_reset(
-            window._current_manifest
-        )
-        project_workspace_service.save_manifest(window._current_manifest, window._current_project_root)
+    if _completed_extraction_available(window._current_project_root) and not _confirm(
+        window,
+        ui_state_service.translate("dialog.confirm_extraction_rerun_title", language),
+        ui_state_service.translate("project.confirm_extraction_rerun", language),
+    ):
+        return
+    translation_page = getattr(window, "_ai_translation_page", None)
+    if translation_page is not None:
+        translation_page.flush_pending_translation_edit()
+    stop_playback = getattr(window, "stop_all_audio_playback", None)
+    if callable(stop_playback):
+        stop_playback()
     start_operation(
         window,
         "extraction",
@@ -54,7 +65,7 @@ def handle_extract_text_requested(window: MainWindow) -> None:
 
 
 def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None:
-    """Run Cleanup with an optional compatible AI profile."""
+    """@brief Run Cleanup with an optional compatible AI profile."""
     if window._current_project_root is None or window._current_manifest is None:
         return
     language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -104,7 +115,7 @@ def handle_cleanup_requested(window: MainWindow, profile_id: str | None) -> None
 
 
 def handle_reset_cleanup_requested(window: MainWindow) -> None:
-    """Reset Cleanup and downstream results after explicit confirmation."""
+    """@brief Reset Cleanup and downstream results after explicit confirmation."""
     if window._current_project_root is None or window._current_manifest is None:
         return
     language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -123,7 +134,7 @@ def handle_reset_cleanup_requested(window: MainWindow) -> None:
 
 
 def handle_save_cleaned_text_requested(window: MainWindow, cleaned_text: str) -> None:
-    """Persist an optional operator correction and invalidate downstream text work."""
+    """@brief Persist an optional operator correction and invalidate downstream text work."""
     if window._current_project_root is None or window._current_manifest is None:
         return
     language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -158,7 +169,7 @@ def start_operation(
     success_handler,
     failure_handler,
 ) -> None:
-    """Start one cancellable Extraction or Cleanup worker."""
+    """@brief Start one cancellable Extraction or Cleanup worker."""
     operation_runner_controller.start_threaded_operation(
         window,
         operation_kind,
@@ -176,18 +187,21 @@ def start_operation(
 
 
 def handle_extraction_success(window: MainWindow, result_payload: object) -> None:
+    """@brief Refresh project state after the worker published the new extraction."""
     _ = result_payload
     assert window._current_project_root is not None
     _refresh_and_notify(window, "status.text_extracted")
 
 
 def handle_cleanup_success(window: MainWindow, result_payload: object) -> None:
+    """@brief Refresh project state after Cleanup completes."""
     _ = result_payload
     assert window._current_project_root is not None
     _refresh_and_notify(window, "status.text_cleaned")
 
 
 def handle_operation_failure(window: MainWindow, error: Exception) -> None:
+    """@brief Show the operation error without changing persisted project results."""
     QMessageBox.warning(
         window,
         ui_state_service.translate(
@@ -199,6 +213,7 @@ def handle_operation_failure(window: MainWindow, error: Exception) -> None:
 
 
 def handle_operation_cancelled(window: MainWindow, message: str) -> None:
+    """@brief Refresh the preserved project state after cooperative cancellation."""
     _ = message
     _refresh_and_notify(window, "status.operation_cancelled")
 
@@ -230,6 +245,7 @@ def _resolve_ai_profile(
     settings_payload: dict[str, object],
     profile_id: str | None,
 ) -> dict[str, object] | None:
+    """@brief Resolve an optional enabled AI profile from application settings."""
     if not profile_id:
         return None
     profiles = settings_payload.get("llm_profiles", [])
@@ -248,6 +264,7 @@ def _resolve_ai_profile(
 
 
 def _completed_extraction_available(project_root) -> bool:
+    """@brief Check current extraction metadata and matching artifacts before rerun confirmation."""
     try:
         metadata = text_extraction_service.load_extraction_metadata(project_root)
     except (OSError, ValueError):
@@ -256,6 +273,7 @@ def _completed_extraction_available(project_root) -> bool:
 
 
 def _confirm(window: MainWindow, title: str, message: str) -> bool:
+    """@brief Ask for destructive rerun confirmation with a default negative answer."""
     decision = QMessageBox.question(
         window,
         title,
@@ -264,3 +282,6 @@ def _confirm(window: MainWindow, title: str, message: str) -> bool:
         QMessageBox.StandardButton.No,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+# END OF FILE

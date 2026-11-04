@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-"""Read-only UI state and shared manifest reset helpers for Cleanup."""
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file text_cleanup_state_service.py
+@brief Read-only Cleanup UI state and shared manifest reset helpers.
+@details Includes extraction readiness, diagnostics, optional profiles and text edit state.
+"""
+
+# IMPORTS
 
 from collections.abc import Iterable
 from pathlib import Path
@@ -14,14 +26,18 @@ from audiomancer.services import (
     text_extraction_service,
     ui_state_service,
 )
+from audiomancer.services.logging_service import get_component_logger, trace_function
+
+_LOGGER = get_component_logger("text_cleanup_state")
 
 
+@trace_function(_LOGGER)
 def build_text_cleanup_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
     language: str,
 ) -> dict[str, object]:
-    """Build the unified Text Cleanup page state without creating artifacts."""
+    """@brief Build the unified Text Cleanup page state without creating artifacts."""
     if project_root is None or manifest is None:
         return {
             "extracted_text": None,
@@ -40,9 +56,13 @@ def build_text_cleanup_state(
         extraction_metadata = text_extraction_service.load_extraction_metadata(project_root)
     except (OSError, ValueError):
         extraction_invalid = True
-    extracted_text = None if extraction_invalid else read_optional_project_text(
-        project_root,
-        config.EXTRACTED_TEXT_FILE_NAME,
+    extracted_text = (
+        None
+        if extraction_invalid
+        else read_optional_project_text(
+            project_root,
+            config.EXTRACTED_TEXT_FILE_NAME,
+        )
     )
     cleaned_text = read_optional_project_text(project_root, config.CLEANED_TEXT_FILE_NAME)
     cleanup_invalid = False
@@ -67,6 +87,8 @@ def build_text_cleanup_state(
         notes.append(ui_state_service.translate("text_cleanup.note_no_source", language))
     else:
         notes.append(ui_state_service.translate("text_cleanup.note_cleanup_ready", language))
+    if isinstance(extraction_metadata, dict):
+        notes.extend(str(warning) for warning in extraction_metadata["warnings"])
     if cleanup_invalid:
         notes.append("Cleanup data is invalid. Reset Cleanup and run it again.")
     elif cleanup_document is not None:
@@ -76,10 +98,7 @@ def build_text_cleanup_state(
         elif cleanup_document["status"] == "paused":
             notes.append("Cleanup is paused and can resume from its checkpoint.")
         else:
-            notes.append(
-                f"Cleanup status: {cleanup_document['status']} "
-                f"({cleanup_document['phase']})."
-            )
+            notes.append(f"Cleanup status: {cleanup_document['status']} ({cleanup_document['phase']}).")
 
     extraction_complete = (
         extracted_text is not None
@@ -95,11 +114,7 @@ def build_text_cleanup_state(
         config.CLEANUP_DOCUMENT_FILE_NAME,
         config.CLEANED_TEXT_FILE_NAME,
     )
-    quality_report = (
-        cleanup_document.get("quality_report")
-        if isinstance(cleanup_document, dict)
-        else None
-    )
+    quality_report = cleanup_document.get("quality_report") if isinstance(cleanup_document, dict) else None
     return {
         "extracted_text": extracted_text,
         "cleaned_text": cleaned_text,
@@ -115,9 +130,7 @@ def build_text_cleanup_state(
             else str((cleanup_document or {}).get("status", "not_started"))
         ),
         "uncertainty_count": (
-            int(quality_report.get("low_confidence_count", 0))
-            if isinstance(quality_report, dict)
-            else 0
+            int(quality_report.get("low_confidence_count", 0)) if isinstance(quality_report, dict) else 0
         ),
     }
 
@@ -125,7 +138,7 @@ def build_text_cleanup_state(
 def build_ai_cleanup_profile_state(
     settings_payload: dict[str, object] | None,
 ) -> dict[str, object]:
-    """Build enabled optional AI-profile entries for Cleanup."""
+    """@brief Build enabled optional AI-profile entries for Cleanup."""
     if not isinstance(settings_payload, dict) or not isinstance(settings_payload.get("llm_profiles"), list):
         return {"entries": [], "selected_profile_id": None}
     entries: list[tuple[str, str | None]] = []
@@ -147,13 +160,13 @@ def save_cleaned_text_edit(
     project_root: Path,
     cleaned_text: str,
 ) -> dict[str, object]:
-    """Persist an optional operator correction and keep Chunking immediately ready."""
+    """@brief Persist an optional operator correction and keep Chunking immediately ready."""
     text_cleanup_service.save_user_cleaned_text(project_root, cleaned_text)
     return project_workspace_service.load_manifest(project_root)
 
 
 def reset_cleanup(project_root: Path, manifest: dict[str, object]) -> dict[str, object]:
-    """Delete Cleanup and downstream artifacts, then reset their manifest summaries."""
+    """@brief Delete Cleanup and downstream artifacts, then reset their manifest summaries."""
     text_cleanup_service.reset_cleanup_and_downstream(project_root)
     updated = build_manifest_after_operation_reset(manifest, "cleanup")
     project_workspace_service.save_manifest(updated, project_root)
@@ -163,7 +176,7 @@ def reset_cleanup(project_root: Path, manifest: dict[str, object]) -> dict[str, 
 def normalized_manifest_operations(
     manifest: dict[str, object],
 ) -> dict[str, dict[str, object]]:
-    """Return every required compact manifest operation summary."""
+    """@brief Return every required compact manifest operation summary."""
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
         operations = {}
@@ -178,7 +191,7 @@ def normalized_manifest_operations(
 
 
 def build_manifest_after_extraction_reset(manifest: dict[str, object]) -> dict[str, object]:
-    """Reset all generated operation summaries after a fresh Extraction request."""
+    """@brief Reset all generated operation summaries after a fresh Extraction request."""
     return project_workspace_service.build_manifest_after_operation_reset(
         manifest,
         "extraction",
@@ -190,7 +203,7 @@ def build_manifest_after_operation_reset(
     operation_kind: str,
     preserve_operation_kinds: Iterable[str] | None = None,
 ) -> dict[str, object]:
-    """Delegate shared compact-summary reset construction to Project Lifecycle."""
+    """@brief Delegate shared compact-summary reset construction to Project Lifecycle."""
     return project_workspace_service.build_manifest_after_operation_reset(
         manifest,
         operation_kind,
@@ -199,7 +212,7 @@ def build_manifest_after_operation_reset(
 
 
 def read_optional_project_text(project_root: Path, relative_path: str | None) -> str | None:
-    """Read one optional project-root UTF-8 text artifact."""
+    """@brief Read one optional project-root UTF-8 text artifact."""
     if not relative_path:
         return None
     artifact_path = project_root / relative_path

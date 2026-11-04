@@ -66,7 +66,7 @@ def test_cleanup_state_exposes_runtime_quality_and_manual_save(tmp_path) -> None
 
 
 def test_cleanup_reset_removes_artifacts_and_forces_fresh_analysis(tmp_path) -> None:
-    """Verify Cleanup reset removes completed artifacts before a fresh run starts."""
+    """@brief Verify Cleanup reset removes completed artifacts before a fresh run starts."""
     project_root, manifest = _extracted_project(tmp_path, "ResetCleanup")
     text_cleanup_service.clean_text(project_root, manifest)
     downstream_artifact = project_root / config.CHUNK_ARTIFACT_FILE_NAME
@@ -130,6 +130,7 @@ def test_ai_cleanup_profile_state_preserves_nonempty_whitespace_label() -> None:
         "selected_profile_id": "local",
     }
 
+
 # LOCAL HELPERS
 
 
@@ -154,6 +155,17 @@ def _extracted_project(tmp_path, name):
     project_workspace_service.save_manifest(manifest, project_root)
     text_extraction_service.extract_text(project_root, manifest)
     return project_root, manifest
+
+
+def test_extraction_warnings_are_visible_in_cleanup_notes(tmp_path):
+    """@brief Expose actionable extraction diagnostics alongside statistics in both UI languages."""
+    root, manifest = _extracted_project(tmp_path, "Warnings")
+    metadata = text_extraction_service.load_extraction_metadata(root)
+    metadata["warnings"] = ["PDF page 2 contains only images; review whether OCR is needed."]
+    text_extraction_service.write_extraction_metadata(root, metadata)
+    for language in ("en", "ro"):
+        state = text_cleanup_state_service.build_text_cleanup_state(root, manifest, language)
+        assert metadata["warnings"][0] in state["notes"]
 
 
 # END OF FILE

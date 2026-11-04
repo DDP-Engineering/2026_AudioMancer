@@ -9,8 +9,7 @@
 """
 @file test_text_extraction_service.py
 @brief Focused tests for the AudioMancer text extraction service.
-@details Verifies self-contained extraction artifacts, resumable state, and
-         deterministic text extraction for the supported source formats.
+@details Verifies canonical artifacts, restart behavior and deterministic extraction for supported formats.
 """
 
 # IMPORTS
@@ -27,10 +26,11 @@ from odf.text import P
 import pytest
 
 from audiomancer import config
+from audiomancer.extraction import encoding as text_encoding
+from audiomancer.extraction.formats import html_content, pdf
 from audiomancer.services import (
     project_workspace_service,
     source_ledger_service,
-    text_extraction_adapters,
     text_extraction_service,
 )
 
@@ -58,17 +58,15 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     )
     assert metadata == {
         "status": "completed",
-        "progress_current": 1,
-        "progress_total": 1,
+        "progress_current": 100,
+        "progress_total": 100,
         "warnings": [],
         "character_count": 23,
         "word_count": 4,
         "line_count": 3,
         "page_count": None,
     }
-    assert json.loads(
-        (project_root / config.EXTRACTION_METADATA_FILE_NAME).read_text(encoding="utf-8")
-    ) == metadata
+    assert json.loads((project_root / config.EXTRACTION_METADATA_FILE_NAME).read_text(encoding="utf-8")) == metadata
     generated_artifact_names = {
         path.name
         for path in project_root.iterdir()
@@ -100,7 +98,7 @@ def test_extract_text_selects_supported_text_encoding_without_mojibake(
     source_text: str,
     expected_ledger_encoding: str,
 ) -> None:
-    """Verify public TXT extraction selects supported encodings truthfully."""
+    """@brief Verify public TXT extraction selects supported encodings truthfully."""
     project_name = f"Encoding_{expected_ledger_encoding.replace('-', '_')}"
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     source_path = project_root / "story.txt"
@@ -116,7 +114,7 @@ def test_extract_text_selects_supported_text_encoding_without_mojibake(
 
 
 def test_extract_text_honors_rtf_code_page_declaration(tmp_path) -> None:
-    """Verify an RTF code-page declaration takes priority over codec guessing."""
+    """@brief Verify an RTF code-page declaration takes priority over codec guessing."""
     project_root, manifest = project_workspace_service.create_project("RtfCp1251", tmp_path)
     source_text = "Привет из RTF."
     source_path = project_root / "story.rtf"
@@ -132,10 +130,10 @@ def test_extract_text_honors_rtf_code_page_declaration(tmp_path) -> None:
 
 
 def test_text_decoder_uses_explicit_latin1_terminal_fallback() -> None:
-    """Verify Latin-1 is used only after every Windows-code-page decoder rejects."""
+    """@brief Verify Latin-1 is used only after every Windows-code-page decoder rejects."""
     source_bytes = b"Fallback:\x98\x81"
 
-    decoded, encoding = text_extraction_adapters._decode_bytes_with_fallback(source_bytes)
+    decoded, encoding = text_encoding._decode_bytes_with_fallback(source_bytes)
 
     assert decoded == source_bytes.decode("latin-1")
     assert encoding == "latin-1"
@@ -210,7 +208,7 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
     assert metadata["warnings"] == ["PDF page 2 did not contain extractable text."]
     output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert output_text == "Story page one\n\n\f\n\nStory page three\n"
-    assert metadata["progress_total"] == 3
+    assert metadata["progress_total"] == 100
 
 
 def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
@@ -233,18 +231,18 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
     metadata = text_extraction_service.load_extraction_metadata(project_root)
     assert metadata is not None
     assert metadata["status"] == "failed"
-    assert metadata["progress_current"] == 2
+    assert metadata["progress_current"] == 85
 
 
 def test_pdf_ordering_places_centered_spanning_material_once_around_columns() -> None:
-    """Verify centered headers and footers surround clear columns without duplication."""
+    """@brief Verify centered headers and footers surround clear columns without duplication."""
     lines = [
         _pdf_order_line("Centered top", (292.0, 60.0, 320.0, 70.0), 0),
         *_two_column_pdf_lines(start_index=1),
         _pdf_order_line("Centered bottom", (288.0, 200.0, 324.0, 210.0), 7),
     ]
 
-    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+    ordered, layout_mode, reasons = pdf._order_pdf_lines(lines, 612.0)
 
     assert [line["text"] for line in ordered] == [
         "Centered top",
@@ -261,7 +259,7 @@ def test_pdf_ordering_places_centered_spanning_material_once_around_columns() ->
 
 
 def test_pdf_ordering_emits_vertical_threshold_overlap_once() -> None:
-    """Verify one spanning line cannot belong to both vertical partitions."""
+    """@brief Verify one spanning line cannot belong to both vertical partitions."""
     lines = [
         _pdf_order_line("Left 1", (72.0, 100.0, 250.0, 102.0), 0),
         _pdf_order_line("Left 2", (72.0, 103.0, 250.0, 105.0), 1),
@@ -272,7 +270,7 @@ def test_pdf_ordering_emits_vertical_threshold_overlap_once() -> None:
         _pdf_order_line("Threshold overlap", (250.0, 99.0, 360.0, 109.0), 6),
     ]
 
-    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+    ordered, layout_mode, reasons = pdf._order_pdf_lines(lines, 612.0)
 
     assert sum(line is lines[-1] for line in ordered) == 1
     assert layout_mode == "uncertain_columns"
@@ -280,7 +278,7 @@ def test_pdf_ordering_emits_vertical_threshold_overlap_once() -> None:
 
 
 def test_pdf_ordering_is_identity_permutation_for_every_layout_mode() -> None:
-    """Verify every successful PDF ordering contains every input object exactly once."""
+    """@brief Verify every successful PDF ordering contains every input object exactly once."""
     short_lines = [
         _pdf_order_line("Short 2", (72.0, 120.0, 250.0, 130.0), 0),
         _pdf_order_line("Short 1", (72.0, 100.0, 250.0, 110.0), 1),
@@ -301,7 +299,7 @@ def test_pdf_ordering_is_identity_permutation_for_every_layout_mode() -> None:
     modes: set[str] = set()
 
     for lines in (short_lines, single_column_lines, two_column_lines, uncertain_lines):
-        ordered, layout_mode, _reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+        ordered, layout_mode, _reasons = pdf._order_pdf_lines(lines, 612.0)
         modes.add(layout_mode)
         assert len(ordered) == len(lines)
         assert {id(line) for line in ordered} == {id(line) for line in lines}
@@ -310,13 +308,13 @@ def test_pdf_ordering_is_identity_permutation_for_every_layout_mode() -> None:
 
 
 def test_pdf_ordering_preserves_uncertain_column_warning() -> None:
-    """Verify a genuinely ambiguous spanning line keeps the established warning."""
+    """@brief Verify a genuinely ambiguous spanning line keeps the established warning."""
     lines = [
         *_two_column_pdf_lines(),
         _pdf_order_line("Ambiguous", (250.0, 130.0, 360.0, 140.0), 6),
     ]
 
-    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+    ordered, layout_mode, reasons = pdf._order_pdf_lines(lines, 612.0)
 
     assert ordered == lines
     assert layout_mode == "uncertain_columns"
@@ -328,7 +326,7 @@ def test_pdf_ordering_normalizes_early_single_column_identity(
     line_count: int,
     page_width: float,
 ) -> None:
-    """Verify every early single-column return assigns column identity zero."""
+    """@brief Verify every early single-column return assigns column identity zero."""
     lines = [
         _pdf_order_line(
             f"Line {index}",
@@ -338,7 +336,7 @@ def test_pdf_ordering_normalizes_early_single_column_identity(
         for index in reversed(range(line_count))
     ]
 
-    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, page_width)
+    ordered, layout_mode, reasons = pdf._order_pdf_lines(lines, page_width)
 
     assert [line["text"] for line in ordered] == [f"Line {index}" for index in range(line_count)]
     assert all(line["column"] == 0 for line in ordered)
@@ -347,7 +345,7 @@ def test_pdf_ordering_normalizes_early_single_column_identity(
 
 
 def test_pdf_ordering_preserves_normal_single_column_top_left_order() -> None:
-    """Verify normal single-column pages retain stable top-left ordering."""
+    """@brief Verify normal single-column pages retain stable top-left ordering."""
     lines = [
         _pdf_order_line("Second on first row", (200.0, 100.0, 250.0, 110.0), 0),
         _pdf_order_line("First on first row", (72.0, 100.0, 150.0, 110.0), 1),
@@ -357,7 +355,7 @@ def test_pdf_ordering_preserves_normal_single_column_top_left_order() -> None:
         _pdf_order_line("Line 6", (72.0, 180.0, 250.0, 190.0), 5),
     ]
 
-    ordered, layout_mode, reasons = text_extraction_adapters._order_pdf_lines(lines, 612.0)
+    ordered, layout_mode, reasons = pdf._order_pdf_lines(lines, 612.0)
 
     assert [line["text"] for line in ordered] == [
         "First on first row",
@@ -373,7 +371,7 @@ def test_pdf_ordering_preserves_normal_single_column_top_left_order() -> None:
 
 
 def test_extract_text_emits_centered_pdf_text_once(tmp_path) -> None:
-    """Verify public PDF extraction writes one copy of a centered physical line."""
+    """@brief Verify public PDF extraction writes one copy of a centered physical line."""
     project_root, manifest = project_workspace_service.create_project(
         "CenteredPdfProject",
         tmp_path,
@@ -459,17 +457,17 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
     ("markup", "expected_texts"),
     [
         ("<p>Before</p><div hidden>Hidden</div><p>After</p>", ["Before", "After"]),
-        ("<p>Before</p><div hidden=\"\">Hidden</div><p>After</p>", ["Before", "After"]),
-        ("<p>Before</p><div hidden=\"hidden\">Hidden</div><p>After</p>", ["Before", "After"]),
-        ("<p>Before</p><div hidden=\"false\">Hidden</div><p>After</p>", ["Before", "After"]),
-        ("<p>Before</p><div ArIa-HiDdEn=\" TrUe \">Hidden</div><p>After</p>", ["Before", "After"]),
-        ("<p>Before</p><p aria-hidden=\"false\">Visible</p><p>After</p>", ["Before", "Visible", "After"]),
+        ('<p>Before</p><div hidden="">Hidden</div><p>After</p>', ["Before", "After"]),
+        ('<p>Before</p><div hidden="hidden">Hidden</div><p>After</p>', ["Before", "After"]),
+        ('<p>Before</p><div hidden="false">Hidden</div><p>After</p>', ["Before", "After"]),
+        ('<p>Before</p><div ArIa-HiDdEn=" TrUe ">Hidden</div><p>After</p>', ["Before", "After"]),
+        ('<p>Before</p><p aria-hidden="false">Visible</p><p>After</p>', ["Before", "Visible", "After"]),
         (
-            "<p>Before</p><div hidden>Hidden<span>nested</span><br><img src=\"x\"></div><p>After</p>",
+            '<p>Before</p><div hidden>Hidden<span>nested</span><br><img src="x"></div><p>After</p>',
             ["Before", "After"],
         ),
         (
-            "<p>Before</p><div hidden>Hidden<br/><img src=\"x\"/></div><p>After</p>",
+            '<p>Before</p><div hidden>Hidden<br/><img src="x"/></div><p>After</p>',
             ["Before", "After"],
         ),
         ("<p>Before</p><input hidden><p>After</p>", ["Before", "After"]),
@@ -483,8 +481,8 @@ def test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible
     markup: str,
     expected_texts: list[str],
 ) -> None:
-    """Verify HTML hidden semantics and void tags keep ignored-state tracking balanced."""
-    parser = text_extraction_adapters._StructuredHtmlExtractor(
+    """@brief Verify HTML hidden semantics and void tags keep ignored-state tracking balanced."""
+    parser = html_content._StructuredHtmlExtractor(
         spine_index=0,
         item_id="chapter_1.xhtml",
     )
@@ -496,8 +494,8 @@ def test_structured_html_extractor_omits_ignored_subtrees_without_losing_visible
 
 
 def test_structured_html_extractor_preserves_common_visible_containers() -> None:
-    """Verify common EPUB structural containers do not silently lose visible text."""
-    parser = text_extraction_adapters._StructuredHtmlExtractor(spine_index=0, item_id="chapter_1.xhtml")
+    """@brief Verify common EPUB structural containers do not silently lose visible text."""
+    parser = html_content._StructuredHtmlExtractor(spine_index=0, item_id="chapter_1.xhtml")
     parser.feed(
         "<body>Bare body<div>Div paragraph.</div><table><tr><td>Cell text.</td></tr></table>"
         "<dl><dt>Term.</dt><dd>Definition.</dd></dl><figure><figcaption>Caption.</figcaption></figure></body>"
@@ -505,18 +503,23 @@ def test_structured_html_extractor_preserves_common_visible_containers() -> None
     parser.close()
 
     assert [event.text for event in parser.events] == [
-        "Bare body", "Div paragraph.", "Cell text.", "Term.", "Definition.", "Caption."
+        "Bare body",
+        "Div paragraph.",
+        "Cell text.",
+        "Term.",
+        "Definition.",
+        "Caption.",
     ]
 
 
 def test_extract_text_omits_hidden_epub_content_from_canonical_text_and_ledger(tmp_path) -> None:
-    """Verify public EPUB extraction writes only visible blocks in source order."""
+    """@brief Verify public EPUB extraction writes only visible blocks in source order."""
     project_root, manifest = project_workspace_service.create_project("VisibleEpub", tmp_path)
     source_path = project_root / "story.epub"
     _write_epub_source(source_path)
     document = (
         '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
-        "<p>Visible first.</p><div hidden>Hidden <span>nested</span><br><img src=\"x\"/></div>"
+        '<p>Visible first.</p><div hidden>Hidden <span>nested</span><br><img src="x"/></div>'
         "<p>Visible last.</p></body></html>"
     )
     _replace_epub_member(source_path, "chapter_1.xhtml", document.encode("utf-8"))
@@ -550,7 +553,7 @@ def test_extract_text_honors_uniform_epub_content_encoding(
     source_text: str,
     expected_encoding: str,
 ) -> None:
-    """Verify a genuine non-UTF-8 EPUB member uses its declaration or BOM."""
+    """@brief Verify a genuine non-UTF-8 EPUB member uses its declaration or BOM."""
     project_name = f"Epub_{expected_encoding.replace('-', '_')}"
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     source_path = project_root / "story.epub"
@@ -572,7 +575,7 @@ def test_extract_text_honors_uniform_epub_content_encoding(
 
 
 def test_extract_text_preserves_mixed_encoding_epub_spine_order(tmp_path) -> None:
-    """Verify mixed EPUB encodings remain ordered and are reported truthfully."""
+    """@brief Verify mixed EPUB encodings remain ordered and are reported truthfully."""
     project_root, manifest = project_workspace_service.create_project("MixedEncodingEpub", tmp_path)
     source_path = project_root / "story.epub"
     _write_two_chapter_epub_source(source_path)
@@ -607,7 +610,7 @@ def test_extract_text_preserves_mixed_encoding_epub_spine_order(tmp_path) -> Non
 
 
 def test_extract_text_identifies_epub_item_with_invalid_declared_encoding(tmp_path) -> None:
-    """Verify an invalid EPUB declaration fails with the responsible item identity."""
+    """@brief Verify an invalid EPUB declaration fails with the responsible item identity."""
     project_root, manifest = project_workspace_service.create_project("InvalidEncodingEpub", tmp_path)
     source_path = project_root / "story.epub"
     _write_epub_source(source_path)
@@ -623,7 +626,7 @@ def test_extract_text_identifies_epub_item_with_invalid_declared_encoding(tmp_pa
 
 
 def test_extract_text_identifies_epub_item_when_declared_decoding_fails(tmp_path) -> None:
-    """Verify strict declared decoding failures name the responsible EPUB item."""
+    """@brief Verify strict declared decoding failures name the responsible EPUB item."""
     project_root, manifest = project_workspace_service.create_project("FailedDecodeEpub", tmp_path)
     source_path = project_root / "story.epub"
     _write_epub_source(source_path)
@@ -709,19 +712,20 @@ def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None
     source_path = project_root / "story.docx"
     _write_docx_source(source_path, paragraphs=["Story first", "Story second"])
     manifest["source_document"] = _build_source_document(source_path, "docx")
-    cancellation_checks = iter((False, True))
+    observed_progress = []
 
     with pytest.raises(text_extraction_service.OperationCancelledError):
         text_extraction_service.extract_text(
             project_root,
             manifest,
-            cancel_requested=lambda: next(cancellation_checks),
+            progress_callback=lambda current, *_args: observed_progress.append(current),
+            cancel_requested=lambda: any(value > 0 for value in observed_progress),
         )
 
     cancelled_metadata = text_extraction_service.load_extraction_metadata(project_root)
     assert cancelled_metadata is not None
     assert cancelled_metadata["status"] == "cancelled"
-    assert cancelled_metadata["progress_current"] == 1
+    assert 0 < cancelled_metadata["progress_current"] <= 85
     assert cancelled_metadata["character_count"] is None
 
     completed_metadata = text_extraction_service.extract_text(project_root, manifest)
@@ -742,7 +746,7 @@ def test_extract_text_persists_cancelled_progress_and_restarts(tmp_path) -> None
     ],
 )
 def test_load_extraction_metadata_rejects_incompatible_schema(tmp_path, payload_update) -> None:
-    """Verify exact fields, status, progress, and incomplete statistics are strict."""
+    """@brief Verify exact fields, status, progress, and incomplete statistics are strict."""
     project_root, _manifest = project_workspace_service.create_project("InvalidExtraction", tmp_path)
     payload = {
         "status": "running",
@@ -765,7 +769,7 @@ def test_load_extraction_metadata_rejects_incompatible_schema(tmp_path, payload_
 
 
 def test_load_extraction_metadata_rejects_invalid_json(tmp_path) -> None:
-    """Verify malformed metadata JSON requires a destructive extraction reset."""
+    """@brief Verify malformed metadata JSON requires a destructive extraction reset."""
     project_root, _manifest = project_workspace_service.create_project("InvalidExtractionJson", tmp_path)
     (project_root / config.EXTRACTION_METADATA_FILE_NAME).write_text("{broken", encoding="utf-8")
 
@@ -901,7 +905,7 @@ def _write_epub_source(path: Path) -> None:
 
 
 def _write_two_chapter_epub_source(path: Path) -> None:
-    """Write one EPUB fixture with two ordered content documents and navigation."""
+    """@brief Write one EPUB fixture with two ordered content documents and navigation."""
     book = epub.EpubBook()
     book.set_identifier("two-chapter-book")
     book.set_title("Two chapters")
@@ -920,12 +924,12 @@ def _write_two_chapter_epub_source(path: Path) -> None:
 
 
 def _replace_epub_member(path: Path, file_name: str, content: bytes) -> None:
-    """Replace one EPUB ZIP member selected by its trailing file name."""
+    """@brief Replace one EPUB ZIP member selected by its trailing file name."""
     _replace_epub_members(path, {file_name: content})
 
 
 def _replace_epub_members(path: Path, replacements: dict[str, bytes]) -> None:
-    """Rewrite EPUB ZIP members so tests retain genuine declared source bytes."""
+    """@brief Rewrite EPUB ZIP members so tests retain genuine declared source bytes."""
     replacement_path = path.with_name(f"{path.stem}_replacement.epub")
     matched_names: set[str] = set()
     with (
@@ -969,7 +973,7 @@ def _pdf_order_line(
     bbox: tuple[float, float, float, float],
     index: int,
 ) -> dict[str, object]:
-    """Build the minimum visual-line record required by PDF ordering tests."""
+    """@brief Build the minimum visual-line record required by PDF ordering tests."""
     return {
         "text": text,
         "bbox": list(bbox),
@@ -980,7 +984,7 @@ def _pdf_order_line(
 
 
 def _two_column_pdf_lines(*, start_index: int = 0) -> list[dict[str, object]]:
-    """Build three clearly separated lines in each PDF column."""
+    """@brief Build three clearly separated lines in each PDF column."""
     return [
         _pdf_order_line("Left 1", (72.0, 100.0, 250.0, 110.0), start_index),
         _pdf_order_line("Left 2", (72.0, 130.0, 250.0, 140.0), start_index + 1),
@@ -992,7 +996,7 @@ def _two_column_pdf_lines(*, start_index: int = 0) -> list[dict[str, object]]:
 
 
 def _write_two_column_pdf_source(path: Path) -> None:
-    """Write a clear two-column PDF page with one centered narrow header."""
+    """@brief Write a clear two-column PDF page with one centered narrow header."""
     document = fitz.open()
     page = document.new_page(width=612.0, height=792.0)
     for point, text in (

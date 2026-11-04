@@ -29,6 +29,7 @@ name = "audiomancer"
 version = "2.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "defusedxml" },
     { name = "ebooklib" },
     { name = "httpx" },
     { name = "keyring" },
@@ -53,6 +54,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "defusedxml", specifier = ">=0.7,<1.0" },
     { name = "ebooklib", specifier = ">=0.18,<1.0" },
     { name = "httpx", specifier = ">=0.28,<1.0" },
     { name = "keyring", specifier = ">=25,<26" },

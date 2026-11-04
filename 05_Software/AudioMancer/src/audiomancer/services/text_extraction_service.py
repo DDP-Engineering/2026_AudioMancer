@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
 """
 @file text_extraction_service.py
 @brief Structural source extraction orchestration for AudioMancer.
@@ -7,17 +13,21 @@
          metadata while coordinating cancellation and downstream resets.
 """
 
+# IMPORTS
+
 from functools import partial
 import json
 from pathlib import Path
+import tempfile
 
-from audiomancer import config
-from audiomancer.services import source_ledger_service, text_extraction_adapters
+from audiomancer import config, extraction
+from audiomancer.extraction.models import ExtractionCancelledError
+from audiomancer.services import source_ledger_service
+from audiomancer.services.extraction_publication_service import publish_extraction
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     emit_progress_update,
-    raise_if_cancelled,
     reset_operation_data,
     resolve_project_relative_path,
 )
@@ -39,11 +49,10 @@ _METADATA_FIELDS = frozenset(
     )
 )
 _PERSISTED_STATUSES = frozenset(("running", "cancelled", "failed", "completed"))
-_LEGACY_EXTRACTION_FILE_NAMES = ("extraction_report.json", "extraction_state.json")
 
 
 class ExtractionMetadataError(ValueError):
-    """Raised when Extraction artifacts do not match the current strict contract."""
+    """@brief Raised when Extraction artifacts do not match the current strict contract."""
 
 
 @trace_function(_EXTRACTION_LOGGER)
@@ -53,92 +62,77 @@ def extract_text(
     progress_callback=None,
     cancel_requested=None,
 ) -> ExtractionMetadataPayload:
-    """Rebuild canonical text and its structural ledger from the registered source."""
-    root = Path(project_root)
+    """@brief Rebuild canonical text and its structural ledger from the registered source."""
+    root = Path(project_root).resolve()
     source_document = _source_document_from_manifest(manifest)
     if source_document is None:
         raise ValueError("No imported source is available for text extraction.")
     source_path = _source_path_from_manifest(root, source_document)
     metadata_path = root / config.EXTRACTION_METADATA_FILE_NAME
-    file_type = str(source_document["file_type"])
-    _emit_status(progress_callback, f"Preparing {file_type.upper()} extraction...")
-
-    for artifact_name in (config.EXTRACTED_TEXT_FILE_NAME, config.SOURCE_LEDGER_FILE_NAME):
-        (root / artifact_name).unlink(missing_ok=True)
-    running_metadata = _build_metadata(
+    original_manifest = (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes()
+    preserve_previous = metadata_path.exists()
+    progress = _build_metadata(
         status="running",
         progress_current=0,
-        progress_total=1,
+        progress_total=100,
         warnings=[],
         character_count=None,
         word_count=None,
         line_count=None,
         page_count=None,
     )
-    write_json_atomic(metadata_path, running_metadata)
 
-    def _record_progress(current: int, total: int, message: str) -> None:
-        running_metadata["progress_current"] = max(0, int(current))
-        running_metadata["progress_total"] = max(1, int(total))
-        write_json_atomic(metadata_path, running_metadata)
+    def record_progress(current: int, total: int, message: str) -> None:
+        """@brief Report phase progress in memory; extraction always restarts instead of checkpointing."""
+        progress["progress_current"] = current
+        progress["progress_total"] = total
         _emit_progress(progress_callback, current, total, message)
 
     try:
-        adapter_result = text_extraction_adapters.extract_source_events(
+        record_progress(0, 100, "Reading source document...")
+        result = extraction.extract_document(
             source_path,
-            file_type,
-            progress_callback=_record_progress,
-            cancel_requested=cancel_requested,
+            file_type=str(source_document["file_type"]),
+            on_progress=record_progress,
+            is_cancelled=cancel_requested,
         )
-        raise_if_cancelled(cancel_requested)
-        builder = source_ledger_service.CanonicalDocumentBuilder(
-            source_format=file_type,
-            source_sha256=source_ledger_service.file_sha256(source_path),
-            encoding=adapter_result.encoding,
-            structure_quality=adapter_result.structure_quality,
-            eligibility_mode=adapter_result.eligibility_mode,
-            eligibility_reason_codes=adapter_result.eligibility_reason_codes,
-            pages=adapter_result.pages,
-            warnings=adapter_result.warnings,
-        )
-        for event in adapter_result.events:
-            raise_if_cancelled(cancel_requested)
-            builder.add(event)
-        canonical_text, ledger = builder.build()
-        source_ledger_service.write_source_artifacts(root, canonical_text, ledger)
-        display_text = canonical_text.rstrip("\n")
+        display_text = result.text.rstrip("\n")
         completed = _build_metadata(
             status="completed",
-            progress_current=max(1, adapter_result.progress_total),
-            progress_total=max(1, adapter_result.progress_total),
-            warnings=adapter_result.warnings,
+            progress_current=100,
+            progress_total=100,
+            warnings=list(result.ledger["warnings"]),
             character_count=len(display_text),
             word_count=len(display_text.split()),
             line_count=len(display_text.splitlines()),
-            page_count=adapter_result.page_count,
+            page_count=result.page_count,
         )
-        write_extraction_metadata(root, completed)
-        return completed
-    except OperationCancelledError:
-        _persist_interrupted_metadata(metadata_path, "cancelled")
-        raise
+        record_progress(95, 100, "Saving validated extraction...")
+        with tempfile.TemporaryDirectory(prefix=".extraction-new-", dir=root) as directory:
+            staged = Path(directory)
+            source_ledger_service.write_source_artifacts(staged, result.text, result.ledger)
+            write_extraction_metadata(staged, completed)
+            extraction.check_cancelled(cancel_requested)
+            publish_extraction(root, manifest, staged, original_manifest)
+    except (OperationCancelledError, ExtractionCancelledError):
+        if not preserve_previous:
+            _persist_interrupted_metadata(metadata_path, "cancelled", progress)
+        raise OperationCancelledError("Text extraction cancelled.") from None
     except Exception:
-        _persist_interrupted_metadata(metadata_path, "failed")
+        if not preserve_previous:
+            _persist_interrupted_metadata(metadata_path, "failed", progress)
         raise
+    _emit_progress(progress_callback, 100, 100, "Extraction saved.")
+    return completed
 
 
 @trace_function(_EXTRACTION_LOGGER)
 def load_extraction_metadata(project_root: str | Path) -> ExtractionMetadataPayload | None:
-    """Load strict Extraction metadata and validate completed artifacts."""
+    """@brief Load strict Extraction metadata and validate completed artifacts."""
     root = Path(project_root)
-    if _legacy_sidecars_exist(root):
-        raise _incompatible_metadata_error("Legacy extraction sidecars require Reset Extraction.")
     metadata_path = root / config.EXTRACTION_METADATA_FILE_NAME
     if not metadata_path.is_file():
-        if any(
-            (root / name).exists()
-            for name in (config.EXTRACTED_TEXT_FILE_NAME, config.SOURCE_LEDGER_FILE_NAME)
-        ):
+        if any((root / name).exists() for name in (config.EXTRACTED_TEXT_FILE_NAME, config.SOURCE_LEDGER_FILE_NAME)):
             raise _incompatible_metadata_error("Extraction artifacts exist without current metadata.")
         return None
     metadata = _load_metadata_path(metadata_path)
@@ -151,10 +145,8 @@ def write_extraction_metadata(
     project_root: str | Path,
     metadata: ExtractionMetadataPayload,
 ) -> Path:
-    """Validate and atomically persist Extraction metadata."""
+    """@brief Validate and atomically persist Extraction metadata."""
     root = Path(project_root)
-    if _legacy_sidecars_exist(root):
-        raise _incompatible_metadata_error("Legacy extraction sidecars require Reset Extraction.")
     _validate_metadata(metadata)
     _validate_artifact_pair(root, metadata)
     path = root / config.EXTRACTION_METADATA_FILE_NAME
@@ -164,7 +156,7 @@ def write_extraction_metadata(
 
 @trace_function(_EXTRACTION_LOGGER)
 def reset_extraction_and_downstream(project_root: str | Path) -> None:
-    """Remove Extraction and every downstream generated artifact."""
+    """@brief Remove Extraction and every downstream generated artifact."""
     reset_operation_data(project_root, "extraction", include_current=True)
 
 
@@ -179,6 +171,7 @@ def _build_metadata(
     line_count: int | None,
     page_count: int | None,
 ) -> ExtractionMetadataPayload:
+    """@brief Build one normalized extraction status and statistics payload."""
     return {
         "status": str(status),
         "progress_current": int(progress_current),
@@ -192,6 +185,7 @@ def _build_metadata(
 
 
 def _source_path_from_manifest(project_root: Path, source_document: dict[str, object]) -> Path:
+    """@brief Resolve the registered source within its project and require an existing file."""
     source_path = resolve_project_relative_path(
         project_root,
         str(source_document["stored_relative_path"]),
@@ -202,11 +196,13 @@ def _source_path_from_manifest(project_root: Path, source_document: dict[str, ob
 
 
 def _source_document_from_manifest(manifest: dict[str, object]) -> dict[str, object] | None:
+    """@brief Return a copy of the registered source mapping when present."""
     source_document = manifest.get("source_document")
     return dict(source_document) if isinstance(source_document, dict) else None
 
 
 def _load_metadata_path(path: Path) -> ExtractionMetadataPayload:
+    """@brief Read metadata JSON and validate the current extraction contract."""
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -216,6 +212,7 @@ def _load_metadata_path(path: Path) -> ExtractionMetadataPayload:
 
 
 def _validate_metadata(payload: object) -> None:
+    """@brief Enforce extraction status, progress and statistics invariants."""
     if not isinstance(payload, dict) or set(payload) != _METADATA_FIELDS:
         raise _incompatible_metadata_error("Metadata fields do not match the current schema.")
     if payload.get("status") not in _PERSISTED_STATUSES:
@@ -245,6 +242,7 @@ def _validate_metadata(payload: object) -> None:
 
 
 def _validate_artifact_pair(project_root: Path, metadata: ExtractionMetadataPayload) -> None:
+    """@brief Require matching text and provenance for every completed extraction."""
     if metadata["status"] != "completed":
         return
     try:
@@ -255,39 +253,20 @@ def _validate_artifact_pair(project_root: Path, metadata: ExtractionMetadataPayl
         ) from error
 
 
-def _persist_interrupted_metadata(metadata_path: Path, status: str) -> None:
-    metadata = (
-        _load_metadata_path(metadata_path)
-        if metadata_path.is_file()
-        else _build_metadata(
-            status=status,
-            progress_current=0,
-            progress_total=0,
-            warnings=[],
-            character_count=None,
-            word_count=None,
-            line_count=None,
-            page_count=None,
-        )
-    )
+def _persist_interrupted_metadata(metadata_path: Path, status: str, progress: dict[str, object]) -> None:
+    """@brief Record a first failed/cancelled attempt without masking the original error."""
+    metadata = dict(progress)
     metadata["status"] = status
-    metadata["character_count"] = None
-    metadata["word_count"] = None
-    metadata["line_count"] = None
-    _validate_metadata(metadata)
-    write_json_atomic(metadata_path, metadata)
-
-
-def _legacy_sidecars_exist(project_root: Path) -> bool:
-    return any((project_root / name).exists() for name in _LEGACY_EXTRACTION_FILE_NAMES)
+    try:
+        _validate_metadata(metadata)
+        write_json_atomic(metadata_path, metadata)
+    except OSError:
+        _EXTRACTION_LOGGER.exception("Could not persist extraction interruption at %s", metadata_path)
 
 
 def _incompatible_metadata_error(reason: str) -> ExtractionMetadataError:
-    return ExtractionMetadataError(
-        f"Extraction data is incompatible: {reason} Use Reset Extraction before continuing."
-    )
+    """@brief Build an actionable error for invalid current extraction data."""
+    return ExtractionMetadataError(f"Extraction data is incompatible: {reason} Use Reset Extraction before continuing.")
 
 
-def _emit_status(progress_callback, message: str) -> None:
-    if callable(progress_callback):
-        progress_callback(0, 1, 0, message)
+# END OF FILE

@@ -23,6 +23,8 @@ from pathlib import Path
 import sys
 import tempfile
 
+from .extraction import SUPPORTED_SOURCE_SUFFIXES as SUPPORTED_SOURCE_SUFFIXES
+
 # CONSTANTS
 # Application Identity
 # @brief Operator-facing desktop application name.
@@ -462,17 +464,6 @@ AI_TRANSACTION_LOG_FILE_EXTENSION = ".log"
 
 
 # Source Import And Processing Artifacts
-# @brief Supported import suffixes mapped to persisted source-type ids.
-SUPPORTED_SOURCE_SUFFIXES = {
-    ".txt": "txt",
-    ".pdf": "pdf",
-    ".rtf": "rtf",
-    ".docx": "docx",
-    ".odt": "odt",
-    ".md": "md",
-    ".epub": "epub",
-}
-
 # @brief File name used for persisted raw extracted text.
 EXTRACTED_TEXT_FILE_NAME = "extracted_text.txt"
 

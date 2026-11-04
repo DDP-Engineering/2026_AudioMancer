@@ -124,7 +124,7 @@ def test_cleanup_controller_passes_optional_selected_profile(monkeypatch, tmp_pa
 
 
 def test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker(monkeypatch, tmp_path) -> None:
-    """Verify declining completed Cleanup rerun leaves the active state untouched."""
+    """@brief Verify declining completed Cleanup rerun leaves the active state untouched."""
     manifest = {"source_document": {"original_name": "story.txt"}, "marker": "original"}
     window = SimpleNamespace(
         _current_project_root=tmp_path,
@@ -159,7 +159,7 @@ def test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker(mon
 
 
 def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monkeypatch, tmp_path) -> None:
-    """Verify confirmed completed Cleanup rerun installs the reset manifest first."""
+    """@brief Verify confirmed completed Cleanup rerun installs the reset manifest first."""
     original_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "original"}
     reset_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "reset"}
     window = SimpleNamespace(
@@ -178,12 +178,14 @@ def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monk
     monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: True)
 
     def _reset(root, manifest):
+        """@brief Capture the completed Cleanup reset before worker startup."""
         assert root == tmp_path
         assert manifest is original_manifest
         events.append("reset")
         return reset_manifest
 
     def _start(_window, operation_kind, _name, _message, worker, _success, _failure):
+        """@brief Verify the Cleanup worker receives the reset manifest."""
         assert operation_kind == "cleanup"
         assert events == ["reset"]
         assert window._current_manifest is reset_manifest
@@ -200,7 +202,7 @@ def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monk
 
 @pytest.mark.parametrize("status", ["running", "paused", "finalizing", "failed"])
 def test_resumable_cleanup_starts_without_destructive_reset(monkeypatch, tmp_path, status: str) -> None:
-    """Verify an unfinished Cleanup document retains its checkpoint when started."""
+    """@brief Verify an unfinished Cleanup document retains its checkpoint when started."""
     checkpoint = tmp_path / "cleanup.json"
     checkpoint.write_text('{"status": "paused"}', encoding="utf-8")
     window = SimpleNamespace(
@@ -240,7 +242,7 @@ def test_resumable_cleanup_starts_without_destructive_reset(monkeypatch, tmp_pat
 
 
 def test_completed_cleanup_rerun_reset_failure_starts_no_worker(monkeypatch, tmp_path) -> None:
-    """Verify a failed completed-rerun reset cannot start or report Cleanup success."""
+    """@brief Verify a failed completed-rerun reset cannot start or report Cleanup success."""
     window = SimpleNamespace(
         _current_project_root=tmp_path,
         _current_manifest={"source_document": {"original_name": "story.txt"}},
@@ -270,7 +272,7 @@ def test_completed_cleanup_rerun_reset_failure_starts_no_worker(monkeypatch, tmp
 
 
 def test_failed_cleaned_text_save_keeps_editable_draft(monkeypatch, qtbot, tmp_path) -> None:
-    """Verify the controller does not discard a Cleanup draft after save failure."""
+    """@brief Verify the controller does not discard a Cleanup draft after save failure."""
     page = TextCleanupPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -298,7 +300,7 @@ def test_failed_cleaned_text_save_keeps_editable_draft(monkeypatch, qtbot, tmp_p
 
 
 def test_successful_cleaned_text_save_exits_edit_mode_before_refresh(monkeypatch, qtbot, tmp_path) -> None:
-    """Verify a persisted Cleanup correction returns the refreshed editor to read-only mode."""
+    """@brief Verify a persisted Cleanup correction returns the refreshed editor to read-only mode."""
     page = TextCleanupPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -310,7 +312,7 @@ def test_successful_cleaned_text_save_exits_edit_mode_before_refresh(monkeypatch
     messages: list[object] = []
 
     def show_project_state(project_root, manifest) -> None:
-        """Project the persisted correction into the page during the controller refresh."""
+        """@brief Project the persisted correction into the page during the controller refresh."""
         state_updates.append((project_root, manifest))
         page.set_processing_state(
             "source",
@@ -352,6 +354,38 @@ def test_successful_cleaned_text_save_exits_edit_mode_before_refresh(monkeypatch
     assert page._save_cleaned_button.isEnabled() is False
     assert page._cancel_edit_button.isEnabled() is False
     assert messages == ["Cleaned text saved."]
+
+
+def test_extraction_rerun_defers_reset_until_worker_publication(monkeypatch, tmp_path):
+    """@brief Confirmation starts the worker with original files and manifest, after pending edits settle."""
+    events = []
+    manifest = {"marker": "original"}
+    window = SimpleNamespace(
+        _current_project_root=tmp_path,
+        _current_manifest=manifest,
+        _settings_payload={"language": "en"},
+        _ai_translation_page=SimpleNamespace(flush_pending_translation_edit=lambda: events.append("flush")),
+        stop_all_audio_playback=lambda: events.append("stop"),
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "_completed_extraction_available", lambda _root: True)
+    monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.text_extraction_service,
+        "reset_extraction_and_downstream",
+        lambda *_args: pytest.fail("Controller reset live results before extraction"),
+    )
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", lambda *_args: events.append("start"))
+    text_cleanup_ui_controller.handle_extract_text_requested(window)
+    assert events == ["flush", "stop", "start"]
+    assert window._current_manifest is manifest
+
+
+def test_busy_extraction_request_does_not_prompt_or_reset(monkeypatch, tmp_path):
+    """@brief Reject direct extraction requests before any confirmation while an operation is active."""
+    window = SimpleNamespace(_current_project_root=tmp_path, _current_manifest={}, _active_operation_kind="cleanup")
+    monkeypatch.setattr(text_cleanup_ui_controller, "_confirm", lambda *_args: pytest.fail("Unexpected prompt"))
+    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", lambda *_args: pytest.fail("Unexpected worker"))
+    text_cleanup_ui_controller.handle_extract_text_requested(window)
 
 
 # END OF FILE

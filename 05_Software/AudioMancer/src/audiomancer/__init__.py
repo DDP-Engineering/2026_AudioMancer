@@ -14,13 +14,20 @@
 
 # IMPORTS
 
-from .app import main
 
 # CONSTANTS
 
 __version__ = "2.2.0"
 
 # PUBLIC API
+
+
+def main() -> int:
+    """@brief Load the desktop bootstrap only when the application is actually started."""
+    from .app import main as run_application
+
+    return run_application()
+
 
 __all__ = ["__version__", "main"]
 

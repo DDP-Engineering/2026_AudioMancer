@@ -456,7 +456,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ol>
                     <li>Press <strong>New Project</strong>. Choose the parent folder, then enter the project name &mdash; the book title works well.</li>
-                    <li>The book picker opens next. Choose a TXT, PDF, RTF, DOCX, ODT, MD or EPUB document. The completed project opens with its own copy of that book. Cancelling any picker keeps your previous project open.</li>
+                    <li>The book picker opens next. Choose a TXT, PDF, RTF, DOCX, ODT, MD, EPUB, HTML/HTM/XHTML or FB2 document. The completed project opens with its own copy of that book. Cancelling any picker keeps your previous project open.</li>
                     <li>Choose the <strong>Translation language</strong> &mdash; English, Romanian, German, French, Russian, Portuguese, Spanish or Italian.</li>
                     <li>Choose the <strong>Audio output style</strong>: <strong>Same narrator for whole book</strong>, or <strong>Narrator + character voices</strong>.</li>
                 </ol>
@@ -494,6 +494,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     TXT and RTF extraction recognises UTF-8 as well as common Central European, Western European and
                     cp1251 Russian text. EPUB chapters follow their byte-order mark or their declared XML/HTML
                     charset, including UTF-16 and declared legacy encodings.
+                </p>
+                <p>
+                    HTML/HTM/XHTML files are read locally in document order. Paragraphs, headings,
+                    quotes and explicit line breaks are retained; hidden elements, navigation,
+                    scripts and style blocks are skipped. External resources are never loaded,
+                    and full CSS layout or JavaScript-generated content is not rendered.
+                    Review the extraction notes for rendering limitations.
+                </p>
+                <p>
+                    FB2 support reads uncompressed FictionBook 2 XML. Main body text, headings,
+                    poetry, tables and auxiliary notes are retained. Notes stay after the main
+                    body in document order and are flagged for review, rather than inserted at
+                    every reference. Publication metadata and embedded images are excluded.
+                    XML encodings are honored; malformed XML, DTDs and custom entities are rejected.
+                    Unzip FB2 archives before choosing the .fb2 file.
                 </p>
                 <h3>Reading The Home Page</h3>
                 <p>
@@ -540,6 +555,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     page has two previews side by side: <strong>Extracted Text Preview</strong> on the left, always
                     read-only, and <strong>Cleaned Text Preview</strong> on the right.
                 </p>
+                <p>Extraction always restarts from the source; it has no resume checkpoint. Read its notes before Cleanup: image-only PDF pages may need OCR, while blank pages can be intentional. DOCX embedded text objects and notes are reported when detected but are not extracted. EPUB auxiliary content is kept in spine order and identified for review. Explicit line breaks are preserved in XHTML content. OCR is not performed by Extraction.</p>
                 <h3>Running It</h3>
                 <p>
                     If a page contains only recognized page numbers, headers or footers, Cleanup keeps
@@ -547,7 +563,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     a page number pass cleanup. Artifacts on pages with other text are removed as usual.
                 </p>
                 <ol>
-                    <li>Press <strong>Extract Text</strong>. If a completed extraction already exists, AudioMancer asks first, because a new extraction deletes the current extraction and every later result.</li>
+                    <li>Press <strong>Extract Text</strong>. If a completed extraction already exists, AudioMancer asks first, because a successful extraction replaces the current extraction and resets every later result. A failed or cancelled extraction keeps the existing results.</li>
                     <li>Choose an <strong>AI Profile (optional)</strong>. Leave it at <strong>(none)</strong> for a purely deterministic pass using local rules &mdash; the safest first attempt. Choose an enabled profile to let a model help with broken OCR, page artifacts and poor paragraph formatting.</li>
                     <li>Press <strong>Cleanup</strong>. There is one Cleanup button for both cases; the profile decides whether a model is involved. If a completed cleanup already exists, AudioMancer asks before replacing it and everything downstream.</li>
                     <li>Read the result. Press <strong>Edit</strong> to correct it by hand, then <strong>Save</strong> &mdash; or <strong>Cancel</strong> to discard the draft and restore the saved text.</li>

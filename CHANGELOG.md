@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Extraction preserves visible EPUB/XHTML tails, explicit line breaks and quoted
+  paragraphs, reads embedded HTML blocks in Markdown, and avoids duplicated DOCX
+  merged-cell text. Image-only PDF pages and uncertain reading order are reported.
+- Rerunning Extraction preserves existing results when parsing, saving or
+  cancellation prevents a successful replacement. Later stages reset only after
+  the replacement has been validated and safely saved.
+
 - Right-clicking the main toolbar no longer offers an option to hide it,
   keeping New Project, Open Project and Settings accessible.
 - Text Cleanup completes for books with pages containing only a page number,
@@ -19,6 +26,11 @@ All notable changes to this project will be documented in this file.
   text to preserve the safeguard against deleting an entire page.
 
 ### Changed
+
+- Isolated document extraction from the desktop UI and project storage, with
+  separate format adapters and a shared canonical text/provenance builder.
+  Extraction restarts from the source, reports progress through saving, and
+  exposes its warnings on the Cleanup page. All previously supported formats remain available.
 
 - Rebuilt the Windows and Linux portable packages as an additional local
   delivery, keeping application version 2.2.0 and the existing archives.
@@ -43,6 +55,11 @@ All notable changes to this project will be documented in this file.
   presented as ready for audio.
 
 ### Added
+
+- HTML, HTM and XHTML books can be selected when creating a project and extracted
+  locally without executing scripts or loading external resources.
+- FictionBook 2 (.fb2) extraction preserves body text, headings, poetry, tables
+  and auxiliary notes, with explicit review diagnostics and safe XML parsing.
 
 - Speech Blocks notes report how many source chunks have no blocks and name each
   one, so it is clear which passages still need splitting with another AI profile

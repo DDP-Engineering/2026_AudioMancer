@@ -32,6 +32,10 @@ from audiomancer.services import import_service
         (".odt", "odt"),
         (".md", "md"),
         (".epub", "epub"),
+        (".html", "html"),
+        (".htm", "html"),
+        (".xhtml", "html"),
+        (".fb2", "fb2"),
     ],
 )
 def test_import_source_accepts_supported_formats(tmp_path, suffix: str, file_type: str) -> None:
@@ -196,6 +200,7 @@ def test_import_source_copy_failure_preserves_complete_previous_project_state(
     }
 
     def _fail_after_partial_copy(_source_path, destination_path) -> None:
+        """@brief Simulate a copy error after partial destination bytes were written."""
         destination_path.write_text("partial new source", encoding="utf-8")
         raise OSError("simulated copy failure")
 

@@ -30,6 +30,9 @@ execution, validation, and packaging entry points.
   exposed to the app shell and import tests.
 - `src/audiomancer/app.py`, `__main__.py` - application entry points.
 - `src/audiomancer/config.py` - configuration contract and defaults.
+- `src/audiomancer/extraction/` - isolated document extraction engine with shared
+  canonical text/provenance construction and format adapters. Supports TXT, PDF,
+  RTF, DOCX, ODT, Markdown, EPUB, local HTML/HTM/XHTML and uncompressed FB2.
 - `src/audiomancer/services/` - service layer (import, extraction, cleanup,
   chunking, speech blocks, character and narrator voices, AI runtime and
   translation, TTS audio blocks, audio assembly, persistence, logging).

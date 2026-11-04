@@ -62,6 +62,9 @@ _BASE_FONT_POINT_SIZE: float | None = None
 # @brief Lazily captured platform-default application font family.
 _BASE_FONT_FAMILY: str | None = None
 
+# @brief File picker patterns follow the same supported suffix registry as project import.
+_SOURCE_PATTERNS = " ".join(f"*{suffix}" for suffix in config.SUPPORTED_SOURCE_SUFFIXES)
+
 # @brief Centralized runtime UI string catalog keyed by language and stable identifier.
 _UI_STRINGS = {
     "en": {
@@ -102,7 +105,7 @@ _UI_STRINGS = {
         "dialog.open_project_title": "Open Project",
         "dialog.select_project_parent_title": "Select Project Parent Folder",
         "dialog.select_source_title": "Select Source File",
-        "dialog.select_source_filter": "Supported source files (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
+        "dialog.select_source_filter": f"Supported source files ({_SOURCE_PATTERNS})",
         "dialog.export_title": "Export Project Artifact",
         "dialog.export_filter_txt": "Text Files (*.txt)",
         "dialog.export_filter_markdown": "Markdown Files (*.md)",
@@ -473,9 +476,9 @@ _UI_STRINGS = {
         "text_cleanup.note_no_project": "Create or open a project to begin text extraction.",
         "text_cleanup.note_no_source": "Import a source file to begin extraction.",
         "text_cleanup.note_ready": "Extraction is ready to run for the current source file.",
-        "text_cleanup.note_resume": "A previous extraction was not finalized. Press Extract Text to continue from progress {progress_current}/{progress_total}.",
+        "text_cleanup.note_resume": "A previous extraction was not finalized. Press Extract Text to restart from the source.",
         "text_cleanup.note_report_summary": "Extracted {word_count} words across {line_count} lines. Pages: {page_count}.",
-        "text_cleanup.note_rerun_warning": "Running extraction again will replace the current extraction data and reset all following workflow data.",
+        "text_cleanup.note_rerun_warning": "A successful extraction replaces the current extraction and resets later workflow results; failure or cancellation keeps existing results.",
         "text_cleanup.note_extraction_invalid": "Extraction data is incompatible. Use Reset Extraction before continuing.",
         "text_cleanup.note_cleanup_ready": "Deterministic cleanup is ready to run for the current extracted text.",
         "text_cleanup.note_cleanup_resume": "A previous cleanup was not finalized. Press Deterministic Cleanup to continue from progress {progress_current}/{progress_total}.",
@@ -1100,7 +1103,7 @@ _UI_STRINGS = {
             "The selected source file, translation language, and audio output style will be fixed for this project. "
             "Continue?"
         ),
-        "project.confirm_extraction_rerun": "Continuing will delete the current extraction data and all subsequent-step data, clear the following operation folders, and reset workflow progress. Continue?",
+        "project.confirm_extraction_rerun": "A successful extraction will replace the current extraction and reset all later results, including text, characters, voices and audio. If extraction fails or is cancelled before saving, the existing results are kept. Continue?",
         "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data and every downstream result. Continue?",
         "project.confirm_cleanup_draft_discard": "You have unsaved changes to cleaned text. Discard them and switch projects?",
         "project.confirm_cleanup_mode_switch": "Changing Cleanup mode will delete the current Cleanup result and every downstream result. Continue?",
@@ -1310,7 +1313,7 @@ _UI_STRINGS = {
         "dialog.open_project_title": "Deschide Proiect",
         "dialog.select_project_parent_title": "Selecteaza Dosarul Parinte Al Proiectului",
         "dialog.select_source_title": "Selecteaza Fisierul Sursa",
-        "dialog.select_source_filter": "Fisiere sursa acceptate (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
+        "dialog.select_source_filter": f"Fisiere sursa acceptate ({_SOURCE_PATTERNS})",
         "dialog.export_title": "Exporta Artefact Proiect",
         "dialog.export_filter_txt": "Fisiere Text (*.txt)",
         "dialog.export_filter_markdown": "Fisiere Markdown (*.md)",
@@ -1681,9 +1684,9 @@ _UI_STRINGS = {
         "text_cleanup.note_no_project": "Creeaza sau deschide un proiect pentru a incepe extragerea textului.",
         "text_cleanup.note_no_source": "Importa un fisier sursa pentru a incepe extragerea.",
         "text_cleanup.note_ready": "Extragerea este pregatita pentru fisierul sursa curent.",
-        "text_cleanup.note_resume": "O extragere anterioara nu a fost finalizata. Apasa Extrage Textul pentru a continua de la progresul {progress_current}/{progress_total}.",
+        "text_cleanup.note_resume": "O extragere anterioara nu a fost finalizata. Apasa Extrage Textul pentru a reporni din sursa.",
         "text_cleanup.note_report_summary": "Au fost extrase {word_count} cuvinte pe {line_count} linii. Pagini: {page_count}.",
-        "text_cleanup.note_rerun_warning": "Rularea extragerii din nou va inlocui datele actuale de extragere si va reseta toate datele pasilor urmatori.",
+        "text_cleanup.note_rerun_warning": "O extragere reusita inlocuieste extragerea curenta si reseteaza rezultatele ulterioare; esecul sau anularea pastreaza rezultatele existente.",
         "text_cleanup.note_extraction_invalid": "Datele extragerii sunt incompatibile. Foloseste Reseteaza Extragerea inainte de a continua.",
         "text_cleanup.note_cleanup_ready": "Curatarea determinista este pregatita pentru textul extras curent.",
         "text_cleanup.note_cleanup_resume": "O curatare anterioara nu a fost finalizata. Apasa Curatare Determinista pentru a continua de la progresul {progress_current}/{progress_total}.",
@@ -2316,7 +2319,7 @@ _UI_STRINGS = {
         "project.confirm_project_options_lock": (
             "Fisierul sursa, limba traducerii si stilul audio selectate vor ramane fixe pentru acest proiect. Continui?"
         ),
-        "project.confirm_extraction_rerun": "Continuarea va sterge datele curente de extragere si toate datele pasilor urmatori, va goli folderele operatiilor urmatoare si va reseta progresul fluxului. Continui?",
+        "project.confirm_extraction_rerun": "O extragere reusita va inlocui extragerea curenta si va reseta toate rezultatele ulterioare, inclusiv textul, personajele, vocile si audio. Daca extragerea esueaza sau este anulata inainte de salvare, rezultatele existente sunt pastrate. Continui?",
         "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare si toate rezultatele ulterioare. Continui?",
         "project.confirm_cleanup_draft_discard": "Ai modificari nesalvate ale textului curatat. Renunti la ele si schimbi proiectul?",
         "project.confirm_cleanup_mode_switch": "Schimbarea modului de curatare va sterge rezultatul Cleanup curent si toate rezultatele ulterioare. Continui?",
