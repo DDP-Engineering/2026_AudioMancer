@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-c1618303"
+title = "Explain project creation and reset behavior in both languages"
+status = "active"
+
+requirement = "For English and Romanian users, AudioMancer shall describe integrated creation, automatically saved options and the matching reset consequences in Home, confirmations and the corresponding user guide."
+verification = "Inspection: compare both catalogs and guide creation/workflow sections with the implemented controls and reset tests; check that current instructions contain no Start Project step."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "06_SoftwareDocu/UserGuide/index.html", "06_SoftwareDocu/UserGuide_ro/index.html", "06_SoftwareDocu/UserGuide/assets/screenshots/home-project.png", "06_SoftwareDocu/UserGuide_ro/assets/screenshots/home-project.png"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_ui_controller.py::test_project_options_confirmation_buttons_and_actual_impact", "05_Software/AudioMancer/tests/test_ui_localization_coverage.py"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

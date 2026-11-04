@@ -18,6 +18,11 @@ The expected stable archive names are:
 - `AudioMancer_Windows_x64.zip`
 - `AudioMancer_Linux_x64.zip`
 
+Additional local rebuilds using the same application version are kept under
+`releases/<version>_<timestamp>/`, including Windows ZIP, Linux ZIP, Linux
+AppImage and their SHA256 checksums. These folders are ignored by Git and
+preserve the existing delivery archives.
+
 Each delivery zip contains a portable application folder with:
 
 - the platform-specific `AudioMancer` executable

@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-f0999e62"
+title = "Contain unsuccessful project creation and import"
+status = "active"
+
+requirement = "If project creation or initial source import fails, AudioMancer shall show the project error while preserving the previous active project and pre-existing destination contents."
+verification = "Inject copy and manifest-write errors, including an existing empty destination, and verify warning, unchanged active state and removal of only newly created artifacts."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_options_service.py::test_source_ready_creation_failure_keeps_destination", "05_Software/AudioMancer/tests/test_project_options_service.py::test_initial_import_manifest_failure_removes_new_copy", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_project_creation_filesystem_error", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_contains_source_import_filesystem_error"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

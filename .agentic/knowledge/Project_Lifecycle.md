@@ -7,7 +7,14 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Project Lifecycle
 
-## 1. Purpose
+## Routing
+
+For New Project, initial book import, Home language/narration changes, manifest
+repair or exports, start at `home_ui_controller`, `project_options_service` and
+`test_home_ui_controller.py` / `test_project_options_service.py`. Operation
+Orchestration owns the artifact registry; individual workflows own generation.
+
+## Purpose and boundaries
 
 The Project Lifecycle component owns the operator-facing lifetime of an
 AudioMancer project: creating or opening its flat workspace, validating and
@@ -15,7 +22,7 @@ repairing `project.json`, registering the source document, presenting Home-page
 state, and producing external exports or whole-project snapshots. It also owns
 the shared atomic writer used for critical project metadata.
 
-## 2. Responsibilities
+### Responsibilities
 
 - Create, validate, open, normalize, save, and metadata-repair project
   workspaces and manifests.
@@ -26,14 +33,16 @@ the shared atomic writer used for critical project metadata.
   Extraction, and Cleanup.
 - Validate project names and project-relative artifact paths across supported
   platforms.
-- Import or transactionally replace one supported source document before
-  project options are locked, preserving normalized source metadata and draft
-  language/voice options while invalidating stale generated state.
+- Publish source-ready projects and import the first book into existing source-less
+  projects, keeping registered source selection fixed in Home.
+- Plan and apply confirmed language/narration changes with automatic persistence,
+  exact artifact impacts and rollback after expected filesystem failures.
+- Provide copy-first source replacement through the low-level importer API.
 - Project detailed operation state into compact manifest summaries and derive
   Home-page workflow status and export readiness.
 - Build coherent operation-and-downstream compact-summary resets for domain
   services that have already invalidated their centralized runtime artifacts.
-- Coordinate Home-page create/open/repair, source import, option locking,
+- Coordinate Home-page create/open/repair, initial source import, automatically saved options,
   snapshot, and export actions.
 - Render text/Markdown delivery projections and package ready voice or audio
   artifacts into external ZIP exports through temporary archives and atomic
@@ -49,15 +58,18 @@ artifacts only to present state, validate manifest evidence, and export current
 results. Thread execution and cancellation primitives belong to
 `operation-orchestration`.
 
-## 3. Implementation Overview
+### Implementation overview
 
 The implementation boundary is:
 
 - `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/import_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_options_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_options_service.py` — creation and confirmed option publication.
+- `05_Software/AudioMancer/tests/test_project_options_service.py` — impact, preservation, rollback and path containment.
 - `05_Software/AudioMancer/src/audiomancer/services/home_presenter_service.py`
 - `05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py`
 - `05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py`
@@ -93,14 +105,31 @@ when archive creation or replacement fails. The requested destination therefore
 remains unchanged until a complete replacement is available
 (`REQ-FUNC-efcaeeed`).
 
-For replacement, `HomeUiController` registers the copied source in the pending
-manifest, calls `text_extraction_service.reset_extraction_and_downstream`,
-applies `text_cleanup_state_service.build_manifest_after_extraction_reset`,
-and then saves the manifest. The reset therefore deletes stale Extraction and
-downstream outputs and resets their compact summaries without deleting the
-new source or rewriting unlocked `target_language`,
-`selected_voice_language`, or `voice_assignment_mode`. Initial import retains
-the existing Home draft-option capture behavior.
+`project_options_service.create_project_with_source` stages a complete workspace
+and copied source under a temporary sibling directory before publishing the
+selected project folder. Cancelling a picker preserves the active project and
+Cleanup draft. `import_initial_source` saves source registration and initial
+options together, removing the new copy if manifest publication fails.
+
+Home flushes the Translation page's existing debounced manual save before
+planning, so both accepted and cancelled option changes retain the latest edit.
+`plan_project_options_change` reads current project evidence and the centralized
+operation-owned artifact registry without mutation. Home uses that exact plan
+for localized confirmation and `apply_project_options_change`. A mode change
+preserves text, translation, Book Analysis, character definitions, edited voice
+prompts and preview text, and narrator profiles/selection/samples; it clears
+character sample metadata and samples plus Speech Blocks through Audio Assembly.
+Mode-only changes retain a legacy project's independently saved voice language.
+A language change clears Translation and every later result plus Book Analysis,
+keeping source and data through Chunking. The stage can move back to the last
+retained boundary but cannot be promoted by an option edit. Same-value requests
+leave project bytes unchanged, and programmatic combo refresh emits no change.
+
+Application rechecks the manifest and replacement voice-plan bytes, stages
+originals by rename, atomically publishes the new metadata, and restores originals
+on expected failure. A restoration failure retains recovery originals under their
+project-relative paths and reports the backup root. Project workers are blocked during changes. The source, target and
+voice metadata remain project-local; external exports are preserved.
 
 When strict Chunking loading reports incompatible persisted content,
 `project_workspace_service.open_project` invokes the operation-runtime reset,
@@ -132,7 +161,7 @@ replacement, or a success notification. Successful flows are unchanged.
 
 `home_presenter_service` turns manifest summaries and the active operation into
 read-only workflow rows. `HomeUiController` owns the UI orchestration and keeps
-dialogs, project activation, option locking, threaded snapshots, and external
+dialogs, project activation, automatic options, threaded snapshots, and external
 save-path checks out of `HomeProjectPage`. The page owns Qt signals, controls,
 translated labels, theme roles, busy state, and readiness display.
 
@@ -149,7 +178,7 @@ the active project, skips symlinks and AI transaction logs, archives files under
 one top-level project folder, and replaces the requested destination only after
 the temporary ZIP completes.
 
-## 4. Dependencies
+### Dependencies
 
 Internal dependencies include `audiomancer.config`, time and logging services,
 operation runtime/path-safety and reserved-artifact helpers, Extraction and
@@ -162,7 +191,7 @@ date/time, dataclass, regular-expression, and ZIP APIs. The UI boundary uses
 PySide6 widgets, signals, dialogs, and models. Project data is stored in the
 local filesystem; the component does not call a network service.
 
-## 5. Inputs And Outputs
+## Public interface
 
 Inputs include operator-selected project and source paths, project names,
 language and voice-mode selections, the active manifest, operation artifacts,
@@ -175,7 +204,7 @@ snapshots, and operator-visible success, validation, or filesystem-error
 messages. Export and snapshot deliverables are not registered as runtime project
 artifacts.
 
-## 6. Data Contracts
+## Invariants
 
 Chunking completion evidence and text-chunk exports are projections of the one
 strict `chunks_text.json` document. An incompatible document is regenerable
@@ -213,7 +242,7 @@ and `log_ai_narrator_profiles_*.log`. Project snapshots include the document
 and WAVs while excluding AI transaction logs.
 
 The root manifest contains project identity and timestamps, `current_stage`,
-`source_document`, compact `operations`, locked language/voice options,
+`source_document`, compact `operations`, persisted language/voice options and a legacy options-lock flag,
 audio-assembly settings, and notes. `source_document` contains
 `original_name`, `stored_relative_path`, `file_type`, `imported_at`, and
 `size_bytes`. Compact operation summaries contain `status`, progress values,
@@ -246,7 +275,7 @@ resolve inside the active project even when symlinks are present. New projects
 use a flat root, with generated audio permitted under `audio_blocks/` and final
 assembly output under `audiobook/`; unsupported numbered workflow folders are not
 accepted.
-Creation accepts an absent target or an empty target directory. A non-empty
+Low-level workspace creation accepts an absent target or an empty target directory. A non-empty
 directory raises `FileExistsError`; an existing file raises `FileExistsError`
 with `Project path already exists as a file: <path>` and remains unchanged.
 
@@ -256,7 +285,7 @@ and a trailing newline by default. Export/snapshot paths must be outside the
 active project. Snapshot members share one top-level folder named after the
 project root; AI transaction logs and symlinks are excluded.
 
-`REQ-FUNC-b1f49831` defines source replacement as one ordered state transition.
+`REQ-FUNC-b1f49831` defines the low-level importer copy-first replacement boundary.
 The selected source and previous manifest path are validated before mutation;
 the new file is copied and atomically promoted before the previous stored file
 is deleted. A copy failure removes its incomplete temporary file and leaves the
@@ -265,16 +294,14 @@ unchanged. Generated-artifact names are reserved case-insensitively, so a
 supported source named `extracted_text.txt` or `clean_text.txt` receives the
 normal numeric suffix instead of occupying a reset-owned path.
 
-`REQ-FUNC-3278aae6` makes re-selecting the stored source an exact no-op. Both
-the import service and Home controller compare the resolved filesystem identity
-after project-relative containment validation, so the existing source payload,
-manifest bytes, artifacts, summaries, and stage remain untouched. A different
-external file with the same basename remains a normal collision-safe
-replacement.
+`REQ-FUNC-3278aae6` makes the low-level importer's stored-source selection an
+exact identity no-op. Home rejects a new import once a book is registered,
+independently of the legacy options-lock flag. A different same-named external
+file remains a collision-safe replacement at the low-level importer API.
 
-`REQ-UX-e4b0be69` keeps `_refresh_summary_labels()` as the only derivation for
-the Home source status. Language changes therefore retain the translated absent,
-selected-unlocked, or locked status, its source name, styling, and controls.
+`REQ-UX-e4b0be69` keeps `_refresh_summary_labels()` as the source-status
+projection. Changing UI language retains the absent or fixed-book state,
+source name, styling and control availability.
 
 `REQ-FUNC-cfd0a750` uses the shared append-only extension helper before export
 and snapshot containment checks. It compares complete filenames
@@ -289,16 +316,14 @@ the same downstream summaries. The completed Cleanup summary and
 `text_chunking_ready` stage are saved in that single manifest write, preserving
 the source, Extraction, project options, and unrelated manifest fields.
 
-## 7. Workflow Integration
+### Workflow integration
 
 The application shell delegates project and Home actions to
-`HomeUiController`. A successful create/open/repair activates the project,
-updates the Home presenter and export readiness, and enables the appropriate
-workflow pages. Source import precedes downstream processing; locking project
-options freezes source replacement and establishes target language and voice
-assignment mode. Replacing an unlocked source after processing first completes
-the safe copy and then resets Extraction and every downstream artifact and
-summary to `source_selected` while preserving the unlocked option fields.
+`home_ui_controller`. A successful source-ready creation, open or repair activates
+the project, updates the Home summary and enables workflow pages. The source book
+is fixed after registration. Language and narration mode remain editable while
+idle and persist automatically after any required actual-impact confirmation.
+Existing projects display their saved options without an option-change reset.
 
 Downstream workflow components persist detailed artifacts and compact manifest
 summaries. Project open may use trustworthy artifacts to propose a metadata-only
@@ -311,14 +336,13 @@ reopen with `status="ok"`, not a repair request caused by stale downstream
 summaries. A failed manifest write propagates to Cleanup and is never converted
 into a successful transition.
 
-## 8. Usage
+### Usage
 
 ```python
-from audiomancer.services import project_workspace_service
+from audiomancer.services import project_options_service, project_workspace_service
 
-project_root, manifest = project_workspace_service.create_project(
-    "Book5_CAL_CAL",
-    "D:/Projects",
+project_root, manifest = project_options_service.create_project_with_source(
+    "Book5_CAL_CAL", "D:/Projects", "D:/Books/story.txt",
 )
 open_result = project_workspace_service.open_project(project_root)
 ```
@@ -338,7 +362,7 @@ The desktop UI normally reaches these services through
 `HomeUiController`; callers must preserve the external-destination checks for
 exports and snapshots.
 
-## 9. Validation And Tests
+### Verification
 
 Primary automated coverage:
 
@@ -363,12 +387,12 @@ decisions and appears exactly once. The workspace-service suite separately
 verifies that a Chunking `OSError` propagates without reset or deletion.
 Source-import regressions inject a partial copy failure and compare the complete
 project tree byte-for-byte, exercise current and case-variant reserved names,
-and replace a processed project through the Home controller while checking all
-root artifacts, generated audio, compact summaries, new-source registration,
-stage reset, and unlocked option preservation.
+and preserve the complete prior project after a failed low-level copy. Home
+controller tests reject replacement of registered books while preserving all
+root artifacts, generated audio, compact summaries and source registration.
 They also verify resolved same-source no-ops, different same-named replacements,
 and byte-for-byte preservation through the Home controller. Home-page tests
-cover each source status in English and Romanian. Export and snapshot tests
+cover fixed-source availability and saved option selectors in English and Romanian. Export and snapshot tests
 cover dotted, extensionless, lowercase, and uppercase destination names at both
 controller and service boundaries.
 `test_cleanup_service.py` covers the shared manifest-reset builder through both
@@ -385,7 +409,7 @@ After changes, run those focused tests with `uv run pytest`, plus
 to persistence or path containment require the atomic I/O and unsafe-path cases
 as part of focused validation.
 
-## 10. Limitations And Future Work
+### Operational limits
 
 - Atomic writes are last-replacement-wins and do not provide cross-process
   locking or backup rotation.
@@ -400,15 +424,33 @@ as part of focused validation.
   application, the create and open dialogs start again at the documents root
   rather than wherever their projects actually live.
 
-## Supporting Book Analysis Operation
+### Supporting Book Analysis operation
 
 `book_analysis` is included in project manifest operation summaries but not in
 the workflow operation order or stage map. Manifest repair preserves supporting
 summaries at every stage. Its start, failure, cancellation, completion, and
 reset never promote or lower `current_stage`; explicit reset clears only its
 summary and owned files. Upstream Chunking changes preserve its completed
-report so freshness can be derived and shown as stale instead of deleting useful
-analysis.
+report so freshness can be derived and shown as stale. Confirmed Home language
+changes reset its document, AI logs and compact summary; narration-mode changes
+preserve its report.
+
+## Change map
+
+| Change requested | Start with | Focused verification |
+|---|---|---|
+| Creation, automatic options and confirmed resets | project_options_service, home_ui_controller | test_project_options_service.py, test_home_ui_controller.py |
+| Manifest validation and repair | project_workspace_service | test_project_workspace_service.py |
+| Source copy safety | import_service | test_import_service.py |
+| Exports and snapshots | project_export_service, project_snapshot_service | export/snapshot service and controller tests |
+
+## Key behaviors
+
+- `REQ-FUNC-b27e4e87`, `REQ-FUNC-ad79f7c7`, `REQ-FUNC-f0999e62`: source-ready creation and cancellation/failure preservation.
+- `REQ-FUNC-1c28e0bf`, `REQ-FUNC-348f0aeb`, `REQ-FUNC-c3d29114`: autosaved options with exact mode/language reset boundaries.
+- `REQ-FUNC-2083d3a1`: confirmed-reset failures restore originals; recovery failures retain their backup path.
+- `REQ-FUNC-eb5d81aa`, `REQ-FUNC-c132a7bf`, `REQ-UX-e4b0be69`: source presence gates import while Home options remain editable when idle.
+- `REQ-FUNC-3500196d`, `REQ-FUNC-3401b07e`, `REQ-FUNC-ec10fa36`: cancellation/no-op, refresh and busy guards.
 
 ## Files
 

@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-ad79f7c7"
+title = "Cancel project creation without switching projects"
+status = "active"
+
+requirement = "If the operator cancels any New Project picker, AudioMancer shall preserve the previously active project and its unsaved Cleanup draft without creating the new project folder."
+verification = "Cancel folder, name or book selection with an active project and modified draft; compare the project tree and active state."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_ui_controller.py::test_new_project_document_cancel_preserves_current_project", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_confirmed_new_project_picker_cancel_keeps_cleanup_draft"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

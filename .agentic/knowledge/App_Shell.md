@@ -35,6 +35,11 @@ services. External dependencies are PySide6 and the host desktop event loop.
 
 ## Public interface
 
+Home's `project_options_change_requested` signal routes deliberate language or
+narration selections to Project Lifecycle's confirmed persistence handler.
+Programmatic state refresh does not request changes. New Project activates only
+a published source-ready project; opening existing projects displays saved options.
+
 Inputs are persisted settings, translated resource files, user navigation and
 dialog actions, and project summaries emitted by domain components. Outputs are
 the visible window, active page selection, themed Qt state, dialogs, status
@@ -48,6 +53,10 @@ to the owning controllers. Domain code uses `MainWindow` navigation and refresh
 hooks rather than recreating application or dialog infrastructure.
 
 ## Invariants
+
+Account sign-in/model-test workers keep their own AI Runtime cancellation
+lifecycle. Project workflow workers use Operation Orchestration's shutdown and
+cancellation contracts.
 
 The package API exports `__version__` and `main`. Page identifiers must match
 the sidebar and stacked-page registration. Theme is applied before widgets are
@@ -133,23 +142,6 @@ speech, TTS, and assembly components. Domain pages are constructed here but
 retain ownership of their own service contracts and state transitions.
 
 
-
-## Architecture
-
-```mermaid
-flowchart TD
-    entry([app.main]) --> settings[settings_service]
-    entry --> logging[logging_service]
-    entry --> window[MainWindow]
-    window --> sidebar[NavigationSidebar]
-    window --> pages([Workflow pages])
-    window --> dialogs[Settings dialogs]
-    dialogs --> account([ChatGPTAuthUiController])
-    window --> operations([operation_runner_controller])
-    window --> audio([Audio playback])
-```
-
-The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
 
 ## Files
 

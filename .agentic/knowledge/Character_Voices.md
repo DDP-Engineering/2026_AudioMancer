@@ -1,7 +1,13 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Character Voices
 
-## Purpose
+## Routing
+
+For target prompts, character samples and readiness, start at
+`character_voices_service` and its service/state tests. Home narration-mode and
+language changes belong to Project Lifecycle's `project_options_service`.
+
+## Purpose and boundaries
 
 Character Voices derives narrator-first voice targets from the selected narrator
 and reviewed character inventory, then manages prompt review, sample import or
@@ -9,6 +15,11 @@ generation, preview, readiness, and the compact project-manifest summary. It doe
 not assign Speech Blocks or generate final audiobook audio.
 
 ## Public interface
+
+Project Lifecycle mode changes clear character sample metadata/WAVs and readiness
+while preserving target prompts and preview text plus the selected narrator's
+data. A language change resets the whole target plan and its dependent samples.
+
 
 `character_voices_service.py` owns `characters_voice.json`, target/sample lookup,
 prompt updates, import and generated-sample persistence, readiness, and operation
@@ -76,6 +87,13 @@ batch generation, and preview signals.
 - Readiness requires the selected narrator WAV and metadata plus every character
   target WAV and metadata; the manifest stage remains a promotion-only high-water
   mark.
+
+## Invariants
+
+Narrator targets reuse the selected narrator sample and remain read-only. Target
+IDs remain stable during prompt edits and mode changes. A mode reset retains
+operator prompt/preview edits and narrator data; downstream block/audio results
+are governed by Project Lifecycle's confirmed impact plan.
 
 ## Persistence and workflow
 

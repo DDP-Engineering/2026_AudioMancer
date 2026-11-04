@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-3401b07e"
+title = "Load existing projects without option-change side effects"
+status = "active"
+
+requirement = "When refreshing or opening an existing project, AudioMancer shall display its saved language and narration mode without initiating option-change confirmations or resets."
+verification = "Refresh legacy locked/unlocked projects repeatedly with signal observers and verify no change requests, prompts or deletions."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_page.py::test_home_page_refresh_emits_no_option_request", "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_source_and_options_have_independent_editability"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

@@ -149,41 +149,38 @@ def test_home_page_language_application_updates_export_labels(qtbot) -> None:
     assert page._export_rows[project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY]["format"].itemText(0) == "ZIP"
 
 
-def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:
-    """
-    @brief      Verify source import, ZIP export, and project locking follow project state.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    """
+def test_home_page_source_and_options_have_independent_editability(qtbot) -> None:
+    """@brief Registered books stay fixed while language and narration remain editable."""
     page = HomeProjectPage()
     qtbot.addWidget(page)
-
     page.set_project_active(True)
     page.set_project_options(False, "ro", "same_narrator")
+    assert not hasattr(page, "_import_button")
+    assert not hasattr(page, "_start_project_button")
+    page.set_source_summary("story.txt")
+    for locked in (False, True):
+        page.set_project_options(locked, "ro", "same_narrator")
+        assert page._target_language_combo.isEnabled()
+        assert page._narration_mode_combo.isEnabled()
+        assert page._source_label.text() == "Source: story.txt"
+    page.set_operation_busy(True)
+    assert not page._target_language_combo.isEnabled()
+    assert not page._narration_mode_combo.isEnabled()
 
-    assert page._import_button.isEnabled() is True
-    assert page._snapshot_button.isEnabled() is True
-    assert page._target_language_caption.text() == "Translation language"
-    assert page._narration_mode_caption.text() == "Audio output style"
-    assert page._target_language_combo.isEnabled() is True
-    assert page._narration_mode_combo.isEnabled() is True
-    assert page._start_project_button.isEnabled() is False
 
-    page.set_source_locked(True, "story.txt")
-
-    assert page._import_button.isEnabled() is True
-    assert page._start_project_button.isEnabled() is True
-    assert "Selected source: story.txt" in page._source_lock_label.text()
-
+def test_home_page_refresh_emits_no_option_request(qtbot) -> None:
+    """@brief Only deliberate combo activation requests automatic persistence."""
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    requests = []
+    page.project_options_change_requested.connect(lambda *args: requests.append(args))
     page.set_project_options(True, "ro", "same_narrator")
-
-    assert page._import_button.isEnabled() is False
-    assert page._snapshot_button.isEnabled() is True
-    assert "Locked source: story.txt" in page._source_lock_label.text()
-    assert page._target_language_combo.isEnabled() is False
-    assert page._narration_mode_combo.isEnabled() is False
-    assert page._start_project_button.isEnabled() is False
+    page.set_project_options(False, "de", "narrator_and_characters")
+    page.apply_language("ro")
+    assert requests == []
+    page._target_language_combo.activated.emit(page._target_language_combo.currentIndex())
+    assert requests == [("de", "narrator_and_characters")]
 
 
 def test_home_page_stage_rows_use_theme_status_roles(qtbot) -> None:
@@ -230,7 +227,7 @@ def test_home_page_stage_rows_use_theme_status_roles(qtbot) -> None:
     assert "background: #FEFEFE;" in page._stage_rows[0].styleSheet()
 
 
-def test_home_page_theme_fallback_keeps_source_lock_style_valid(qtbot) -> None:
+def test_home_page_theme_fallback_keeps_workflow_style_valid(qtbot) -> None:
     """
     @brief      Verify partial or malformed theme payloads fall back to built-in color roles.
     @param[in]  qtbot Qt test helper fixture.
@@ -242,13 +239,14 @@ def test_home_page_theme_fallback_keeps_source_lock_style_valid(qtbot) -> None:
 
     page.apply_theme({"colors": {"danger": "not-a-color"}})
     page.set_project_active(True)
-    page.set_source_locked(True, "story.txt")
+    page.set_source_summary("story.txt")
     page.set_project_options(True, "en", "same_narrator")
 
     default_theme = ui_theme_service.theme_by_id(ui_theme_service.default_theme_id(), [])
     default_colors = default_theme["colors"]
     assert isinstance(default_colors, dict)
-    assert f"color: {default_colors['danger']};" in page._source_lock_label.styleSheet()
+    page.set_stage_statuses([{"label": "Cleanup", "status": "not_started"}])
+    assert f"border: 1px solid {default_colors['border']};" in page._stage_rows[0].styleSheet()
 
 
 def test_home_page_has_workflow_stepper_matching_stage_count(qtbot) -> None:
@@ -332,17 +330,13 @@ def test_home_page_language_switch_preserves_all_source_statuses(
     page = HomeProjectPage()
     qtbot.addWidget(page)
     page.set_project_state("Project", "/project", "source_selected")
-    page.set_source_locked(has_source, source_name)
+    page.set_source_summary(source_name if has_source else None)
     page.set_project_options(options_locked, "en", "narrator_and_characters")
-    expected_style = page._source_lock_label.styleSheet()
 
     page.apply_language("ro")
 
-    assert page._source_lock_label.text() == home_page._build_source_status_text(
-        "ro", has_source, options_locked, source_name
-    )
-    assert page._source_lock_label.styleSheet() == expected_style
-    assert page._import_button.isEnabled() is (not options_locked)
+    assert page._source_label.text() == f"Sursa: {source_name or 'niciuna'}"
+    assert not hasattr(page, "_import_button")
 
 
 @pytest.mark.parametrize("stage_count", [9, 10])

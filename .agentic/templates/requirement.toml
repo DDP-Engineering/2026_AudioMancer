@@ -79,8 +79,9 @@ verification = "How a human or agent confirms this behavior holds."
 affected_paths = []
 
 # AEGIS:TEMPLATE-BEGIN
-# "tests/path/test_file.py::test_name" entries. Kept current during build;
-# these select the impacted regression set.
+# "<test file>" entries, or "<test file>::<test name>" where the test runner
+# accepts that selector. Kept current during build; these select the
+# impacted regression set.
 # AEGIS:TEMPLATE-END
 linked_tests = []
 

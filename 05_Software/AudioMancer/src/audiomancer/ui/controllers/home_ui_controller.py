@@ -18,20 +18,18 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
-    home_presenter_service,
-    import_service,
     operation_runtime_service,
     project_export_service,
+    project_options_service,
     project_snapshot_service,
     project_workspace_service,
     speech_blocks_service,
-    text_cleanup_state_service,
-    text_extraction_service,
     ui_state_service,
 )
 from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
@@ -53,6 +51,8 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @exception  None
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if getattr(window, "_active_operation_kind", None) is not None:
+        return
     if not _confirm_cleanup_draft_discard(window, current_language):
         return
     selected_parent = QFileDialog.getExistingDirectory(
@@ -85,10 +85,20 @@ def handle_new_project_requested(window: "MainWindow") -> None:
         )
         return
 
+    selected_file, _selected_filter = QFileDialog.getOpenFileName(
+        window,
+        ui_state_service.translate("dialog.select_source_title", current_language),
+        selected_parent,
+        ui_state_service.translate("dialog.select_source_filter", current_language),
+    )
+    if not selected_file:
+        return
+
     try:
-        project_root, manifest = project_workspace_service.create_project(
+        project_root, manifest = project_options_service.create_project_with_source(
             project_name,
             selected_parent,
+            selected_file,
         )
     except (OSError, ValueError) as error:
         QMessageBox.warning(
@@ -194,12 +204,14 @@ def show_project_open_recovery(
 
 def handle_import_source_requested(window: "MainWindow") -> None:
     """
-    @brief      Let the operator select and import one source file.
+    @brief      Import the first book for an existing source-less project.
     @param[in]  window Active main window shell.
     @return     None.
-    @exception  None
+    @exception  None.
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if getattr(window, "_active_operation_kind", None) is not None:
+        return
     if window._current_project_root is None or window._current_manifest is None:
         QMessageBox.warning(
             window,
@@ -207,15 +219,13 @@ def handle_import_source_requested(window: "MainWindow") -> None:
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-
-    if bool(window._current_manifest.get("project_options_locked", False)):
+    if isinstance(window._current_manifest.get("source_document"), dict):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("project.error_project_already_started", current_language),
+            ui_state_service.translate("project.error_locked_source", current_language),
         )
         return
-
     selected_file, _selected_filter = QFileDialog.getOpenFileName(
         window,
         ui_state_service.translate("dialog.select_source_title", current_language),
@@ -224,19 +234,10 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     )
     if not selected_file:
         return
-
     try:
-        previous_source_document = window._current_manifest.get("source_document")
-        if import_service.is_same_source_selection(
-            window._current_project_root,
-            selected_file,
-            previous_source_document if isinstance(previous_source_document, dict) else None,
-        ):
-            return
-        source_document = import_service.import_source(
-            window._current_project_root,
-            selected_file,
-            previous_source_document if isinstance(previous_source_document, dict) else None,
+        target_language, voice_assignment_mode = window._home_page.selected_project_options()
+        manifest = project_options_service.import_initial_source(
+            window._current_project_root, selected_file, target_language, voice_assignment_mode
         )
     except (OSError, ValueError) as error:
         QMessageBox.warning(
@@ -245,90 +246,131 @@ def handle_import_source_requested(window: "MainWindow") -> None:
             str(error),
         )
         return
-
-    replacing_source = isinstance(previous_source_document, dict)
-    updated_manifest = dict(window._current_manifest)
-    updated_manifest["source_document"] = source_document
-    if replacing_source:
-        text_extraction_service.reset_extraction_and_downstream(
-            window._current_project_root,
-        )
-        updated_manifest = text_cleanup_state_service.build_manifest_after_extraction_reset(
-            updated_manifest,
-        )
-    else:
-        updated_manifest["current_stage"] = "source_selected"
-    if not replacing_source and not bool(updated_manifest.get("project_options_locked", False)):
-        target_language, voice_assignment_mode = window._home_page.selected_project_options()
-        updated_manifest["target_language"] = target_language
-        updated_manifest["selected_voice_language"] = target_language
-        updated_manifest["voice_assignment_mode"] = voice_assignment_mode
-    project_workspace_service.save_manifest(
-        updated_manifest,
-        window._current_project_root,
-    )
-    reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
-    window.show_project_state(window._current_project_root, reloaded_manifest)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.source_imported", current_language),
-    )
+    window.show_project_state(window._current_project_root, manifest)
+    misc_ui_controller.show_message(window, ui_state_service.translate("status.source_imported", current_language))
 
 
-def handle_project_options_lock_requested(
-    window: "MainWindow",
-    target_language: str,
-    voice_assignment_mode: str,
+def handle_project_options_change_requested(
+    window: "MainWindow", target_language: str, voice_assignment_mode: str
 ) -> None:
     """
-    @brief      Confirm and lock project-level audiobook options.
+    @brief      Confirm actual dependent losses and automatically save Home options.
     @param[in]  window Active main window shell.
-    @param[in]  target_language Requested project target language.
+    @param[in]  target_language Requested translation and voice language.
     @param[in]  voice_assignment_mode Requested narration mode.
     @return     None.
-    @exception  None
+    @exception  None.
     """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("project.error_no_active_project", current_language),
-        )
         return
-    if bool(window._current_manifest.get("project_options_locked", False)):
+    if getattr(window, "_active_operation_kind", None) is not None:
+        _restore_project_option_selection(window)
         return
-    if home_presenter_service.source_document_name(window._current_manifest) is None:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("project.error_start_project_missing_source", current_language),
-        )
-        return
-    if not misc_ui_controller.confirm_question(
-        window,
-        current_language,
-        "dialog.confirm_project_options_title",
-        "project.confirm_project_options_lock",
-    ):
-        return
+    language = ui_state_service.current_language_from_settings(window._settings_payload)
     try:
-        manifest = project_workspace_service.lock_project_options(
-            window._current_project_root,
-            target_language,
-            voice_assignment_mode,
+        # Settle the existing manual-save timer before its document can be reset.
+        window._ai_translation_page.flush_pending_translation_edit()
+        plan = project_options_service.plan_project_options_change(
+            window._current_project_root, target_language, voice_assignment_mode
         )
-    except ValueError as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
-        )
+        if not plan.changed or (
+            plan.requires_confirmation and not confirm_project_options_change(window, plan, language)
+        ):
+            _restore_project_option_selection(window)
+            return
+        window.stop_all_audio_playback()
+        manifest = project_options_service.apply_project_options_change(plan)
+    except (OSError, ValueError) as error:
+        _restore_project_option_selection(window)
+        QMessageBox.warning(window, ui_state_service.translate("dialog.project_error_title", language), str(error))
         return
     window.show_project_state(window._current_project_root, manifest)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.project_options_locked", current_language),
+    misc_ui_controller.show_message(window, ui_state_service.translate("status.project_options_saved", language))
+
+
+def build_project_options_confirmation_message(
+    plan: project_options_service.ProjectOptionsChange, language: str
+) -> str:
+    """
+    @brief      Explain the exact planned reset and its preservation boundary.
+    @param[in]  plan Read-only option change shown to the operator.
+    @param[in]  language Current interface language.
+    @return     Localized plain-text confirmation body.
+    @exception  None.
+    """
+    key = "project.options_change_language" if plan.language_changed else "project.options_change_mode"
+    value = (
+        ui_state_service.translate(f"language.{plan.target_language}", language)
+        if plan.language_changed
+        else ui_state_service.translate(f"home.mode_{plan.voice_assignment_mode}", language)
+    )
+    lines = [ui_state_service.translate(key, language).format(value=value)]
+    if plan.affected_operations:
+        lines += ["", ui_state_service.translate("project.options_reset_header", language)]
+        lines += [
+            ui_state_service.translate(f"project.options_reset.{kind}", language) for kind in plan.affected_operations
+        ]
+        if plan.artifact_paths:
+            file_message = ui_state_service.translate("project.options_file_count", language)
+            lines.append(file_message.format(count=len(plan.artifact_paths)))
+        else:
+            lines += [ui_state_service.translate("project.options_progress_only", language)]
+    else:
+        lines += ["", ui_state_service.translate("project.options_no_results", language)]
+    preserve_key = "project.options_preserve_language" if plan.language_changed else "project.options_preserve_mode"
+    lines += ["", ui_state_service.translate(preserve_key, language)]
+    return "\n".join(lines)
+
+
+def confirm_project_options_change(
+    window: "MainWindow", plan: project_options_service.ProjectOptionsChange, language: str
+) -> bool:
+    """
+    @brief      Present a cancellable change action with actual impact details.
+    @param[in]  window Parent window.
+    @param[in]  plan Exact change to confirm.
+    @param[in]  language Current interface language.
+    @return     True only for the explicitly labelled apply action.
+    @exception  None.
+    """
+    dialog = QMessageBox(window)
+    dialog.setIcon(QMessageBox.Icon.Warning if plan.affected_operations else QMessageBox.Icon.Question)
+    dialog.setWindowTitle(ui_state_service.translate("dialog.confirm_project_options_change_title", language))
+    dialog.setTextFormat(Qt.TextFormat.PlainText)
+    dialog.setText(build_project_options_confirmation_message(plan, language))
+    if plan.artifact_paths:
+        dialog.setDetailedText("\n".join(str(path.relative_to(plan.project_root)) for path in plan.artifact_paths))
+        details_button = next(
+            button for button in dialog.buttons() if dialog.buttonRole(button) == QMessageBox.ButtonRole.ActionRole
+        )
+        details_button.setText(ui_state_service.translate("project.options_show_details", language))
+
+        def update_details_label() -> None:
+            """@brief Apply the app locale after Qt toggles its built-in details panel."""
+            expanded = not bool(details_button.property("details_expanded"))
+            details_button.setProperty("details_expanded", expanded)
+            key = "project.options_hide_details" if expanded else "project.options_show_details"
+            details_button.setText(ui_state_service.translate(key, language))
+
+        details_button.clicked.connect(update_details_label)
+    action_key = "project.options_apply_reset" if plan.affected_operations else "project.options_apply"
+    apply_button = dialog.addButton(ui_state_service.translate(action_key, language), QMessageBox.ButtonRole.AcceptRole)
+    cancel_button = dialog.addButton(
+        ui_state_service.translate("project.options_cancel", language), QMessageBox.ButtonRole.RejectRole
+    )
+    dialog.setDefaultButton(cancel_button)
+    dialog.setEscapeButton(cancel_button)
+    dialog.exec()
+    return dialog.clickedButton() is apply_button
+
+
+def _restore_project_option_selection(window: "MainWindow") -> None:
+    """@brief Restore persisted selector values without emitting another change request."""
+    manifest = window._current_manifest
+    window._home_page.set_project_options(
+        bool(manifest.get("project_options_locked", False)),
+        str(manifest["target_language"]),
+        str(manifest["voice_assignment_mode"]),
     )
 
 

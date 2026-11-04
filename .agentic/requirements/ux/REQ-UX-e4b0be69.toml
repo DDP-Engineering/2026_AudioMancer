@@ -38,7 +38,7 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When the Home page changes its UI language, it shall retain the existing three-state source status: no source, selected while project options remain unlocked, or locked after project options are locked.
+When the Home page changes its UI language, it shall retain the source name and truthful source availability: source-less projects permit the first import and registered books remain fixed independently of the legacy options-lock flag.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -66,4 +66,4 @@ priority = "normal"
 rationale = "A language-only UI action must not misrepresent whether an operator can still change the project source."
 
 created = 2026-08-07
-updated = 2026-08-07
+updated = 2026-11-04

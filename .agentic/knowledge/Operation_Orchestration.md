@@ -54,6 +54,12 @@ Python filesystem/JSON/runtime primitives. No provider SDK is used directly.
 
 ## Public interface
 
+`operation_reset_artifact_paths(project_root, operation_kind)` enumerates existing
+files from the central ownership registry without deleting or initializing data.
+It rejects redirected paths, symlinks and junction escapes. Project Lifecycle
+uses this collector to show and transactionally apply the same confirmed option
+impact. Existing `reset_operation_data` retains its best-effort reset contract.
+
 Inputs are an active project root and manifest, stable operation kind, optional
 state/artifact paths, cancellation event, worker callable, and UI callbacks.
 Outputs include root-level JSON artifacts, compact state payloads, impact
@@ -71,6 +77,10 @@ snapshot: Project Lifecycle reloads the current file, refreshes the requested
 summary, and only promotes a requested workflow stage.
 
 ## Invariants
+
+Account sign-in/model-test workers keep their own AI Runtime cancellation
+lifecycle. Project workflow workers use Operation Orchestration's shutdown and
+cancellation contracts.
 
 Operation kinds must be present in `config.WORKFLOW_OPERATION_ORDER`. Relative
 artifact paths must be nonempty, nonabsolute, and traversal-free; conversion
@@ -118,6 +128,8 @@ for translating their own failure state into operator-facing outcomes.
 | Operation artifact/reset rules | operation_runtime_service | test_operation_runtime_service.py |
 
 ## Key behaviors
+
+- `REQ-FUNC-348f0aeb`, `REQ-FUNC-c3d29114`, `REQ-FUNC-2083d3a1`: registry-backed option impact collection feeds Project Lifecycle transactional publication.
 
 - `REQ-UX-3d0aeaec`: MainWindow waits independently for the account controller during shutdown; account jobs preserve the project runner's modal state and operation documents.
 
@@ -199,24 +211,6 @@ reset for both automatic and manual canonical-text publication, then delegates
 summary reset construction to Project Lifecycle before success is returned.
 
 
-
-## Architecture
-
-```mermaid
-flowchart TD
-    controller([Domain controllers]) --> facade[workflow_controller_service]
-    facade --> runner[operation_runner_controller]
-    runner --> worker[ThreadedOperationWorker]
-    worker --> service([Domain service])
-    worker --> bridge[ThreadedOperationUiBridge]
-    bridge --> progress[OperationProgressDialog]
-    service --> runtime[operation_runtime_service]
-    runtime --> files[(Project operation artifacts)]
-    shell([MainWindow.closeEvent]) --> runner
-    shell --> account([ChatGPTAuthUiController.shutdown])
-```
-
-The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
 
 ## Files
 

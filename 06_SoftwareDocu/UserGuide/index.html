@@ -439,7 +439,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     <strong>Cancel</strong>, <strong>Apply</strong> and <strong>OK</strong> behave as they do in
                     Settings. The audiobook language and the narration mode are not here &mdash; they belong to the project
-                    and are locked on the Home page.
+                    and save automatically on the Home page.
                 </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
@@ -456,15 +456,33 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ol>
                     <li>Press <strong>New Project</strong>. Choose the parent folder, then enter the project name &mdash; the book title works well.</li>
-                    <li>On the Home page press <strong>Select Source File</strong> and pick the book. Supported formats are TXT, PDF, RTF, DOCX, ODT, MD and EPUB.</li>
+                    <li>The book picker opens next. Choose a TXT, PDF, RTF, DOCX, ODT, MD or EPUB document. The completed project opens with its own copy of that book. Cancelling any picker keeps your previous project open.</li>
                     <li>Choose the <strong>Translation language</strong> &mdash; English, Romanian, German, French, Russian, Portuguese, Spanish or Italian.</li>
                     <li>Choose the <strong>Audio output style</strong>: <strong>Same narrator for whole book</strong>, or <strong>Narrator + character voices</strong>.</li>
-                    <li>Press <strong>Start Project</strong> and confirm. The source file, the translation language and the audio output style are then fixed for this project.</li>
                 </ol>
                 <p>
-                    Once the options are locked, the two combos and <strong>Start Project</strong> grey out and the
-                    summary reads <em>Locked source</em>. To work from a different source file or a different output
-                    style, create a new project.
+                    The source book is fixed after import; create another project to use a different book.
+                    Translation language and audio output style remain editable on Home and save automatically.
+                    The initial choices are English and narrator plus character voices. Selecting another language
+                    or style does not start translation or audio generation.
+                </p>
+                <p>
+                    Changing audio output style asks for confirmation in either direction. The dialog lists only
+                    existing results affected by the change and offers the file names under details. It clears
+                    character voice samples, Speech Blocks (including manual edits and approvals), Audio Blocks
+                    and generated audio, and the assembled audiobook inside this project. It keeps the source,
+                    processed text, translation, Book Analysis, characters, edited character voice prompts and
+                    preview text, and the narrator profiles, selection and sample. Speech Blocks must be rebuilt
+                    for the new style.
+                </p>
+                <p>
+                    Changing language saves immediately when there are no affected results. Otherwise, confirm
+                    the reset of Translation and its approvals, characters, narrator profiles and samples,
+                    character voices, Speech Blocks, Audio Blocks, the assembled audiobook, and Book Analysis.
+                    The source, Extraction, Cleanup and text chunks are kept. Exports saved outside the project
+                    are kept for either change. Cancel restores the previous option and preserves project data.
+                    Options are unavailable while an operation is running. Existing projects keep their saved
+                    options and results when opened.
                 </p>
                 <p>
                     <strong>Open Project</strong> returns to an existing project folder. If the project data is
@@ -479,8 +497,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <h3>Reading The Home Page</h3>
                 <p>
-                    <strong>Project Summary</strong> shows the project name, folder, source file, whether the options
-                    are locked, and what to do next. <strong>Workflow Pipeline</strong> draws the ten stages as a
+                    <strong>Project Summary</strong> shows the project name, folder, source file, the saved language and audio output style, and what to do next. <strong>Workflow Pipeline</strong> draws the ten stages as a
                     strip of beads: filled with a tick when finished, filled with a dot while in progress, and hollow
                     when not started. <strong>Workflow Progress</strong> repeats the same information as a list, one
                     row per stage reading <em>Not Started</em>, <em>In Progress</em> or <em>Finished</em>, with a
@@ -496,7 +513,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     yourself.
                 </p>
                 <ol>
-                    <li>Create the project from the toolbar, select the source file on <strong>Home / Project</strong>, choose the translation language and audio output style, then press <strong>Start Project</strong>.</li>
+                    <li>Create the project from the toolbar and choose its book in the following picker. On <strong>Home / Project</strong>, select the translation language and audio output style; both save automatically.</li>
                     <li>Open <strong>Text Cleanup</strong>, press <strong>Extract Text</strong>, then press <strong>Cleanup</strong> with the AI profile set to <strong>(none)</strong> for a deterministic pass. Press <strong>Edit</strong> to correct the cleaned text by hand, then <strong>Save</strong>.</li>
                     <li>Open <strong>Text Chunking</strong>. For a fully manual structure press <strong>Insert</strong> to create the first chunk, press <strong>Edit</strong>, paste or type the chunk text, and press <strong>Save</strong>. Select a chunk and press <strong>Insert</strong> again to add the next one after it.</li>
                     <li>Use <strong>Edit</strong>, <strong>Save</strong> and <strong>Delete</strong> until the chunk list matches the book order you want. The last remaining chunk cannot be deleted.</li>
@@ -651,7 +668,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     AI Translation is optional and aims at <strong>literary translation</strong>: keeping tone,
                     dialogue, character voice, rhythm and meaning rather than producing a word-for-word rewrite.
                     <strong>Original Language</strong> and <strong>Target Language</strong> are shown as read-only
-                    indicators &mdash; the target was locked when you started the project. When the two match, starting a
+                    indicators &mdash; change the target language on Home, where the reset consequences are confirmed. When the two match, starting a
                     translation still uses the AI profile, so the run rewrites, normalises or adapts the text instead
                     of copying it.
                 </p>

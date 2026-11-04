@@ -45,3 +45,8 @@ ignore = ["**/.venv/**"]
 strict_promote = []
 # run = ["test"]   # restrict what `check --run` executes; without this,
 #                  # side-effect-looking names are skipped
+
+[diagrams]
+# Design diagrams are produced when applicable to the proposed implementation.
+enabled = true
+types = ["structure", "sequence", "state"]

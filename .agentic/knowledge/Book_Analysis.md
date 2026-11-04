@@ -18,25 +18,15 @@ workflow stage, block Translation, or supply canonical character/voice data.
 
 ## Public interface
 
+Confirmed Home language changes remove Book Analysis's document, AI logs and
+compact summary through Project Lifecycle's reset plan. Narration-mode changes
+preserve Book Analysis. The analysis page still owns its explicit Reset action.
+
 The service consumes completed canonical chunks, the project target language and
 one enabled AI profile. It writes `book_analysis.json`; document/state services
 validate checkpoints and project operation summaries. The page/controller expose
 Analyze and Reset through the shared operation runner.
 
-## Architecture
-
-```mermaid
-flowchart LR
-    C[Completed canonical chunks] --> W[Whole-chunk conservative windows]
-    P[Selected enabled AI profile] --> W
-    W --> L[Validated leaf summaries]
-    L --> K[Atomic checkpoint in book_analysis.json]
-    K --> R[Recursive consolidation]
-    R --> K
-    R --> F[Final layered report]
-    F --> D[Completed report slot]
-    D --> U[Concise view and expandable details]
-```
 
 `book_analysis_service` packs chunks in sequence and never splits a canonical
 chunk. Every accepted provider response is semantically validated before an

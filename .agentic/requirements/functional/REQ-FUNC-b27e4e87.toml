@@ -1,24 +1,12 @@
 schema = 1
 id = "REQ-FUNC-b27e4e87"
-title = "The Home controller shall create and activate a project"
+title = "Create and activate a project with its book"
 status = "active"
 
-requirement = """
-The Home controller shall create and activate a project.
-"""
-
-verification = "Automated: 1 linked pytest selector(s)."
-
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
-]
-linked_tests = [
-  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_creates_and_activates_project",
-]
-
+requirement = "When the operator completes New Project folder, name and document selection, AudioMancer shall activate a project containing a copied source and persisted initial language and narration options, ready for work without a separate start action."
+verification = "Mock all creation pickers, select a real supported document, and verify copied bytes, source metadata, initial options, current active project and absence of a Start Project button."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_creates_and_activates_project", "05_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_creates_project_and_updates_shell"]
 priority = "high"
-rationale = """
-Creating a project must activate it for the workflow.
-"""
 created = 2026-07-18
-updated = 2026-07-24
+updated = 2026-11-04

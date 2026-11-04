@@ -45,7 +45,10 @@ their staging/output folders.
 The commands in `.agentic/aegis.toml` own final verification. Focused provider and
 account checks use `uv run pytest -q tests/test_chatgpt_*.py`; the autouse test fixture isolates the subscription manager in memory and requires
 an injected HTTP transport, preventing automatic settings discovery from using
-the operator's credentials or network. Offscreen Qt is available with QT_QPA_PLATFORM=offscreen.
+the operator's credentials or network. Offscreen Qt is available with QT_QPA_PLATFORM=offscreen. On Windows,
+QT_QPA_FONTDIR can point to the installed system font directory for readable
+offscreen captures. HowToTest.md keeps UI tests serial; service-tier parallelism
+is an opt-in route.
 
 ## Platform details
 

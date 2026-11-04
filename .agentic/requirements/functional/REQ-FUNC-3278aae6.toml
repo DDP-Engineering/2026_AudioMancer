@@ -43,7 +43,7 @@ When an operator selects the source file already registered in an active project
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Focused import and Home-controller tests select equivalent resolved paths and prove the project tree, manifest bytes, compact summaries, artifacts, and workflow stage remain unchanged; different same-named external sources and replacement safeguards remain covered."
+verification = "Importer tests select equivalent resolved paths and compare source metadata and project bytes; Home guard tests preserve registered sources and existing outputs before any replacement picker opens. Different same-named low-level API replacements and copy safeguards remain covered."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -62,7 +62,7 @@ linked_tests = [
   "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_previous_source_traversal_path",
   "05_Software/AudioMancer/tests/test_import_service.py::test_import_source_avoids_reserved_generated_artifact_names",
   "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_reselects_stored_source_without_reset",
-  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_replaces_processed_source_as_one_consistent_reset",
+  "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_keeps_processed_source_fixed",
 ]
 
 # --- optional below this line ---
@@ -74,4 +74,4 @@ priority = "high"
 rationale = "Selecting the visible project copy must not silently duplicate large sources or invalidate completed work."
 
 created = 2026-08-07
-updated = 2026-08-07
+updated = 2026-11-04

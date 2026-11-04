@@ -16,19 +16,23 @@
 
 # IMPORTS
 
+import json
 from types import SimpleNamespace
 import zipfile
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+import pytest
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_translation_service,
     project_export_service,
     project_workspace_service,
 )
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.main_window import MainWindow
+from chunking_test_support import build_chunking_document
 
 # PUBLIC API
 
@@ -57,6 +61,14 @@ def test_home_ui_controller_creates_and_activates_project(
         lambda *args, **kwargs: ("ControllerProject", True),
     )
 
+    source_path = tmp_path / "story.txt"
+    source_path.write_text("A complete book.\n", encoding="utf-8")
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(source_path), ""),
+    )
+
     window = MainWindow(
         settings_payload={
             "language": "en",
@@ -75,6 +87,38 @@ def test_home_ui_controller_creates_and_activates_project(
     assert window._current_project_root == tmp_path / "ControllerProject"
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "ControllerProject"
+    assert window._current_manifest["source_document"] is not None
+    assert (window._current_project_root / "story.txt").read_bytes() == source_path.read_bytes()
+    assert window._current_manifest["selected_voice_language"] == window._current_manifest["target_language"]
+
+
+@pytest.mark.parametrize("cancel_at", ["name", "document"])
+def test_new_project_document_cancel_preserves_current_project(
+    monkeypatch, qtbot, tmp_path, default_settings_payload, cancel_at
+):
+    """@brief Cancelling the book picker keeps the old project and creates no new folder."""
+    current_root, manifest = project_workspace_service.create_project("CurrentProject", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    home_ui_controller.activate_project(window, current_root, manifest)
+    window.set_current_page("text_cleanup")
+    cleanup_page = window._text_cleanup_page
+    cleanup_page.set_processing_state("source", "saved draft", [], True, True, True, "passed", 0)
+    cleanup_page._edit_cleaned_button.click()
+    cleanup_page._cleaned_text_edit.setPlainText("Keep this unsaved draft")
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "question", lambda *args: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getExistingDirectory", lambda *args: str(tmp_path))
+    monkeypatch.setattr(
+        home_ui_controller.QInputDialog, "getText", lambda *args: ("CancelledProject", cancel_at != "name")
+    )
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+
+    home_ui_controller.handle_new_project_requested(window)
+
+    assert window._current_project_root == current_root
+    assert not (tmp_path / "CancelledProject").exists()
+    assert cleanup_page.has_modified_cleaned_text_draft()
+    assert cleanup_page._cleaned_text_edit.toPlainText() == "Keep this unsaved draft"
 
 
 def test_new_project_declined_cleanup_draft_discard_keeps_project_and_draft(
@@ -83,7 +127,7 @@ def test_new_project_declined_cleanup_draft_discard_keeps_project_and_draft(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify declining the Cleanup-draft warning prevents the New picker."""
+    """@brief Verify declining the Cleanup-draft warning prevents the New picker."""
     current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -122,7 +166,7 @@ def test_confirmed_new_project_picker_cancel_keeps_cleanup_draft(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify accepting the warning alone does not discard a Cleanup draft."""
+    """@brief Verify accepting the warning alone does not discard a Cleanup draft."""
     current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -153,7 +197,7 @@ def test_open_project_declined_cleanup_draft_discard_keeps_project_and_draft(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify declining the Cleanup-draft warning prevents the Open picker."""
+    """@brief Verify declining the Cleanup-draft warning prevents the Open picker."""
     current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -187,7 +231,7 @@ def test_confirmed_new_project_activation_clears_old_draft_and_loads_new_text(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify a successful confirmed activation replaces the old Cleanup draft."""
+    """@brief Verify a successful confirmed activation replaces the old Cleanup draft."""
     current_root, current_manifest = project_workspace_service.create_project("CurrentDraft", tmp_path)
     new_root, new_manifest = project_workspace_service.create_project("NewProject", tmp_path)
     (new_root / config.CLEANED_TEXT_FILE_NAME).write_text("new authoritative text", encoding="utf-8")
@@ -203,11 +247,14 @@ def test_confirmed_new_project_activation_clears_old_draft_and_loads_new_text(
     monkeypatch.setattr(home_ui_controller.QFileDialog, "getExistingDirectory", lambda *_args: str(tmp_path))
     monkeypatch.setattr(home_ui_controller.QInputDialog, "getText", lambda *_args: ("NewProject", True))
     monkeypatch.setattr(
-        home_ui_controller.project_workspace_service,
-        "create_project",
+        home_ui_controller.project_options_service,
+        "create_project_with_source",
         lambda *_args: (new_root, new_manifest),
     )
 
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog, "getOpenFileName", lambda *args: (str(tmp_path / "book.txt"), "")
+    )
     home_ui_controller.handle_new_project_requested(window)
     window.set_current_page("text_cleanup")
 
@@ -338,7 +385,7 @@ def test_home_ui_controller_contains_project_creation_filesystem_error(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify a project-creation filesystem failure leaves Home state unchanged."""
+    """@brief Verify a project-creation filesystem failure leaves Home state unchanged."""
     existing_root, existing_manifest = project_workspace_service.create_project(
         "ExistingCreationProject",
         tmp_path,
@@ -358,8 +405,8 @@ def test_home_ui_controller_contains_project_creation_filesystem_error(
         lambda *args, **kwargs: ("NewProject", True),
     )
     monkeypatch.setattr(
-        home_ui_controller.project_workspace_service,
-        "create_project",
+        home_ui_controller.project_options_service,
+        "create_project_with_source",
         lambda *_args: (_ for _ in ()).throw(expected_error),
     )
     monkeypatch.setattr(
@@ -382,6 +429,9 @@ def test_home_ui_controller_contains_project_creation_filesystem_error(
     window._current_project_root = existing_root
     window._current_manifest = existing_manifest
 
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog, "getOpenFileName", lambda *args: (str(tmp_path / "book.txt"), "")
+    )
     home_ui_controller.handle_new_project_requested(window)
 
     assert warnings == [
@@ -403,7 +453,7 @@ def test_home_ui_controller_contains_source_import_filesystem_error(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify a source-import filesystem failure preserves the active project."""
+    """@brief Verify a source-import filesystem failure preserves the active project."""
     project_root, manifest = project_workspace_service.create_project("ImportFailureProject", tmp_path)
     expected_error = PermissionError("source copy is not permitted")
     warnings = []
@@ -415,7 +465,7 @@ def test_home_ui_controller_contains_source_import_filesystem_error(
         lambda *args, **kwargs: (str(tmp_path / "story.txt"), ""),
     )
     monkeypatch.setattr(
-        home_ui_controller.import_service,
+        home_ui_controller.project_options_service.import_service,
         "import_source",
         lambda *_args: (_ for _ in ()).throw(expected_error),
     )
@@ -456,7 +506,7 @@ def test_home_ui_controller_contains_confirmed_repair_filesystem_error(
     tmp_path,
     default_settings_payload,
 ) -> None:
-    """Verify a confirmed project-repair filesystem failure preserves Home state."""
+    """@brief Verify a confirmed project-repair filesystem failure preserves Home state."""
     existing_root, existing_manifest = project_workspace_service.create_project(
         "ExistingRepairProject",
         tmp_path,
@@ -879,7 +929,7 @@ def test_home_ui_controller_snapshot_button_click_exports_locked_source_project(
     default_settings_payload,
 ) -> None:
     """
-    @brief      Verify the Home ZIP button remains clickable when the locked-source note is visible.
+    @brief      Verify the Home ZIP button remains clickable for a project with a registered source.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -919,7 +969,7 @@ def test_home_ui_controller_snapshot_button_click_exports_locked_source_project(
         _run_threaded_operation_synchronously,
     )
 
-    assert "Locked source: Command Performance.pdf" in window._home_page._source_lock_label.text()
+    assert window._home_page._source_label.text() == "Source: Command Performance.pdf"
     assert window._home_page._snapshot_button.isEnabled() is True
 
     qtbot.mouseClick(window._home_page._snapshot_button, Qt.MouseButton.LeftButton)
@@ -931,7 +981,7 @@ def test_home_ui_controller_snapshot_button_click_exports_locked_source_project(
     assert messages
 
 
-def test_home_ui_controller_locks_project_options_in_manifest(
+def test_home_ui_controller_autosaves_project_options_in_manifest(
     monkeypatch,
     qtbot,
     tmp_path,
@@ -962,24 +1012,25 @@ def test_home_ui_controller_locks_project_options_in_manifest(
     messages = []
 
     monkeypatch.setattr(
-        home_ui_controller.QMessageBox,
-        "question",
-        lambda *args, **kwargs: home_ui_controller.QMessageBox.StandardButton.Yes,
+        home_ui_controller,
+        "confirm_project_options_change",
+        lambda *args, **kwargs: True,
+        raising=False,
     )
     monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: messages.append(args))
 
-    home_ui_controller.handle_project_options_lock_requested(window, "ro", "same_narrator")
+    home_ui_controller.handle_project_options_change_requested(window, "ro", "same_narrator")
 
     saved_manifest = project_workspace_service.load_manifest(project_root)
-    assert saved_manifest["project_options_locked"] is True
+    assert saved_manifest["project_options_locked"] is False
     assert saved_manifest["target_language"] == "ro"
     assert saved_manifest["selected_voice_language"] == "ro"
     assert saved_manifest["voice_assignment_mode"] == "same_narrator"
-    assert window._home_page._import_button.isEnabled() is False
+    assert not hasattr(window._home_page, "_import_button")
     assert messages
 
 
-def test_home_ui_controller_import_preserves_unlocked_draft_project_options(
+def test_home_ui_controller_import_saves_selected_project_options(
     monkeypatch,
     qtbot,
     tmp_path,
@@ -1014,29 +1065,25 @@ def test_home_ui_controller_import_preserves_unlocked_draft_project_options(
     home_ui_controller.handle_import_source_requested(window)
 
     saved_manifest = project_workspace_service.load_manifest(project_root)
-    assert saved_manifest["project_options_locked"] is False
+    assert saved_manifest["project_options_locked"] is True
     assert saved_manifest["target_language"] == "fr"
     assert saved_manifest["selected_voice_language"] == "fr"
     assert saved_manifest["voice_assignment_mode"] == "same_narrator"
     assert window._home_page._target_language_combo.currentData() == "fr"
 
 
-def test_home_ui_controller_replaces_processed_source_as_one_consistent_reset(
+def test_home_ui_controller_keeps_processed_source_fixed(
     monkeypatch,
     tmp_path,
 ) -> None:
     """
-    @brief      Verify processed source replacement clears derived state and preserves options.
+    @brief      Verify a registered source cannot be replaced even in a legacy unlocked project.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     """
     project_root, manifest = project_workspace_service.create_project("ProcessedReplacement", tmp_path)
-    default_operation_summaries = {
-        operation_kind: dict(operation_summary)
-        for operation_kind, operation_summary in manifest["operations"].items()
-    }
     old_source = project_root / "old_story.txt"
     old_source.write_text("old source", encoding="utf-8")
     manifest["source_document"] = {
@@ -1113,23 +1160,22 @@ def test_home_ui_controller_replaces_processed_source_as_one_consistent_reset(
     )
     monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: None)
 
+    warnings = []
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "warning", lambda *args: warnings.append(args))
+    before = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
     home_ui_controller.handle_import_source_requested(window)
-
-    saved_manifest = project_workspace_service.load_manifest(project_root)
-    assert saved_manifest["current_stage"] == "source_selected"
-    assert saved_manifest["operations"] == default_operation_summaries
-    assert saved_manifest["target_language"] == "ro"
-    assert saved_manifest["selected_voice_language"] == "en"
-    assert saved_manifest["voice_assignment_mode"] == "same_narrator"
-    assert saved_manifest["source_document"]["original_name"] == config.EXTRACTED_TEXT_FILE_NAME
-    assert saved_manifest["source_document"]["stored_relative_path"] == "extracted_text_1.txt"
-    stored_source = project_root / str(saved_manifest["source_document"]["stored_relative_path"])
-    assert stored_source.read_text(encoding="utf-8") == "new source"
-    assert not old_source.exists()
-    assert all(not path.exists() for path in stale_artifact_paths)
-    assert not stale_generated_audio.exists()
-    assert not stale_assembly_audio.exists()
-    assert refreshed_manifests == [saved_manifest]
+    after = {
+        path.relative_to(project_root).as_posix(): path.read_bytes()
+        for path in project_root.rglob("*")
+        if path.is_file()
+    }
+    assert after == before
+    assert warnings
+    assert refreshed_manifests == []
 
 
 def _run_threaded_operation_synchronously(
@@ -1267,6 +1313,7 @@ def test_home_ui_controller_reselects_stored_source_without_reset(monkeypatch, t
     )
     monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: None)
 
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "warning", lambda *args: None)
     home_ui_controller.handle_import_source_requested(window)
 
     after = {
@@ -1281,7 +1328,7 @@ def test_home_ui_controller_reselects_stored_source_without_reset(monkeypatch, t
 def test_activate_project_flushes_translation_edit_and_displays_home(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:
-    """Verify project activation flushes old edits before selecting the Home container."""
+    """@brief Verify project activation flushes old edits before selecting the Home container."""
     project_root, manifest = project_workspace_service.create_project("ActivationTarget", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -1297,3 +1344,237 @@ def test_activate_project_flushes_translation_edit_and_displays_home(
 
 
 # END OF FILE
+
+
+@pytest.mark.parametrize("language", ["en", "ro"])
+@pytest.mark.parametrize("change", ["language", "mode"])
+def test_home_option_cancel_restores_saved_selection(
+    monkeypatch, qtbot, tmp_path, default_settings_payload, language, change
+):
+    """@brief Declining a change restores both selectors and all persisted bytes."""
+    root, manifest = project_workspace_service.create_project("CancelOptions", tmp_path)
+    manifest["project_options_locked"] = True
+    manifest["operations"]["translation"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, root)
+    settings = dict(default_settings_payload, language=language)
+    window = MainWindow(settings_payload=settings)
+    qtbot.addWidget(window)
+    window.show_project_state(root, manifest)
+    before = (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes()
+    prompts = []
+    monkeypatch.setattr(
+        home_ui_controller, "confirm_project_options_change", lambda *args: prompts.append(args) or False, raising=False
+    )
+    combo = (
+        window._home_page._target_language_combo if change == "language" else window._home_page._narration_mode_combo
+    )
+    selected = "ro" if change == "language" else "same_narrator"
+    combo.setCurrentIndex(combo.findData(selected))
+    combo.activated.emit(combo.currentIndex())
+    assert len(prompts) == 1
+    assert (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes() == before
+    assert window._home_page._target_language_combo.currentData() == "en"
+    assert window._home_page._narration_mode_combo.currentData() == "narrator_and_characters"
+
+
+def test_home_language_selection_saves_without_confirmation_on_empty_project(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+):
+    """@brief Choosing a language immediately persists it without a Start button."""
+    root, manifest = project_workspace_service.create_project("AutoLanguage", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(root, manifest)
+    monkeypatch.setattr(
+        home_ui_controller,
+        "confirm_project_options_change",
+        lambda *args: pytest.fail("Empty language change should save directly"),
+        raising=False,
+    )
+    combo = window._home_page._target_language_combo
+    combo.setCurrentIndex(combo.findData("ro"))
+    combo.activated.emit(combo.currentIndex())
+    saved = project_workspace_service.load_manifest(root)
+    assert saved["target_language"] == saved["selected_voice_language"] == "ro"
+    assert window._current_manifest["target_language"] == "ro"
+    assert not hasattr(window._home_page, "_start_project_button")
+
+
+def test_home_option_handlers_reject_busy_changes(monkeypatch, qtbot, tmp_path, default_settings_payload):
+    """@brief Direct requests cannot mutate options or import while a worker runs."""
+    root, manifest = project_workspace_service.create_project("BusyOptions", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(root, manifest)
+    window._active_operation_kind = "cleanup"
+    before = (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes()
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getOpenFileName", lambda *args: pytest.fail("Busy picker"))
+    try:
+        home_ui_controller.handle_project_options_change_requested(window, "ro", "same_narrator")
+        home_ui_controller.handle_import_source_requested(window)
+        assert (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes() == before
+    finally:
+        window._active_operation_kind = None
+
+
+@pytest.mark.parametrize("language", ["en", "ro"])
+@pytest.mark.parametrize("accept", [False, True])
+def test_project_options_confirmation_buttons_and_actual_impact(qtbot, tmp_path, language, accept):
+    """@brief Real modal confirmations localize the impact and default to cancellation."""
+    root, _manifest = project_workspace_service.create_project("DialogOptions", tmp_path)
+    (root / "log_ai_speech_blocks_1.log").write_text("Existing operation log", encoding="utf-8")
+    plan = home_ui_controller.project_options_service.plan_project_options_change(root, "en", "same_narrator")
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    dialogs = []
+
+    def respond():
+        """@brief Click the explicit requested button in the live modal dialog."""
+        dialog = QApplication.activeModalWidget()
+        dialogs.append(dialog)
+        role = QMessageBox.ButtonRole.AcceptRole if accept else QMessageBox.ButtonRole.RejectRole
+        button = next(button for button in dialog.buttons() if dialog.buttonRole(button) == role)
+        button.click()
+
+    QTimer.singleShot(0, respond)
+    result = home_ui_controller.confirm_project_options_change(parent, plan, language)
+    assert result is accept
+    dialog = dialogs[0]
+    translate = home_ui_controller.ui_state_service.translate
+    assert dialog.defaultButton().text() == translate("project.options_cancel", language)
+    assert dialog.textFormat() == Qt.TextFormat.PlainText
+    assert translate("project.options_reset.speech_blocks", language) in dialog.text()
+    assert "log_ai_speech_blocks_1.log" in dialog.detailedText()
+    details_button = next(
+        button for button in dialog.buttons() if dialog.buttonRole(button) == QMessageBox.ButtonRole.ActionRole
+    )
+    assert details_button.text() == translate("project.options_show_details", language)
+    details_button.click()
+    assert details_button.text() == translate("project.options_hide_details", language)
+    assert translate("project.options_reset.translation", language) not in dialog.text()
+    assert (root / "log_ai_speech_blocks_1.log").exists()
+
+
+@pytest.mark.parametrize("language", ["en", "ro"])
+def test_empty_mode_confirmation_reports_no_existing_results(tmp_path, language):
+    """@brief A fresh project's mode change explicitly reports no files to delete."""
+    root, _ = project_workspace_service.create_project("NoResults", tmp_path)
+    plan = home_ui_controller.project_options_service.plan_project_options_change(root, "en", "same_narrator")
+    assert plan.requires_confirmation
+    text = home_ui_controller.build_project_options_confirmation_message(plan, language)
+    assert home_ui_controller.ui_state_service.translate("project.options_no_results", language) in text
+    assert home_ui_controller.ui_state_service.translate("project.options_reset_header", language) not in text
+
+
+@pytest.mark.parametrize("language", ["en", "ro"])
+def test_project_options_confirmation_distinguishes_progress_without_files(tmp_path, language):
+    """@brief Summary-only resets explain that there are no files available under details."""
+    root, manifest = project_workspace_service.create_project("ProgressOnly", tmp_path)
+    manifest["operations"]["translation"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, root)
+    plan = home_ui_controller.project_options_service.plan_project_options_change(root, "ro", "narrator_and_characters")
+    assert plan.affected_operations and not plan.artifact_paths
+    message = home_ui_controller.build_project_options_confirmation_message(plan, language)
+    assert home_ui_controller.ui_state_service.translate("project.options_progress_only", language) in message
+
+
+def test_home_option_failure_reports_error_and_restores_selection(monkeypatch, tmp_path):
+    """@brief A failed confirmed save restores the saved selectors without success effects."""
+    root, manifest = project_workspace_service.create_project("FailedOptions", tmp_path)
+    restored = []
+    warnings = []
+    window = SimpleNamespace(
+        _current_project_root=root,
+        _current_manifest=manifest,
+        _active_operation_kind=None,
+        _settings_payload={"language": "ro"},
+        _home_page=SimpleNamespace(set_project_options=lambda *args: restored.append(args)),
+        _ai_translation_page=SimpleNamespace(flush_pending_translation_edit=lambda: None),
+        stop_all_audio_playback=lambda: None,
+        show_project_state=lambda *args: pytest.fail("Failure must not report success"),
+    )
+
+    def fail_apply(*args):
+        """@brief Simulate a service error after its own transaction rollback."""
+        raise PermissionError("Options could not be published")
+
+    monkeypatch.setattr(home_ui_controller, "confirm_project_options_change", lambda *args: True)
+    monkeypatch.setattr(home_ui_controller.project_options_service, "apply_project_options_change", fail_apply)
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "warning", lambda *args: warnings.append(args))
+    home_ui_controller.handle_project_options_change_requested(window, "en", "same_narrator")
+    assert restored == [(False, "en", "narrator_and_characters")]
+    assert warnings[0][1] == home_ui_controller.ui_state_service.translate("dialog.project_error_title", "ro")
+    assert "could not be published" in warnings[0][2]
+
+
+@pytest.mark.parametrize("accept", [False, True])
+@pytest.mark.parametrize("change", ["language", "mode"])
+def test_home_option_change_settles_pending_translation_before_planning(
+    monkeypatch, qtbot, tmp_path, default_settings_payload, accept, change
+):
+    """@brief Queued translation edits settle before confirmation and cannot run after reset."""
+    root, manifest = project_workspace_service.create_project("PendingTranslation", tmp_path)
+    (root / "story.txt").write_text("Original text", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-11-04T00:00:00Z",
+        "size_bytes": 13,
+    }
+    manifest["target_language"] = "ro"
+    manifest["current_stage"] = "text_chunking_ready"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, root)
+    (root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(build_chunking_document([{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original text"}])),
+        encoding="utf-8",
+    )
+    ai_translation_service.write_translation_document(
+        root,
+        {
+            "target_language": "ro",
+            "status": "in_progress",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {
+                "context_window": 4096,
+                "output_reserve_tokens": 512,
+                "prompt_budget_tokens": 100,
+                "text_budget_tokens": 2048,
+                "safety_margin_tokens": 512,
+            },
+            "additional_translation_instructions": "",
+            "chunks": [{"chunk_id": "chunk-0001", "translated_text": "Earlier translation", "approved": False}],
+        },
+    )
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    home_ui_controller.activate_project(window, root, project_workspace_service.load_manifest(root))
+    window.set_current_page("ai_translation")
+    page = window._ai_translation_page
+    page._translated_text_edit.setPlainText("Latest exact translation edit")
+    page._edit_timer.stop()  # Deliver deterministically at the option-change boundary.
+    assert page._pending_edit is not None
+    window.set_current_page("home")
+
+    def confirm_after_save(*args):
+        """@brief Confirmation observes the latest committed edit rather than queued work."""
+        document = ai_translation_service.load_translation_document(root)
+        assert document["chunks"][0]["translated_text"] == "Latest exact translation edit"
+        assert page._pending_edit is None
+        assert not page._edit_timer.isActive()
+        return accept
+
+    monkeypatch.setattr(home_ui_controller, "confirm_project_options_change", confirm_after_save)
+    target = "de" if change == "language" else "ro"
+    mode = "same_narrator" if change == "mode" else "narrator_and_characters"
+    home_ui_controller.handle_project_options_change_requested(window, target, mode)
+    assert page._pending_edit is None
+    page.flush_pending_translation_edit()
+    if accept and change == "language":
+        assert not (root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    else:
+        assert (
+            ai_translation_service.load_translation_document(root)["chunks"][0]["translated_text"]
+            == "Latest exact translation edit"
+        )

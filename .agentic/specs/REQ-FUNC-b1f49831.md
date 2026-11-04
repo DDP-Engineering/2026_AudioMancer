@@ -1,40 +1,19 @@
-<!--
-Copyright (c) 2026 DDP Engineering
-This software is licensed under the PolyForm Noncommercial License 1.0.0.
-Commercial use requires a separate commercial license.
-See the LICENSE.txt in the .agentic folder for full license details.
-SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
--->
-
-# REQ-FUNC-b1f49831 — Transaction-safe source replacement
+# REQ-FUNC-b1f49831 - Source import copy-first boundary
 
 ## Behavior
 
-For an unlocked project that already has a registered source, source replacement proceeds in this order:
+The low-level `import_service.import_source(project_root, source_path, previous_source_document)` API validates the supported file and previous project-relative source path before mutation, selects a collision-safe destination, copies through an atomic temporary file, and then removes the previous project copy. It returns original_name, stored_relative_path, file_type, imported_at and size_bytes. The caller owns manifest publication.
 
-1. Validate the selected source and the previous manifest path without mutating the project.
-2. Choose a unique project-root destination whose case-insensitive file name is neither present on disk nor reserved for a generated workflow artifact.
-3. Copy the selected source into the project successfully, cleaning up any incomplete destination if the copy fails.
-4. Delete the previous stored source only after the new copy is complete.
-5. Reset Extraction and all downstream generated artifacts through `text_extraction_service.reset_extraction_and_downstream`.
-6. Reset every compact operation summary and set `current_stage` to `source_selected` through `text_cleanup_state_service.build_manifest_after_extraction_reset`.
-7. Register the new source record and save the manifest without changing `target_language`, `selected_voice_language`, or `voice_assignment_mode`.
-
-The reset must use the centralized operation-runtime ownership lists. Source-import code must not duplicate downstream artifact deletion lists. Initial import into a project with no previous source retains its existing option-selection behavior.
-
-## Data and interfaces
-
-`import_service.import_source(project_root, source_path, previous_source_document)` retains its manifest-ready dictionary return shape: `original_name`, `stored_relative_path`, `file_type`, `imported_at`, and `size_bytes`.
-
-Reserved names are derived from the centralized root-level operation artifact registry. Comparison is case-insensitive so behavior is consistent on Windows and conservative on case-sensitive filesystems. A reserved name is treated like an existing-file collision and receives the normal numeric suffix, for example `extracted_text.txt` becomes `extracted_text_1.txt` when that candidate is otherwise free.
+Reserved names come from the centralized operation artifact registry and are compared case-insensitively. A supported source named extracted_text.txt receives the first available non-reserved numeric suffix. Selecting the existing stored source returns its existing metadata without copying or deleting.
 
 ## Failure behavior
 
-If source copying raises, the previous stored source remains present, no extraction or downstream reset runs, and `project.json` remains byte-for-byte unchanged with its existing operation summaries. Any partially copied new destination is removed when possible before the exception propagates to the caller.
+A source-copy failure cleans its incomplete destination and propagates while preserving the previous source, manifest, operation summaries and generated artifacts. If removing the previous source fails, the newly copied destination is removed before the error propagates.
+
+## User interface boundary
+
+Home fixes a registered book and imports only the first source of an existing source-less project. New Project publishes its initial book and manifest together through project_options_service. The low-level replacement API remains available to callers responsible for their own manifest and dependent data lifecycle.
 
 ## Acceptance
 
-- Replacing a processed project's source removes every stale Extraction-and-downstream artifact, resets every compact operation summary to its default, and saves `current_stage = "source_selected"`.
-- The saved manifest points to the new source, the new stored file survives reset, and the three unlocked option fields retain their prior values.
-- An injected `shutil.copy2` failure leaves the complete prior project state unchanged.
-- Supported source files named `extracted_text.txt` or `clean_text.txt` are stored under safe non-reserved names.
+Importer tests prove collision-safe names, stored-source idempotence, copy-first replacement, and byte-for-byte preservation after an injected copy failure. Home tests prove that attempts to replace a registered book leave project files unchanged.

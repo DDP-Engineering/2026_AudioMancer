@@ -12,12 +12,29 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Right-clicking the main toolbar no longer offers an option to hide it,
+  keeping New Project, Open Project and Settings accessible.
 - Text Cleanup completes for books with pages containing only a page number,
   header or footer, such as illustrated covers. It keeps that page's artifact
   text to preserve the safeguard against deleting an entire page.
 
 ### Changed
 
+- Rebuilt the Windows and Linux portable packages as an additional local
+  delivery, keeping application version 2.2.0 and the existing archives.
+- Removed the separate Select Source File button from Home; the book is chosen
+  when creating a new project.
+- Removed the repeated source-lock notices from Home, leaving the source filename
+  in the project summary.
+- New Project now asks for the book immediately after the folder and name,
+  then opens the completed project. Cancelling keeps the previous project.
+- Project language and audio output style save automatically on Home. Changes
+  explain and confirm the existing results they reset; narration-mode changes
+  retain text, translation, characters, edited voice prompts and the narrator.
+  The source book remains fixed, and the separate Start Project action is removed.
+- Updated the AEGIS engineering workflow to 0.15.0, preserving project
+  configuration and history, and enabled structure, sequence and state
+  diagrams for applicable designs.
 - Speech Blocks generation no longer stops when the AI provider refuses a source
   chunk. That chunk is left without blocks and the run carries on to the end of
   the book, so one refusal no longer costs the rest of the run.

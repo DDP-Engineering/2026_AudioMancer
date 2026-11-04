@@ -23,7 +23,7 @@ from pathlib import Path, PureWindowsPath
 import re
 
 from audiomancer import config
-from audiomancer.services.logging_service import get_component_logger
+from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
@@ -78,12 +78,8 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         "translation_report.json",
         "translation_state.json",
     ),
-    "character_discovery": (
-        config.CHARACTERS_DOCUMENT_FILE_NAME,
-    ),
-    "narrator_definition": (
-        config.NARRATOR_VOICE_FILE_NAME,
-    ),
+    "character_discovery": (config.CHARACTERS_DOCUMENT_FILE_NAME,),
+    "narrator_definition": (config.NARRATOR_VOICE_FILE_NAME,),
     "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
     "speech_blocks": (
         config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME,
@@ -157,6 +153,62 @@ def downstream_operation_kinds(
     if not include_current:
         start_index += 1
     return _OPERATION_ORDER[start_index:]
+
+
+@trace_function(_OPERATION_RUNTIME_LOGGER)
+def operation_reset_artifact_paths(project_root: str | Path, operation_kind: str) -> tuple[Path, ...]:
+    """
+    @brief      Plan existing files owned by one operation without deleting them.
+    @param[in]  project_root Active project workspace.
+    @param[in]  operation_kind One operation; downstream selection belongs to the caller.
+    @return     Sorted regular file paths from the reset ownership registry.
+    @exception  ValueError Raised for unsupported operations or redirected artifact paths.
+    @exception  OSError Raised when persisted ownership metadata cannot be read.
+    """
+    if operation_kind not in config.PROJECT_OPERATION_KINDS:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    root = Path(project_root).resolve()
+    candidates = [root / name for name in _OPERATION_ARTIFACT_FILE_NAMES.get(operation_kind, ())]
+    for pattern in _OPERATION_ARTIFACT_GLOBS.get(operation_kind, ()):
+        candidates.extend(root.glob(pattern))
+    for token in _OPERATION_AI_LOG_TOKENS.get(operation_kind, (operation_kind,)):
+        candidates.extend(root.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{token}_*.log"))
+    folder_name = {
+        "audio_blocks": config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME,
+        "audio_assembly": config.AUDIOBOOK_OUTPUT_FOLDER_NAME,
+    }.get(operation_kind)
+    if folder_name:
+        folder = root / folder_name
+        _validate_reset_candidate(root, folder)
+        if folder.is_dir():
+            for path in folder.rglob("*"):
+                _validate_reset_candidate(root, path)
+                candidates.append(path)
+    if operation_kind == "character_voices":
+        targets_path = root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+        _validate_reset_candidate(root, targets_path)
+        if targets_path.is_file():
+            targets = json.loads(targets_path.read_text(encoding="utf-8"))
+            if not isinstance(targets, list) or any(not isinstance(target, dict) for target in targets):
+                raise ValueError("Character Voices target metadata is invalid.")
+            for target in targets:
+                relative_path = target.get("sample_audio_path")
+                if target.get("target_kind") == "character" and relative_path:
+                    candidate = root / validate_project_relative_path(relative_path)
+                    if candidate.suffix.lower() == ".wav":
+                        candidates.append(candidate)
+    paths = set()
+    for path in candidates:
+        _validate_reset_candidate(root, path)
+        if path.is_file():
+            paths.add(path)
+    return tuple(sorted(paths))
+
+
+def _validate_reset_candidate(root: Path, path: Path) -> None:
+    """@brief Reject symlinks, junctions and escaped paths before a reset is planned."""
+    if not path.is_relative_to(root) or path == root or path.resolve() != path or path.is_symlink():
+        raise ValueError(f"Reset artifact path is redirected or outside the project: {path}")
 
 
 def reserved_project_artifact_file_names() -> frozenset[str]:
@@ -700,7 +752,7 @@ def _delete_character_voice_samples(project_root: Path) -> None:
 
 
 def _remove_reset_artifact(artifact_path: Path) -> None:
-    """Remove one reset-owned artifact without aborting the remaining reset plan."""
+    """@brief Remove one reset-owned artifact without aborting the remaining reset plan."""
     try:
         artifact_path.unlink()
     except OSError:

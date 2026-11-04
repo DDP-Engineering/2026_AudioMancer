@@ -121,7 +121,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Limbile tinta pentru traducere sunt engleza, romana, germana, franceza, rusa, portugheza, spaniola
-                    si italiana. Limba vorbita urmeaza limba traducerii blocata pe pagina Acasa, deci VoiceWeaver are
+                    si italiana. Limba vorbita urmeaza limba traducerii salvata pe pagina Acasa, deci VoiceWeaver are
                     nevoie de voci care o sustin.
                 </p>
                 <div class="warning">
@@ -446,7 +446,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     <strong>Anuleaza</strong>, <strong>Aplica</strong> si <strong>OK</strong> se comporta ca in Setari.
-                    Limba audiobookului si modul de naratiune nu sunt aici &mdash; ele apartin proiectului si sunt blocate pe
+                    Limba audiobookului si modul de naratiune nu sunt aici &mdash; ele apartin proiectului si se salveaza automat pe
                     pagina Acasa.
                 </p>
                 <figure>
@@ -463,15 +463,33 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ol>
                     <li>Apasa <strong>Proiect Nou</strong>. Alege folderul parinte, apoi scrie numele proiectului &mdash; titlul cartii merge bine.</li>
-                    <li>Pe pagina Acasa apasa <strong>Selecteaza Fisierul Sursa</strong> si alege cartea. Formatele acceptate sunt TXT, PDF, RTF, DOCX, ODT, MD si EPUB.</li>
+                    <li>Urmeaza automat selectia cartii. Alege un document TXT, PDF, RTF, DOCX, ODT, MD sau EPUB. Proiectul complet se deschide cu propria copie a cartii. Anularea oricarui dialog pastreaza proiectul anterior deschis.</li>
                     <li>Alege <strong>Limba traducerii</strong> &mdash; engleza, romana, germana, franceza, rusa, portugheza, spaniola sau italiana.</li>
                     <li>Alege <strong>Stil iesire audio</strong>: <strong>Acelasi narator pentru toata cartea</strong> sau <strong>Narator + voci de personaje</strong>.</li>
-                    <li>Apasa <strong>Porneste Proiectul</strong> si confirma. Fisierul sursa, limba traducerii si stilul de iesire audio sunt apoi fixate pentru acest proiect.</li>
                 </ol>
                 <p>
-                    Odata blocate optiunile, cele doua liste si <strong>Porneste Proiectul</strong> se dezactiveaza, iar
-                    rezumatul afiseaza <em>Sursa blocata</em>. Pentru alt fisier sursa sau alt stil de iesire, creeaza
-                    un proiect nou.
+                    Cartea sursa ramane fixata dupa import; pentru alta carte creeaza alt proiect.
+                    Limba traducerii si stilul audio raman editabile pe Acasa si se salveaza automat.
+                    Alegerile initiale sunt engleza si narator plus voci de personaje. Alegerea altei limbi
+                    sau a altui stil nu porneste traducerea ori generarea audio.
+                </p>
+                <p>
+                    Schimbarea stilului audio cere confirmare in ambele directii. Dialogul enumera doar
+                    rezultatele existente afectate, iar numele fisierelor sunt disponibile in detalii. Se sterg
+                    mostrele vocilor personajelor, Blocurile de Vorbire (inclusiv editarile manuale si aprobarile),
+                    Blocurile Audio si audio generat, precum si audiobookul asamblat din acest proiect. Se pastreaza
+                    sursa, textul procesat, traducerea, Analiza Cartii, personajele, prompturile vocale si textele
+                    de previzualizare editate ale personajelor, precum si profilurile, selectia si mostra naratorului.
+                    Blocurile de Vorbire trebuie refacute pentru noul stil.
+                </p>
+                <p>
+                    Schimbarea limbii se salveaza imediat cand nu exista rezultate afectate. In caz contrar,
+                    confirma resetarea Traducerii si aprobarilor ei, personajelor, profilurilor si mostrelor
+                    naratorului, vocilor personajelor, Blocurilor de Vorbire, Blocurilor Audio, audiobookului
+                    asamblat si Analizei Cartii. Se pastreaza sursa, Extragerea, Curatarea si segmentele de text.
+                    Exporturile salvate in afara proiectului se pastreaza la ambele schimbari. Anuleaza revine
+                    la optiunea anterioara si pastreaza datele. Optiunile sunt indisponibile cat timp ruleaza o
+                    operatie. Proiectele existente isi pastreaza optiunile si rezultatele la deschidere.
                 </p>
                 <p>
                     <strong>Deschide Proiect</strong> revine la un folder de proiect existent. Daca datele proiectului
@@ -486,8 +504,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <h3>Cum se citeste pagina Acasa</h3>
                 <p>
-                    <strong>Rezumat Proiect</strong> arata numele proiectului, folderul, fisierul sursa, daca optiunile
-                    sunt blocate si ce urmeaza de facut. <strong>Flux de Lucru</strong> deseneaza cele zece etape ca o
+                    <strong>Rezumat Proiect</strong> arata numele proiectului, folderul, fisierul sursa, limba si stilul audio salvate
+                    si ce urmeaza de facut. <strong>Flux de Lucru</strong> deseneaza cele zece etape ca o
                     banda de buline: pline cu o bifa cand sunt finalizate, pline cu un punct cat timp sunt in curs si
                     goale cand nu au inceput. <strong>Progres Flux de Lucru</strong> repeta aceeasi informatie ca
                     lista, un rand pe etapa, cu <em>Nepornit</em>, <em>In Curs</em> sau <em>Finalizat</em> si un
@@ -503,7 +521,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     si Blocurile de Vorbire.
                 </p>
                 <ol>
-                    <li>Creeaza proiectul din bara de sus, selecteaza fisierul sursa pe <strong>Acasa / Proiect</strong>, alege limba traducerii si stilul de iesire audio, apoi apasa <strong>Porneste Proiectul</strong>.</li>
+                    <li>Creeaza proiectul din bara de sus si alege cartea in dialogul urmator. Pe <strong>Acasa / Proiect</strong>, alege limba traducerii si stilul audio; ambele se salveaza automat.</li>
                     <li>Deschide <strong>Curatare Text</strong>, apasa <strong>Extrage Textul</strong>, apoi apasa <strong>Curatare</strong> cu profilul AI pe <strong>(niciunul)</strong> pentru o trecere determinista. Apasa <strong>Editeaza</strong> pentru a corecta textul curatat manual, apoi <strong>Salveaza</strong>.</li>
                     <li>Deschide <strong>Segmentare Text</strong>. Pentru o structura complet manuala apasa <strong>Insereaza</strong> pentru primul segment, apasa <strong>Editeaza</strong>, lipeste sau scrie textul si apasa <strong>Salveaza</strong>. Selecteaza un segment si apasa din nou <strong>Insereaza</strong> pentru urmatorul.</li>
                     <li>Foloseste <strong>Editeaza</strong>, <strong>Salveaza</strong> si <strong>Sterge</strong> pana cand lista de segmente respecta ordinea dorita. Ultimul segment ramas nu poate fi sters.</li>
@@ -666,7 +684,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Traducerea AI este optionala si urmareste o <strong>traducere literara</strong>: pastrarea tonului,
                     a dialogului, a vocii personajelor, a ritmului si a sensului, nu o rescriere cuvant cu cuvant.
                     <strong>Limba Originala</strong> si <strong>Limba Tinta</strong> sunt afisate ca indicatoare doar
-                    pentru citire &mdash; limba tinta a fost blocata la pornirea proiectului. Cand cele doua coincid,
+                    pentru citire &mdash; limba tinta se modifica pe Acasa, cu confirmarea rezultatelor care vor fi resetate. Cand cele doua coincid,
                     pornirea unei traduceri foloseste totusi profilul AI, deci rularea rescrie, normalizeaza sau
                     adapteaza textul in loc sa il copieze.
                 </p>

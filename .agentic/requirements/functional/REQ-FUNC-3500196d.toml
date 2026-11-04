@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-3500196d"
+title = "Preserve option state on cancellation or unchanged selection"
+status = "active"
+
+requirement = "After already-requested translation edits have been saved, if an option-change confirmation is cancelled or its requested value equals the saved value, AudioMancer shall retain the saved project bytes and restore the displayed saved selection."
+verification = "Reject both change dialogs and reselect existing values; compare project bytes and selected combo data with no repeat dialogs."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_option_cancel_restores_saved_selection", "05_Software/AudioMancer/tests/test_project_options_service.py::test_empty_language_autosave_and_same_value_are_non_destructive", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_option_change_settles_pending_translation_before_planning"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

@@ -1,24 +1,12 @@
 schema = 1
 id = "REQ-FUNC-c132a7bf"
-title = "The Home page shall lock project options that control source import"
+title = "Edit Home options independently of the fixed source"
 status = "active"
-
-requirement = """
-The Home page shall lock project options that control source import.
-"""
-
-verification = "Automated: 1 linked pytest selector(s)."
-
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py",
-]
-linked_tests = [
-  "05_Software/AudioMancer/tests/test_home_page.py::test_home_page_project_options_lock_controls_source_import",
-]
-
+requirement = "While a project is active, Home shall allow language and narration selection independently of its legacy lock flag, with source selection available only before a book is registered and all three controls disabled during an operation."
+verification = "Home-page tests toggle source presence, both legacy flag values and busy state, verifying selector enabled states and the absence of a Start Project button."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_page.py::test_home_page_source_and_options_have_independent_editability"]
+spec = ""
 priority = "high"
-rationale = """
-Source import must be gated by the project-options lock.
-"""
 created = 2026-07-18
-updated = 2026-07-24
+updated = 2026-11-04

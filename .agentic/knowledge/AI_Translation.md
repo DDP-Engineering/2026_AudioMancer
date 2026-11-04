@@ -1,12 +1,18 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # AI Translation
 
-## 1. Purpose
+## Routing
+
+For translated chunk documents, review edits, debouncing or translation jobs,
+start at `ai_translation_service`, `AiTranslationPage` and their service/page
+controller tests. Home option reset policy belongs to Project Lifecycle.
+
+## Purpose and boundaries
 
 AI Translation converts canonical chunks into one strictly validated,
 operator-reviewable translation document.
 
-## 2. Responsibilities
+### Responsibilities
 
 - Own the authoritative translated-chunk document, strict status/chunk schema,
   atomic writes, summaries, synchronization after chunk changes, and resets.
@@ -20,7 +26,13 @@ only permitted downstream work.
 - Present profile selection, chunk review/edit/debouncing, retranslation,
 approval, localization, and busy-state controls.
 
-## 3. Public Interface
+## Public interface
+
+Home option changes call `flush_pending_translation_edit` before creating a
+reset plan. This persists the latest manual edit and stops its queued save,
+including when the operator cancels the option change. Confirmed language resets
+cannot leave a queued write targeting a removed document; mode changes preserve
+the latest translation. Project Lifecycle owns this coordination.
 
 - `ai_translation_service` loads, validates, starts/resumes, retranslates,
   edits, approves, summarizes, synchronizes, and resets the authoritative
@@ -34,7 +46,7 @@ approval, localization, and busy-state controls.
   retranslation signals; `MainWindow._refresh_ai_translation_page_state(...)`
   supplies the session-local profile selection across state rebuilds.
 
-## 4. Key Behaviors
+## Key behaviors
 
 - `REQ-UX-7e8fb80a` - identical refresh content leaves both Qt editor documents
   untouched so editing context survives.
@@ -71,7 +83,7 @@ approval, localization, and busy-state controls.
 - `REQ-UX-3a39f53e` - it grows no further than half the shared splitter height,
   except on a window short enough that the minimum prevails.
 
-## 5. Implementation Overview
+### Implementation overview
 
 The service validates `translated_text.json`, aligns it to canonical chunk IDs,
 and progresses status from running through review/completed. The state service
@@ -93,14 +105,14 @@ shared helper and then lowers the resulting source-text budget to what those
 output tokens can return, so a profile with a wide context window and a modest
 output limit is segmented more finely instead of being cut off mid-reply.
 
-## 6. Dependencies
+### Dependencies
 
 Text Chunking provides canonical chunks. AI Runtime supplies budget, prompts,
 provider calls, token usage, and logs. Operation Orchestration handles
 cancellation/reset; Project Lifecycle owns the manifest; PySide6 supports the
 review surface.
 
-## 7. Inputs And Outputs
+### Inputs and outputs
 
 Inputs are project/manifest, canonical chunks, target language, enabled profile,
 optional instructions, cancellation/progress callbacks, and operator edits.
@@ -109,7 +121,7 @@ approval state, and page display data. `translated_text.json` is the sole
 durable translation source; separate translation report/state files are not a
 parallel contract.
 
-## 8. Data Contracts
+## Invariants
 
 Canonical source chunks are loaded through `chunking_document_service`; an
 incompatible Chunking document is rejected.
@@ -127,13 +139,13 @@ the unchanged chunks. By contrast, an interrupted main batch stores its
 resumable failed or cancelled status. General start/resume instructions are
 durable; one-off selected-retranslation instructions never replace them.
 
-## 9. Workflow Integration
+### Workflow integration
 
 The component consumes Text Chunking and provides approved target-language
 content to Character Discovery and Speech Blocks. Chunk changes synchronize or
 invalidate only affected translations; reset preserves configured narrator work.
 
-## 10. Usage
+### Usage
 
 Operators choose an AI profile and use Start/Resume, edit/retranslate, then
 approve individual or all chunks. The chunk list and the two chunk text panes
@@ -151,7 +163,7 @@ existing review result available. Controllers call start/continue and refresh
 state after each operation. Direct callers must use the authoritative document
 helpers, never separate report/state files.
 
-## 11. Validation And Tests
+### Verification
 
 Primary automated coverage:
 
@@ -167,11 +179,19 @@ Minimum validation after a change: run the focused modules above with
 `uv run pytest`, plus `uv run python -m py_compile` and `uv run ruff check` on
 changed files.
 
-## 12. Limitations And Future Work
+### Operational limits
 
 Translation quality and target-language fluency require operator review; the
 component validates structural, not semantic, correctness. No live provider
 integration test replaces controlled manual verification of a chosen model.
+
+## Change map
+
+| Change requested | Start with | Focused verification |
+|---|---|---|
+| Translation document, budget or generation | ai_translation_service | test_ai_translation_service.py |
+| Review controls and debounce | AiTranslationPage, ai_translation_ui_controller | translation page/controller tests |
+| Home option reset with pending edits | home_ui_controller | test_home_option_change_settles_pending_translation_before_planning |
 
 ## Files
 

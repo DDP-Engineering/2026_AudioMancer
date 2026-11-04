@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-ec10fa36"
+title = "Prevent project option changes during running operations"
+status = "active"
+
+requirement = "While a workflow operation is active, AudioMancer shall keep source, language and narration changes unavailable through both controls and controller request handlers."
+verification = "Set active operation and trigger direct handlers as well as inspect controls; assert no picker, dialog, manifest write or artifact deletion."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_home_page.py::test_home_page_source_and_options_have_independent_editability", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_option_handlers_reject_busy_changes"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

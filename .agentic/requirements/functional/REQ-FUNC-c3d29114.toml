@@ -1,0 +1,12 @@
+schema = 1
+id = "REQ-FUNC-c3d29114"
+title = "Confirm language-dependent result resets"
+status = "active"
+
+requirement = "When changing Home language affects persisted results, AudioMancer shall request confirmation describing the actual reset of Translation and later workflow results plus Book Analysis while preserving the registered source, Extraction, Cleanup and Chunking."
+verification = "Seed affected and preserved artifacts, change language, confirm, and verify the exact reset set including narrator and analysis data; change an empty project language without a destructive confirmation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_options_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py", "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_options_service.py::test_language_change_resets_translation_and_analysis_but_keeps_text", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_project_options_confirmation_distinguishes_progress_without_files", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_option_change_settles_pending_translation_before_planning"]
+priority = "high"
+created = 2026-11-04
+updated = 2026-11-04

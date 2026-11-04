@@ -42,7 +42,7 @@ from pathlib import Path
 
 import tomllib
 
-VERSION = "0.13.0"
+VERSION = "0.15.0"
 SCHEMA = 1
 
 AGENTIC = Path(__file__).resolve().parent
@@ -141,6 +141,16 @@ autopilot = false
 enabled = false
 max_fix_cycles = 2
 
+[diagrams]
+# true has design draw Mermaid diagrams of the proposed implementation into
+# .agentic/tasks/diagram_TASK-<id>.md for the human, shown at the design
+# checkpoint. Missing, false, or any non-boolean value draws none, and no
+# stage, review or check depends on a diagram.
+enabled = false
+# The diagrams design may draw: "structure", "sequence", "state". Missing or
+# not a list means ["structure"]; a list with no known name draws none.
+types = ["structure"]
+
 [records]
 # Anchor and evolution sidecars under .agentic/tasks/ are local evidence.
 # false keeps them out of git through a managed block in .gitignore that
@@ -151,10 +161,8 @@ commit_fingerprints = false
 [zones]
 # What each stage may write besides `.agentic/`, which every stage may
 # always write. Values name the globs above: "source", "tests". A stage
-# left out entirely may write anywhere - that is why build, validate, and
-# deliver are not listed. Deliver is publish-only by instruction, but the
-# merge-base diff cannot attribute an edit to one stage without false hits.
-# Advisory like everything else: check reports an edit
+# left out entirely may write anywhere - that is why build and validate are
+# not listed. Advisory like everything else: check reports an edit
 # outside the zone, it never stops one. The defaults are shown; uncomment
 # and change a line to widen or narrow one stage.
 # frame = []
@@ -175,66 +183,26 @@ strict_promote = []
 POINTER_DIGEST = """\
 ## AEGIS workflow
 
-The full contract is `.agentic/AGENTS.md` - read it before starting work.
-This digest is enough to act on if you read nothing else.
+This repository uses AEGIS to guide software implementation, one feature,
+fix or change per task. Before changing the product, read
+`.agentic/AGENTS.md`; it routes you to one step file per stage.
 
-AEGIS applies only to software development operations. Do not use it for
-repository operations or package and delivery operations; follow the
-repository's own procedures for those instead.
+- New work: run `python .agentic/aegis.py status` (an open task may cover
+  it), then follow `.agentic/steps/1_frame.md`.
+- An existing task: run `python .agentic/aegis.py brief TASK-<id>` and read
+  what its `Read next` line names.
 
-Stages, one step file each in `.agentic/steps/`: **frame** (agree scope,
-open the task journal) -> **specify** (write the requirement, and a spec
-when useful) -> **design** (a short note for non-trivial work) -> **build**
-(failing test first, then the implementation, until green) -> **validate**
-(review, knowledge, full suite and strict check) -> **deliver** (approval,
-report, commit/PR). A small fix or change may take the quick path,
-frame -> build -> validate -> deliver.
+Stages: frame -> specify -> design -> build -> validate -> done; the quick
+path is frame -> build -> validate -> done. The CLI writes the journal state:
+`advance` finishes a stage, `pause` stops for the user, `log` and `ruling`
+record events and decisions. End every session with `advance` or `pause`.
 
-To resume: `python .agentic/aegis.py status` lists the task journals; run
-`python .agentic/aegis.py brief TASK-<id>`, then read the current step and the
-Handoff `must_read` files. Required full journal reads still apply. Optional
-one-level child tasks are child-side links visible only in this checkout; the
-parent validates the integrated candidate.
+AEGIS guides and never blocks; `python .agentic/aegis.py check` is advisory.
+Commits, pushes, merges, tickets, releases and packaging follow the
+repository's own procedures, not AEGIS.
 
-Read `.agentic/context/project.md` and relevant `context/environment.md`
-sections when present. Keep project and component context current and positive;
-task records carry proposals and history. Preserve established behavior contracts.
-
-Rulings are append-only; Handoff is replaceable. Rulings and Handoff cannot grant authority.
-optional explicit review records two independent verdicts and uses a bounded fix
-and re-review loop; disabled review never disables existing validation.
-
-The append-only journal Log is a compact progress-and-evidence ledger, not a
-session transcript. Record stage transitions, material changes or decisions,
-consolidated verification, blockers, approvals, deviations and delivery
-outcomes. Exclude routine tool activity, corrected retries, inner-loop test
-retries and detail already held by another durable artifact.
-
-`[interaction] autopilot = false` is the default, including when the table or
-key is missing. Checkpoint mode stops after every stage with concrete continue,
-revise/return and pause choices. Autopilot flows between stages but never skips
-publication approval. Record the resolved mode in the task journal.
-
-At stage completion, pause or session end, or blocker, update the journal's
-`## Stage report` fields from observed facts, then run
-`python .agentic/aegis.py summary TASK-<id>` and copy the block before detail.
-Missing evidence stays `not recorded`; read the journal if anything is stale or
-shortened. Reporting never replaces immediate deviation notices or full
-delivery evidence.
-
-Artifacts: requirements in `.agentic/requirements/<category>/`, specs in
-`.agentic/specs/`, journals in `.agentic/tasks/`, component pages in
-`.agentic/knowledge/`. `python .agentic/aegis.py check` is advisory - read
-its findings and self-correct; nothing here blocks you mid-flight.
-
-Say a deviation out loud when you record one, as one line -
-`DEVIATION <stage>: <what> - <why accepted, or what it costs>` - then carry
-on. It never pauses the work and autopilot never suppresses it. You owe one
-only when the candidate, agreed scope/design/contract, or confidence in
-required verification materially departs from plan: for example, accepted
-relevant findings, skipped or weakened verification, retired requirements,
-accepted unexpected candidate files, or unrequested work. Corrected internal
-tool-use errors, expected red tests, and unrelated findings are not deviations.
+Say a deviation when you record one, as one line -
+`DEVIATION <stage>: <what> - <why accepted, or what it costs>` - then carry on.
 """
 
 
@@ -466,10 +434,13 @@ def parse_journal(text: str) -> dict:
     @details Plain regex over `key: value` lines - no YAML. The header is the
              run of key/value lines that follows the `# TASK-<id> - <title>`
              heading; it ends at the first blank line after it starts or at
-             the first line that is not a key/value pair.
+             the first line that is not a key/value pair. A repeated key keeps
+             its first written value - an empty template line never hides one,
+             and `header_with` rewrites the first line - and is listed under
+             `repeated`.
     """
     lines = text.replace("\r\n", "\n").split("\n")
-    result: dict = {"id": "", "title": "", "header": {}, "checklist": [],
+    result: dict = {"id": "", "title": "", "header": {}, "repeated": [], "checklist": [],
                     "components": [], "log": []}
 
     start = -1
@@ -490,7 +461,13 @@ def parse_journal(text: str) -> dict:
         match = HEADER_RE.match(line)
         if not match:
             break
-        result["header"][match.group(1).lower()] = match.group(2)
+        key = match.group(1).lower()
+        if key in result["header"]:
+            if key not in result["repeated"]:
+                result["repeated"].append(key)
+            if result["header"][key]:
+                continue
+        result["header"][key] = match.group(2)
 
     section = ""
     for line in lines[start + 1 :]:
@@ -1082,10 +1059,10 @@ def cmd_init(args: argparse.Namespace) -> int:
     config = AGENTIC / "aegis.toml"
     if config.is_file():
         schema = load_config().get("schema", "?")
-        print(f"  {'aegis.toml':<16} kept (yours; schema {schema})")
+        print(f"  {'.agentic/aegis.toml':<24} kept (yours; schema {schema})")
     else:
         write_text(config, DEFAULT_CONFIG)
-        print(f"  {'aegis.toml':<16} created")
+        print(f"  {'.agentic/aegis.toml':<24} created")
 
     for name in POINTER_FILES:
         print(f"  {name:<16} {write_pointer(name)}")
@@ -1126,20 +1103,32 @@ def cmd_init(args: argparse.Namespace) -> int:
 # task / req
 
 
+#: the payload license block that opens a Markdown or TOML template; records
+#: generated from a template belong to the project and do not carry it.
+LICENSE_PROLOGUE_RE = re.compile(
+    r"\A(?:<!--[^\n]*\n(?:[^\n]*\n)*?[^\n]*SPDX-License-Identifier[^\n]*\n-->\n"
+    r"|(?:#[^\n]*\n)*?#[^\n]*SPDX-License-Identifier[^\n]*\n)")
+
+
 def scaffold_template(name: str) -> str:
-    """@brief Omit explicitly marked authoring notes from new records only."""
-    text = template(name)
-    return re.sub(
+    """@brief A new project record from a template: no license block, no authoring notes."""
+    text = LICENSE_PROLOGUE_RE.sub("", template(name), count=1)
+    text = re.sub(
         r"^<!-- AEGIS:TEMPLATE\n.*?^-->\n|"
         r"^# AEGIS:TEMPLATE-BEGIN\n.*?^# AEGIS:TEMPLATE-END\n",
         "", text, flags=re.MULTILINE | re.DOTALL)
+    return text.lstrip("\n")
 
 
 def cmd_task(args: argparse.Namespace) -> int:
-    """@brief Scaffold a task journal from templates/task.md."""
+    """@brief Scaffold a task journal from .agentic/templates/task.md."""
     title = args.title.strip()
     if not title:
         raise UserError("task title must not be empty")
+    if re.fullmatch(r"TASK-[0-9A-Fa-f]{4,12}", title):
+        # a bare ID is a resume attempt, never the title of new work
+        raise UserError(f"'task' creates a new journal from a title; resume {title.upper()} "
+                        f"with: python .agentic/aegis.py brief {title.upper()}")
 
     parent_id = ""
     if args.parent:
@@ -1173,10 +1162,21 @@ def cmd_task(args: argparse.Namespace) -> int:
     text = re.sub(r"^base:.*$", lambda _m: f"base: {head}".rstrip(), text,
                   count=1, flags=re.MULTILINE)
     text = re.sub(r"^opened: .*$", f"opened: {stamp}", text, count=1, flags=re.MULTILINE)
-    text = re.sub(r"^- \d{4}-\d{2}-\d{2} frame:", f"- {stamp} frame:", text, count=1,
+    stage = "survey" if args.type == "adopt" else "frame"
+    text = re.sub(r"^- \d{4}-\d{2}-\d{2} frame:", f"- {stamp} {stage}:", text, count=1,
                   flags=re.MULTILINE)
 
     path = tasks / f"{task_id}.md"
+    if stage != "frame":
+        text = header_with(text, "stage", stage)
+    checklist = step_checklist("adopt.md") if stage == "survey" else done_when(stage)
+    if checklist:
+        text = section_with(text, "Done checklist", checklist)
+    text = state_with(text, {
+        "status": "working", "reported": f"{stage} - in_progress",
+        "next": ("complete the Frame card and choose the path" if stage == "frame"
+                 else "survey the repository components"),
+        "must_read": must_read(path, stage), **review_fields({}, load_config())})
     write_new(path, text)
     print(rel(path))
     return 0
@@ -1311,9 +1311,20 @@ def status_one(task_id: str, as_json: bool = False) -> int:
     print(f"\nlog (last {len(tail)} of {len(data['log'])}):")
     for line in tail:
         print(f"  - {line}")
+    try:
+        record, notice = journal_state(read_text(path), stage)
+    except UserError as error:
+        record, notice = {}, f"unreadable: {error}"
+    if notice:
+        print(f"\nstate: {notice}")
+    else:
+        print(f"\nstate: {record.get('status') or 'not recorded'} "
+              f"(reported {record['stage']} - {record.get('result') or 'not recorded'})")
+        if record.get("next"):
+            print(f"  next: {record['next']}")
     step = STAGE_STEP_FILES.get(stage)
     if stage == "done":
-        print("\nthis task is delivered - nothing to resume")
+        print("\nthis task is done - nothing to resume")
     elif step:
         print(f"\nnext: open .agentic/steps/{step} (stage '{stage}'), "
               "continue at the first unticked item")
@@ -1471,7 +1482,7 @@ def parse_handoff(text: str) -> dict[str, str]:
             raise UserError("Handoff requires one 'key: value' per line")
         key, value = match.group(1).lower(), match.group(2).strip()
         if key not in HANDOFF_FIELDS:
-            raise UserError("unknown Handoff field; see templates/task.md")
+            raise UserError("unknown Handoff field; see .agentic/templates/task.md")
         if key in fields:
             raise UserError(f"duplicate Handoff field: {key}")
         if key == "current" and value and value not in KNOWN_STAGES:
@@ -1538,7 +1549,7 @@ def parse_stage_report(text: str) -> dict[str, str]:
             raise UserError("Stage report requires one 'key: value' per line")
         key, value = match.group(1).lower(), match.group(2).strip()
         if key not in STAGE_REPORT_FIELDS:
-            raise UserError("unknown Stage report field; see templates/task.md")
+            raise UserError("unknown Stage report field; see .agentic/templates/task.md")
         if key in fields:
             raise UserError(f"duplicate Stage report field: {key}")
         allowed = (KNOWN_STAGES if key in {"stage", "current"} else
@@ -1577,17 +1588,323 @@ def summary_value(value: str) -> tuple[str, bool]:
     return clean[:SUMMARY_VALUE_LIMIT - len(suffix)] + suffix, True
 
 
-def cmd_summary(args: argparse.Namespace) -> int:
-    """@brief Print a bounded stage snapshot without writes, Git or commands.
-    @details Recorded outcomes are author statements, not fresh proof. Missing
-             or mismatched bindings suppress outcome and next-action claims.
-             Any shortened value requires full-journal review before proceeding.
+# state - one CLI-written block; legacy Handoff and Stage report stay readable
+
+#: the `## State` fields, in the order the CLI writes them.
+STATE_FIELDS = ("status", "reported", "next", "must_read", "changed", "evidence",
+                "issues", "spec_compliance", "implementation_quality", "review_round")
+#: working: a stage is in progress; waiting/blocked: the user is needed;
+#: ready: the next stage can start; done: implementation guidance is complete.
+STATE_STATUSES = ("working", "waiting", "blocked", "ready", "done")
+#: the stages each path walks; deliver is a legacy stage that closes to done.
+PATH_STAGES = {"full": ("frame", "specify", "design", "build", "validate", "done"),
+               "quick": ("frame", "build", "validate", "done")}
+ADOPT_STAGES = ("survey", "components", "close", "done")
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+
+
+def one_line(value: str | None) -> str:
+    """@brief Collapse a command-line value to one printable line for a record field."""
+    return " ".join("".join(char if char.isprintable() else " "
+                            for char in (value or "")).split())
+
+
+def section_bounds(text: str, name: str) -> tuple[int, int] | None:
     """
-    path, data = read_journal(args.task)
+    @brief Line span of the body of the first `## <name>...` section.
+    @details Headings inside fenced blocks are content, not structure. The span
+             runs from the line after the heading to the next level-two heading
+             or the end of the text.
+    @return (first body line, end line) indexes into `text.split("\\n")`, or None.
+    """
+    lines = text.split("\n")
+    fence = ""
+    start = None
+    for index, line in enumerate(lines):
+        opening = FENCE_RE.match(line)
+        if fence:
+            if opening and opening.group(1)[0] == fence[0] and len(opening.group(1)) >= len(fence):
+                fence = ""
+            continue
+        if opening:
+            fence = opening.group(1)
+            continue
+        if line.startswith("## "):
+            if start is not None:
+                return start, index
+            heading, wanted = line[3:].strip().lower(), name.lower()
+            if heading == wanted or heading.startswith(wanted + " "):
+                start = index + 1
+    return (start, len(lines)) if start is not None else None
+
+
+def section_with(text: str, name: str, body: str) -> str:
+    """@brief Replace a section's body, or append the section when it is missing."""
+    span = section_bounds(text, name)
+    if span is None:
+        return text.rstrip("\n") + f"\n\n## {name}\n\n{body.rstrip()}\n"
+    lines = text.split("\n")
+    start, end = span
+    updated = lines[:start] + [""] + body.rstrip().split("\n")
+    if end < len(lines):
+        updated += [""] + lines[end:]
+    result = "\n".join(updated)
+    return result if result.endswith("\n") else result + "\n"
+
+
+def lines_appended(text: str, span: tuple[int, int], line: str) -> str:
+    """@brief Insert `line` after the last non-blank line of a section body."""
+    lines = text.split("\n")
+    start, end = span
+    last = end
+    while last > start and not lines[last - 1].strip():
+        last -= 1
+    insert = [line] if last > start else ["", line]
+    return "\n".join(lines[:last] + insert + lines[last:])
+
+
+def section_without(text: str, name: str) -> str:
+    """@brief Remove a section, heading included; absent sections leave text unchanged."""
+    span = section_bounds(text, name)
+    if span is None:
+        return text
+    lines = text.split("\n")
+    start, end = span
+    return "\n".join(lines[:start - 1] + lines[end:]).rstrip("\n") + "\n"
+
+
+def log_with(text: str, message: str) -> str:
+    """@brief Append one dated line at the end of the Log section, keeping older lines."""
+    line = f"- {today()} {message}"
+    span = section_bounds(text, "log")
+    return section_with(text, "Log", line) if span is None else lines_appended(text, span, line)
+
+
+def header_with(text: str, key: str, value: str) -> str:
+    """
+    @brief Set one journal header line, or add it at the end of the header block.
+    @details The header is read as parse_journal reads it - the key/value lines
+             under the title, up to the first blank line - so a same-named
+             field in a later section is never touched.
+    """
+    entry = f"{key}: {value}".rstrip()
+    lines = text.split("\n")
+    title = next((index for index, line in enumerate(lines) if TITLE_RE.match(line)), None)
+    if title is None:
+        raise UserError("journal has no '# TASK-<id> - <title>' heading")
+    end = None
+    for index in range(title + 1, len(lines)):
+        line = lines[index]
+        if not line.strip():
+            if end is not None:
+                break
+            continue
+        match = HEADER_RE.match(line)
+        if not match:
+            break
+        if match.group(1).lower() == key.lower():
+            lines[index] = entry
+            return "\n".join(lines)
+        end = index + 1
+    if end is None:  # no header yet: start one under the title
+        lines[title + 1:title + 1] = ["", entry]
+    else:
+        lines[end:end] = [entry]
+    return "\n".join(lines)
+
+
+def has_section(text: str, name: str) -> bool:
+    """@brief Whether a live (unfenced, uncommented) `## <name>` heading exists."""
+    return any(line.startswith("## ") and line[3:].strip().lower() == name
+               for line in live_markdown_lines(text))
+
+
+def parse_state(text: str) -> dict[str, str]:
+    """
+    @brief Read the CLI-written `## State` fields; reject ambiguity or invalid values.
+    @exception UserError An unknown, duplicate or malformed field or section.
+    """
+    fields: dict[str, str] = {}
+    active = seen = False
+    for line in live_markdown_lines(text):
+        if line.startswith("## "):
+            active = line[3:].strip().lower() == "state"
+            if active:
+                if seen:
+                    raise UserError("duplicate State section")
+                seen = True
+            continue
+        if not active or not line.strip():
+            continue
+        match = HEADER_RE.fullmatch(line)
+        if not match:
+            raise UserError("State requires one 'key: value' per line")
+        key, value = match.group(1).lower(), match.group(2).strip()
+        if key not in STATE_FIELDS:
+            raise UserError("unknown State field; write State with aegis.py pause or advance")
+        if key in fields:
+            raise UserError(f"duplicate State field: {key}")
+        if key == "status" and value and value not in STATE_STATUSES:
+            raise UserError(f"invalid State status; expected {', '.join(STATE_STATUSES)}")
+        if key == "reported" and value:
+            stage, separator, result = value.partition(" - ")
+            if not separator or stage not in KNOWN_STAGES or result not in STAGE_REPORT_RESULTS:
+                raise UserError("invalid State reported; expected '<stage> - <result>'")
+        if key in {"spec_compliance", "implementation_quality"} and value \
+                and value not in REVIEW_VERDICTS:
+            raise UserError(f"invalid State {key}; expected {', '.join(REVIEW_VERDICTS)}")
+        if key == "review_round" and value and (
+                not value.isdecimal() or not 1 <= int(value) <= 6):
+            raise UserError("invalid State review_round; expected 1 through 6")
+        fields[key] = value
+    return fields
+
+
+def stored_state(text: str) -> dict[str, str]:
+    """@brief Recorded state fields from `## State` or the legacy sections; {} when unreadable."""
+    try:
+        if has_section(text, "state"):
+            return parse_state(text)
+        report, handoff = parse_stage_report(text), parse_handoff(text)
+    except UserError:
+        return {}
+    issues = "; ".join(dict.fromkeys(value for value in (report.get("issues", ""),
+                                                         handoff.get("blockers", "")) if value))
+    reported = (f"{report['stage']} - {report['result']}"
+                if report.get("stage") and report.get("result") else "")
+    return {"status": handoff.get("status", ""), "reported": reported,
+            "next": report.get("next") or handoff.get("next", ""),
+            "must_read": handoff.get("must_read", ""), "changed": report.get("changed", ""),
+            "evidence": report.get("evidence", ""), "issues": issues,
+            **{key: report.get(key, "") for key in
+               ("spec_compliance", "implementation_quality", "review_round")}}
+
+
+def journal_state(text: str, current: str) -> tuple[dict[str, str], str]:
+    """
+    @brief The journal's current state in Stage-report terms, from either format.
+    @details A `## State` block is authoritative; a journal without one is read
+             from its legacy Handoff and Stage report. `needs_user` derives from
+             the status, so it is never recorded twice.
+    @return (record, notice): a missing, incomplete or stale state yields an empty
+            record and a notice that tells the reader to refresh it.
+    @exception UserError A malformed State, Handoff or Stage report.
+    """
+    if not has_section(text, "state"):
+        record, notice = bound_stage_report(text, current)
+        if notice:
+            return {}, notice
+        handoff = parse_handoff(text)
+        return {**record, "status": handoff.get("status", ""),
+                "must_read": handoff.get("must_read", "")}, ""
+    state = parse_state(text)
+    if not any(state.values()):
+        return {}, "state not recorded; read journal"
+    stage, _separator, result = state.get("reported", "").partition(" - ")
+    if not stage or not state.get("status"):
+        return {}, "incomplete state; refresh it with aegis.py pause or advance"
+    if stage != current and state["status"] not in {"ready", "done"}:
+        return {}, "stale state: current stage changed; refresh it with aegis.py pause or advance"
+    return {"stage": stage, "result": result, "current": current, "status": state["status"],
+            "needs_user": "yes" if state["status"] in {"waiting", "blocked"} else "no",
+            **{key: state.get(key, "") for key in STATE_FIELDS
+               if key not in {"status", "reported"}}}, ""
+
+
+def state_with(text: str, state: dict[str, str]) -> str:
+    """@brief Write the State block and retire legacy Handoff and Stage report sections."""
+    for legacy in ("handoff", "stage report"):
+        text = section_without(text, legacy)
+    body = "\n".join(f"{key}: {state.get(key, '')}".rstrip() for key in STATE_FIELDS)
+    return section_with(text, "State", body)
+
+
+def review_fields(previous: dict[str, str], cfg: dict, clear: bool = False) -> dict[str, str]:
+    """@brief Review fields from the configuration and the previous state.
+    @param[in] clear Blank both verdicts while keeping the consumed round, as a
+                     changed candidate requires.
+    """
+    enabled, _cycles = review_settings(cfg)
+    if not enabled:
+        return {"spec_compliance": "disabled", "implementation_quality": "disabled",
+                "review_round": ""}
+    keep = {key: "" if clear or previous.get(key) == "disabled" else previous.get(key, "")
+            for key in ("spec_compliance", "implementation_quality")}
+    return {**keep, "review_round": previous.get("review_round", "")}
+
+
+def must_read(path: Path, stage: str, extra: list[str] | None = None) -> str:
+    """@brief The journal, the stage's step file and any named repository paths."""
+    items = [rel(path)]
+    step = STAGE_STEP_FILES.get(stage)
+    if step:
+        items.append(f".agentic/steps/{step}")
+    for entry in extra or []:
+        for part in entry.split(","):
+            value = part.strip().replace("\\", "/")
+            if not value:
+                continue
+            if not repo_relative_ok(value):
+                raise UserError(f"must-read path must stay inside the repository: {value}")
+            if value not in items:
+                items.append(value)
+    return ", ".join(items)
+
+
+def step_checklist(step: str) -> str | None:
+    """@brief A step file's 'Done when' list; None when the file or the list is missing."""
+    path = AGENTIC / "steps" / step
+    if not path.is_file():
+        return None
+    text = read_text(path)
+    if "**Done when:**" not in text:
+        return None
+    body = text.split("**Done when:**", 1)[1]
+    body = re.split(r"^\*\*[^*\n]+:\*\*", body, maxsplit=1, flags=re.MULTILINE)[0]
+    return body.strip() or None
+
+
+def done_when(stage: str) -> str | None:
+    """@brief The checklist for entering `stage`; adoption phases share one list."""
+    step = STAGE_STEP_FILES.get(stage)
+    if not step or stage in ADOPT_STAGES:
+        return None
+    return step_checklist(step)
+
+
+def stage_order(header: dict, stage: str) -> tuple[str, ...]:
+    """@brief The stage sequence that contains `stage` for this journal's path.
+    @details A legacy deliver stage sits between validate and done, so going
+             back to validate from it is a return."""
+    if stage in ADOPT_STAGES and stage != "done":
+        return ADOPT_STAGES
+    order = PATH_STAGES["quick" if header.get("path", "").strip() == "quick" else "full"]
+    return order[:-1] + ("deliver", "done") if stage == "deliver" else order
+
+
+def next_stage(header: dict, stage: str) -> str:
+    """@brief The stage that follows `stage` on this journal's path."""
+    if stage == "deliver":
+        return "done"
+    order = stage_order(header, stage)
+    if stage not in order or stage == "done":
+        raise UserError(f"no stage follows '{stage}' on the {header.get('path') or 'full'} "
+                        "path; name one with --to")
+    return order[order.index(stage) + 1]
+
+
+def recorded_value(value: str | None, previous: dict[str, str], key: str) -> str:
+    """@brief A new command-line value, or the previously recorded one when omitted."""
+    return one_line(value) if value is not None else previous.get(key, "")
+
+
+def summary_lines(path: Path) -> list[str]:
+    """@brief The bounded stage summary of one journal, one field per line."""
+    data = parse_journal(read_text(path))
     current = data["header"].get("stage", "")
     if current not in KNOWN_STAGES:
         raise UserError("journal has no valid current stage")
-    record, notice = bound_stage_report(read_text(path), current)
+    record, notice = journal_state(read_text(path), current)
     rows = {
         "Stage": (f"{record['stage']} - {record.get('result') or 'not recorded'}"
                   if record else "not recorded"),
@@ -1597,7 +1914,7 @@ def cmd_summary(args: argparse.Namespace) -> int:
         "Changed": record.get("changed", ""),
         "Evidence": record.get("evidence", ""),
         "Issues": notice or record.get("issues", ""),
-        "Next": "read journal and refresh Stage report" if notice else record.get("next", ""),
+        "Next": "read journal and refresh the state" if notice else record.get("next", ""),
         "Needs user": "review journal; reporting state is not recorded" if notice
                       else record.get("needs_user", ""),
         "Specification compliance": record.get("spec_compliance", ""),
@@ -1609,8 +1926,290 @@ def cmd_summary(args: argparse.Namespace) -> int:
     if any(shortened for _value, shortened in rendered.values()):
         rendered["Needs user"] = (
             "review full journal before proceeding (summary truncated)", False)
-    for key, (value, _shortened) in rendered.items():
-        print(f"{key + ':':<14}{value}")
+    return [f"{key + ':':<14}{value}" for key, (value, _shortened) in rendered.items()]
+
+
+def record_reminders(header: dict, repeated: list[str] | tuple, text: str) -> list[str]:
+    """
+    @brief Records that later stages read and an edit put out of shape - the
+           header and the Rulings - printed as reminders, never refusals.
+    """
+    notes = [f"the header has more than one {key}: line; keep the one with its value and "
+             "delete the other" for key in repeated]
+    if header.get("path", "").strip() == "quick" and not split_ids(header.get("requirements", "")):
+        notes.append("the quick path names the existing requirement IDs it restores on the "
+                     "header's requirements: line; add them")
+    _records, errors = parse_rulings(text)
+    if errors:
+        notes.append(f"Rulings holds lines `ruling` did not write ({errors[0]}"
+                     f"{'; ...' if len(errors) > 1 else ''}); record a settled decision with "
+                     "`ruling`, and keep other notes in the Frame or the Log")
+    return notes
+
+
+#: The journal section each early stage writes as an ordinary edit.
+STAGE_SECTIONS = {"frame": "Frame", "specify": "Requirement coverage", "design": "Design"}
+LABEL_ONLY_RE = re.compile(r"^[A-Z][A-Za-z -]*:$")
+
+
+def section_reminders(text: str, stage: str) -> list[str]:
+    """
+    @brief A stage that pauses or completes while its own journal section is
+           still empty - comments and bare template labels only - as a
+           reminder, never a refusal.
+    """
+    name = STAGE_SECTIONS.get(stage)
+    span = section_bounds(text, name) if name else None
+    if span is None:
+        return []
+    body = re.sub(r"<!--.*?-->", "", "\n".join(text.split("\n")[span[0]:span[1]]),
+                  flags=re.DOTALL)
+    if any(line.strip() and not LABEL_ONLY_RE.match(line.strip()) for line in body.split("\n")):
+        return []
+    return [f"the {name} section is still empty; {stage} writes it in the journal as an "
+            "ordinary edit" + (", or records why design is skipped" if stage == "design" else "")]
+
+
+#: The Log labels the stage cards define, and the stage whose work each records.
+LOG_LABEL_STAGES = {"red": "build", "green": "build", "final": "validate"}
+
+
+def log_reminders(header: dict, task: str, message: str) -> list[str]:
+    """
+    @brief A Log line that records a later stage's work - a red, green or final
+           label, or that stage's own name - while the header still names an
+           earlier stage: a reminder to advance, never a refusal.
+    @param[in] message The stage-prefixed line as logged.
+    """
+    stage = header.get("stage", "")
+    if stage not in KNOWN_STAGES:
+        return []
+    body = message[len(stage) + 1:] if message.lower().startswith(stage + ":") else message
+    label = body.split(":", 1)[0].strip().lower()
+    owner = LOG_LABEL_STAGES.get(label, label)
+    order = stage_order(header, stage)
+    if owner not in STAGE_STEP_FILES or owner not in order or stage not in order \
+            or order.index(owner) <= order.index(stage):
+        return []
+    return [f"this line records {owner} work, but the journal is still at {stage}; once "
+            f"{stage} is accepted, run `python .agentic/aegis.py advance {task}` before "
+            f"more {owner} work"]
+
+
+def checkpoint_hint(header: dict, stage: str, task: str) -> str:
+    """
+    @brief How a stage waiting on the user resumes when they move on: the
+           `advance` that records it. The hint is conditional; it infers no
+           approval. Adoption pauses after each component inside `components`,
+           where continuing means the next component, so that stage gets none.
+    """
+    if stage == "components":
+        return ""
+    try:
+        following = next_stage(header, stage)
+    except UserError:
+        return ""
+    command = f"`python .agentic/aegis.py advance {task}`"
+    if following == "done":
+        return f"The State waits on the user: when they approve closing the task, run {command}"
+    return (f"The State waits on the user: when they continue to {following}, run {command} "
+            f"first and read .agentic/steps/{STAGE_STEP_FILES[following]}")
+
+
+def cmd_pause(args: argparse.Namespace) -> int:
+    """
+    @brief Record a pause or blocker in the State block, then print the summary.
+    @details Changed, evidence and issues keep their recorded values unless given;
+             review fields follow the configuration. The header stage is unchanged.
+    """
+    path, data = read_journal(args.task)
+    text = read_text(path)
+    stage = data["header"].get("stage", "")
+    if stage not in KNOWN_STAGES:
+        raise UserError("journal has no valid current stage")
+    following = one_line(args.next)
+    if not following:
+        raise UserError("--next must name one action or one question")
+    previous = stored_state(text)
+    blocked = "blocked" if args.blocked else ""
+    state = {"status": blocked or "waiting",
+             "reported": f"{stage} - {blocked or 'paused'}",
+             "next": following, "must_read": must_read(path, stage, args.read),
+             **{key: recorded_value(getattr(args, key), previous, key)
+                for key in ("changed", "evidence", "issues")},
+             **review_fields(previous, load_config())}
+    write_text(path, state_with(text, state))
+    print("\n".join(summary_lines(path)))
+    for note in (section_reminders(text, stage)
+                 + record_reminders(data["header"], data["repeated"], text)):
+        print(f"Note: {note}")
+    return 0
+
+
+def cmd_advance(args: argparse.Namespace) -> int:
+    """
+    @brief Record a stage transition: header, Done checklist, Log line and State.
+    @details Without --to the next stage follows the journal's path; --to also
+             names a return, which waits for the user and clears enabled review
+             verdicts while keeping the consumed round. Advancing never checks
+             whether the stage's work was done - that stays the agent's call.
+    """
+    path, data = read_journal(args.task)
+    text = read_text(path)
+    header = data["header"]
+    stage = header.get("stage", "")
+    if stage not in KNOWN_STAGES:
+        raise UserError("journal has no valid current stage")
+    if args.path:  # the path choice decides which stage follows frame
+        text = header_with(text, "path", args.path)
+        header = {**header, "path": args.path}
+    target = (args.to or next_stage(header, stage)).strip().lower()
+    if target not in KNOWN_STAGES:
+        raise UserError(f"unknown stage '{target}'")
+    if target == stage:
+        raise UserError(f"the task is already at {stage}")
+    order = stage_order(header, stage)
+    returning = stage in order and target in order and order.index(target) < order.index(stage)
+    previous = stored_state(text)
+    cfg = load_config()
+    reason = one_line(args.reason)
+    # Reminders, never refusals: the Log keeps what was left open.
+    notes = []
+    unticked = sum(1 for ticked, _item in data["checklist"] if not ticked)
+    if unticked and not returning and not args.skipped:
+        notes.append(f"{unticked} Done checklist item(s) left unticked")
+    if target == "done" and review_settings(cfg)[0] and (
+            previous.get("spec_compliance"), previous.get("implementation_quality")
+            ) != ("approved", "approved"):
+        notes.append("review verdicts not both approved")
+    text = header_with(text, "stage", target)
+    checklist = done_when(target)
+    if checklist:
+        text = section_with(text, "Done checklist", checklist)
+    verb = ("returned to" if returning else
+            "skipped; next" if args.skipped else "completed; next")
+    text = log_with(text, f"{stage}: {verb} {target}" + (f" - {reason}" if reason else "")
+                    + (f" ({'; '.join(notes)})" if notes else ""))
+    if target == "done":
+        status, default = "done", ("implementation guidance complete; commit, push and "
+                                   "integration belong to the developer")
+    elif returning:
+        status, default = "waiting", f"continue {target}" + (f": {reason}" if reason else "")
+    else:
+        step = STAGE_STEP_FILES.get(target)
+        status, default = "ready", (f"start {target}: read .agentic/steps/{step}" if step
+                                    else f"start {target}")
+    # a return waits at the stage it went back to; a forward move reports the
+    # stage it finished
+    reported = (f"{target} - paused" if returning else
+                f"{stage} - {'skipped' if args.skipped else 'completed'}")
+    state = {"status": status, "reported": reported,
+             "next": one_line(args.next) or default,
+             "must_read": must_read(path, target, args.read),
+             **{key: recorded_value(getattr(args, key), previous, key)
+                for key in ("changed", "evidence", "issues")},
+             **review_fields(previous, cfg, clear=returning)}
+    write_text(path, state_with(text, state))
+    print("\n".join(summary_lines(path)))
+    for note in notes:
+        print(f"Note: {note}; recorded in the Log")
+    for note in ((section_reminders(text, stage) if not (returning or args.skipped) else [])
+                 + record_reminders(header, data["repeated"], text)):
+        print(f"Note: {note}")
+    step = STAGE_STEP_FILES.get(target)
+    print(f"Next: read .agentic/steps/{step} and continue {target}" if step and target != "done"
+          else "Next: nothing to resume; implementation guidance is complete")
+    return 0
+
+
+def cmd_log(args: argparse.Namespace) -> int:
+    """@brief Append one dated, stage-prefixed line to the journal Log."""
+    path, data = read_journal(args.task)
+    message = one_line(" ".join(args.text))
+    if not message:
+        raise UserError("log text must not be empty")
+    stage = data["header"].get("stage", "")
+    if stage and not message.lower().startswith(stage + ":"):
+        message = f"{stage}: {message}"
+    write_text(path, log_with(read_text(path), message))
+    print(f"logged in {rel(path)}")
+    for note in log_reminders(data["header"], data["id"] or path.stem, message):
+        print(f"Note: {note}")
+    return 0
+
+
+def cmd_ruling(args: argparse.Namespace) -> int:
+    """@brief Append one durable decision to Rulings; earlier rulings are never edited."""
+    path, _data = read_journal(args.task)
+    text = read_text(path)
+    records, _errors = parse_rulings(text)
+    span = section_bounds(text, "rulings")
+    section = "\n".join(text.split("\n")[span[0]:span[1]]) if span else ""
+    numbers = [int(number) for number in re.findall(r"RULING-(\d{3})", section)]
+    identity = f"RULING-{max(numbers, default=0) + 1:03d}"
+    values = {"decision": one_line(args.decision), "reason": one_line(args.reason)}
+    for label, value in values.items():
+        if not value or "|" in value:
+            raise UserError(f"ruling {label} must be one non-empty line without '|'")
+    supersedes = (args.supersedes or "none").strip()
+    if supersedes != "none":
+        supersedes = supersedes.upper()
+        if supersedes not in {record["id"] for record in records}:
+            raise UserError(f"cannot supersede unknown ruling {supersedes}")
+    line = (f"- {identity} | date={today()} | decision={values['decision']} | "
+            f"reason={values['reason']} | source={args.source} | supersedes={supersedes}")
+    text = section_with(text, "Rulings", line) if span is None else lines_appended(text, span, line)
+    write_text(path, text)
+    print(f"{identity} recorded in {rel(path)}"
+          + (f"; it marks {supersedes} superseded, so leave that line as written"
+             if supersedes != "none" else ""))
+    return 0
+
+
+def cmd_verdict(args: argparse.Namespace) -> int:
+    """
+    @brief Record independent review verdicts and the review round in the State block.
+    @details Verdicts come from the reviewers; this command only records them.
+             It refuses while explicit review is disabled, where both verdicts
+             stay `disabled`.
+    """
+    path, data = read_journal(args.task)
+    text = read_text(path)
+    stage = data["header"].get("stage", "")
+    if stage not in KNOWN_STAGES:
+        raise UserError("journal has no valid current stage")
+    enabled, max_fix_cycles = review_settings(load_config())
+    if not enabled:
+        raise UserError("explicit review is disabled in .agentic/aegis.toml; "
+                        "verdicts stay disabled")
+    if args.round is not None and not 1 <= args.round <= min(6, 1 + max_fix_cycles):
+        raise UserError(f"review round must be 1 through {min(6, 1 + max_fix_cycles)}")
+    previous = stored_state(text)
+    state = {key: previous.get(key, "") for key in STATE_FIELDS}
+    if not state["reported"].startswith(f"{stage} - ") or not state["status"]:
+        # A verdict is recorded while the current stage is under review.
+        state.update(status="working", reported=f"{stage} - in_progress",
+                     next=f"continue {stage}", must_read=must_read(path, stage))
+    for key, value in (("spec_compliance", args.spec), ("implementation_quality", args.quality)):
+        if value:
+            state[key] = value
+        elif state[key] == "disabled":
+            state[key] = ""
+    state["review_round"] = (str(args.round) if args.round is not None
+                             else state["review_round"] or "1")
+    write_text(path, state_with(text, state))
+    print("\n".join(summary_lines(path)))
+    return 0
+
+
+def cmd_summary(args: argparse.Namespace) -> int:
+    """@brief Print a bounded stage snapshot without writes, Git or commands.
+    @details Recorded outcomes are author statements, not fresh proof. Missing
+             or mismatched bindings suppress outcome and next-action claims.
+             Any shortened value requires full-journal review before proceeding.
+    """
+    path, _data = read_journal(args.task)
+    print("\n".join(summary_lines(path)))
     return 0
 
 
@@ -1618,10 +2217,9 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
     """@brief Render one deterministic bounded resume brief from durable files."""
     header = journal.get("header", {})
     current = header.get("stage", "")
-    record, report_notice = bound_stage_report(text, current)
+    record, state_notice = journal_state(text, current)
     rulings, _ruling_errors = parse_rulings(text)
     active = active_rulings(rulings)
-    handoff = parse_handoff(text)
     children = visible_children(journal.get("id") or path.stem)
 
     def clean(value: str, fallback: str = "not recorded") -> str:
@@ -1640,17 +2238,28 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
     requirements = clean(header.get("requirements", ""))
     checklist = clean(f"{done}/{total} done; next={next_item}")
 
-    if report_notice:
-        report_line = ("not recorded" if report_notice.startswith("stage report not recorded")
-                       else clean(report_notice))
+    if state_notice:
+        state_line = ("not recorded" if " not recorded" in state_notice
+                      else clean(state_notice))
+        outcome_line = "not recorded"
     else:
-        report_line = clean(
-            f"{record['stage']} - {record.get('result') or 'not recorded'}; "
+        state_line = clean(
+            f"{record.get('status') or 'not recorded'}; "
+            f"reported={record['stage']} - {record.get('result') or 'not recorded'}; "
+            f"next={record.get('next') or 'not recorded'}; "
+            f"must_read={record.get('must_read') or 'not recorded'}; "
+            f"needs_user={record.get('needs_user') or 'not recorded'}")
+        outcome_line = clean(
             f"changed={record.get('changed') or 'not recorded'}; "
             f"evidence={record.get('evidence') or 'not recorded'}; "
-            f"issues={record.get('issues') or 'not recorded'}; "
-            f"next={record.get('next') or 'not recorded'}; "
-            f"needs_user={record.get('needs_user') or 'not recorded'}")
+            f"issues={record.get('issues') or 'not recorded'}")
+    step = STAGE_STEP_FILES.get(current)
+    read_next = (f".agentic/steps/{step}, then the State must_read paths" if step
+                 else "nothing to resume; implementation guidance is complete")
+    hint = (checkpoint_hint(header, current, journal.get("id") or path.stem)
+            if step and not state_notice and record.get("status") == "waiting" else "")
+    if hint:
+        read_next += f". {hint}"
     review_enabled, max_fix_cycles = review_settings(cfg)
     mode = interaction_mode(cfg, header)
     review_line = clean(
@@ -1660,22 +2269,11 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
         f"quality={record.get('implementation_quality') or 'not recorded'}; "
         f"round={record.get('review_round') or 'not recorded'}")
 
-    if not any(handoff.values()):
-        handoff_line = "not recorded"
-    elif handoff.get("current") != current:
-        handoff_line = "stale handoff: current stage changed; refresh from journal"
-    else:
-        handoff_line = clean(
-            f"{handoff.get('status') or 'not recorded'}; "
-            f"current={handoff.get('current') or 'not recorded'}; "
-            f"next={handoff.get('next') or 'not recorded'}; "
-            f"must_read={handoff.get('must_read') or 'not recorded'}; "
-            f"blockers={handoff.get('blockers') or 'not recorded'}")
-
     lines = [
         "AEGIS brief",
         f"Task: {task}",
         f"Stage: {clean(current)}",
+        f"Path: {clean(header.get('path', ''))}",
         f"Branch/base: {branch} @ {base}",
         f"Parent: {parent}",
         f"Requirements: {requirements}",
@@ -1684,9 +2282,11 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
             f"({'present' if (AGENTIC / 'context' / name).is_file() else 'not recorded'})"
             for name in CONTEXT_FILES),
         f"Checklist: {checklist}",
-        f"Stage report: {report_line}",
+        f"State: {state_line}",
+        f"Outcome: {outcome_line}",
         f"Interaction: {mode}",
         f"Review: {review_line}",
+        f"Diagrams: {diagram_decision(cfg)}",
         "Active rulings:",
     ]
     if active:
@@ -1699,7 +2299,6 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
             lines.append(f"- ...[{len(active) - BRIEF_RULING_LIMIT} omitted; read journal]")
     else:
         lines.append("- none recorded")
-    lines.append(f"Handoff: {handoff_line}")
     lines.append("Visible children:")
     if children:
         for _child_path, child in children[:BRIEF_CHILD_LIMIT]:
@@ -1711,8 +2310,26 @@ def brief_lines(path: Path, journal: dict, text: str, cfg: dict) -> list[str]:
             lines.append(f"- ...[{len(children) - BRIEF_CHILD_LIMIT} omitted; read journal]")
     else:
         lines.append("- none visible")
+    lines.append(f"Read next: {read_next}")
     lines.append(f"Details: {rel(path)} (durable snapshot; read journal for full history)")
     return lines
+
+
+def diagram_decision(cfg: dict) -> str:
+    """
+    @brief What design draws, computed from `[diagrams]` exactly as diagrams.md
+           defines it: only the boolean true enables; a missing or non-list
+           `types` means structure; an empty or unknown-only list draws nothing.
+    """
+    table = cfg_table(cfg, "diagrams")
+    if table.get("enabled") is not True:
+        return "none (disabled)"
+    types = table.get("types")
+    if not isinstance(types, list):
+        types = ["structure"]
+    known = list(dict.fromkeys(t for t in types if t in DIAGRAM_TYPES))
+    return ("draw " + ", ".join(known) + " for a substantive design; none for a skipped design"
+            if known else "none (no known types configured)")
 
 
 def cmd_brief(args: argparse.Namespace) -> int:
@@ -1745,7 +2362,7 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("repo-evolution", "a scoped task has a completed anchor/evolution pair"),
     ("fingerprints-tracked",
      "anchor/evolution sidecars are committed only when [records] commit_fingerprints is true"),
-    ("config", "aegis.toml keys have the documented shapes"),
+    ("config", ".agentic/aegis.toml keys have the documented shapes"),
     ("command-failed", "a --run command ran to completion and succeeded"),
     ("command-timeout", "no --run command was stopped by its time limit"),
     ("nothing-ran", "--run actually executed at least one command"),
@@ -1785,8 +2402,12 @@ CONFIG_SHAPE: dict[str, dict[str, type]] = {
     "zones": {stage: list for stage in DEFAULT_ZONES},
     "interaction": {"autopilot": bool},
     "review": {"enabled": bool, "max_fix_cycles": int},
+    "diagrams": {"enabled": bool, "types": list},
     "records": {"commit_fingerprints": bool},
 }
+
+#: the diagram types `[diagrams] types` may name.
+DIAGRAM_TYPES = ("structure", "sequence", "state")
 
 
 def check_config(add, cfg: dict) -> None:
@@ -1811,6 +2432,10 @@ def check_config(add, cfg: dict) -> None:
             and not 0 <= cycles <= MAX_FIX_CYCLES_LIMIT):
         add("WARN", "config", name,
             f"[review] max_fix_cycles should be 0 through {MAX_FIX_CYCLES_LIMIT}")
+    types = cfg_table(cfg, "diagrams").get("types")
+    if isinstance(types, list) and any(item not in DIAGRAM_TYPES for item in types):
+        add("WARN", "config", name,
+            f"[diagrams] types should name only {', '.join(DIAGRAM_TYPES)}")
     for key, value in cfg_table(cfg, "commands").items():
         if key != "timeout" and not isinstance(value, str):
             add("WARN", "config", name, f"[commands] {key} should be a string")
@@ -1857,13 +2482,15 @@ REQ_STATUSES = ("draft", "active", "retired")
 REQ_ID_RE = re.compile(r"^REQ-[A-Z]{2,6}-[0-9a-f]{4,12}$")
 #: the same shape unanchored, for finding ids quoted inside prose.
 REQ_ID_SCAN_RE = re.compile(r"REQ-[A-Z]{2,6}-[0-9a-f]{4,12}")
-#: journal stage vocabulary: the six stages, adoption's phases, and done.
+#: journal stage vocabulary: the five stages, adoption's phases, done, and the
+#: legacy deliver stage that older journals may still hold.
 KNOWN_STAGES = ("frame", "specify", "design", "build", "validate", "deliver", "done",
                 "survey", "components", "close")
-#: which step file explains each stage - adoption's phases live in adopt.md.
+#: which step file explains each stage - adoption's phases live in adopt.md;
+#: validate explains how a legacy deliver journal closes.
 STAGE_STEP_FILES = {
     "frame": "1_frame.md", "specify": "2_specify.md", "design": "3_design.md",
-    "build": "4_build.md", "validate": "5_validate.md", "deliver": "6_deliver.md",
+    "build": "4_build.md", "validate": "5_validate.md", "deliver": "5_validate.md",
     "survey": "adopt.md", "components": "adopt.md", "close": "adopt.md",
 }
 
@@ -2353,15 +2980,27 @@ def scan_journals(add, skip, req_ids: set[str]) -> list[tuple[str, dict]]:
                 add("WARN", "journal-header", relpath,
                     f"{ruling['id']} supersedes unknown earlier {supersedes}")
             known_rulings.add(ruling["id"])
-        try:
-            handoff = parse_handoff(text)
-        except UserError as exc:
-            add("WARN", "journal-header", relpath, str(exc))
-            handoff = {}
-        handoff_current = handoff.get("current", "")
-        if handoff_current and handoff_current != data["header"]["stage"]:
-            add("WARN", "journal-header", relpath,
-                f"stale Handoff current {handoff_current} != {data['header']['stage']}")
+        if has_section(text, "state"):
+            try:
+                _record, notice = journal_state(text, data["header"]["stage"])
+            except UserError as exc:
+                add("WARN", "journal-header", relpath, str(exc))
+            else:
+                if notice.startswith(("stale", "incomplete")):
+                    add("WARN", "journal-header", relpath, notice)
+            if has_section(text, "handoff") or has_section(text, "stage report"):
+                add("WARN", "journal-header", relpath,
+                    "legacy Handoff or Stage report beside State is ignored; remove it")
+        else:
+            try:
+                handoff = parse_handoff(text)
+            except UserError as exc:
+                add("WARN", "journal-header", relpath, str(exc))
+                handoff = {}
+            handoff_current = handoff.get("current", "")
+            if handoff_current and handoff_current != data["header"]["stage"]:
+                add("WARN", "journal-header", relpath,
+                    f"stale Handoff current {handoff_current} != {data['header']['stage']}")
         for rid in split_ids(data["header"].get("requirements", "")):
             if rid not in req_ids:
                 add("ERROR", "journal-header", relpath, f"unknown requirement {rid}")
@@ -2411,7 +3050,7 @@ def check_review_state(add, cfg: dict, journals: list[tuple[str, dict]]) -> None
             continue
         try:
             text = read_text(ROOT / relpath)
-            record, notice = bound_stage_report(text, stage)
+            record, notice = journal_state(text, stage)
         except UserError:
             add("WARN", "review-state", relpath,
                 "enabled review has malformed verdict evidence")
@@ -2824,6 +3463,67 @@ SIDE_EFFECT_NAME_RE = re.compile(r"deploy|migrat|publish|release|push|upload",
                                  re.IGNORECASE)
 
 
+def plan_configured_commands(cfg: dict) -> list[tuple[str, str, str, str]]:
+    """
+    @brief Decide what `check --run` would execute, without executing it.
+    @details Returns one `(name, command, decision, reason)` per configured
+             entry, where `decision` is `run` or `skipped`. Both the preview
+             and the real run read this single function, so a `--dry-run`
+             plan can never promise a different set than `--run` delivers.
+    """
+    allowed = str_list(cfg_table(cfg, "check").get("run"))
+    plan: list[tuple[str, str, str, str]] = []
+    for name, command in runnable_commands(cfg):
+        if allowed and name not in allowed:
+            plan.append((name, command, "skipped", "not listed in [check] run"))
+        elif not allowed and SIDE_EFFECT_NAME_RE.search(name):
+            plan.append((name, command, "skipped",
+                         ("name suggests side effects - list it in "
+                          "[check] run to include it")))
+        else:
+            plan.append((name, command, "run", ""))
+    return plan
+
+
+def preview_configured_commands(cfg: dict, stream=None) -> list[dict]:
+    """
+    @brief Print what `check --run` would execute, and run nothing.
+    @details `--run` already prints `run: <name> started` before each command,
+             but that reaches a human watching a live terminal - an agent
+             calling the command through a shell tool receives all output only
+             once the command has returned, by which time an hour-long suite
+             has already been spent. A caller that must decide *whether* it can
+             afford this proof needs the answer beforehand, so this prints the
+             plan and the per-command limit, and returns.
+
+             The limit is the honest duration signal available without running
+             anything: `no limit` says the repository believes the command may
+             legitimately take as long as it takes.
+    """
+    out = stream if stream is not None else sys.stdout
+    plan = plan_configured_commands(cfg)
+    will_run = [entry for entry in plan if entry[2] == "run"]
+    print(f"dry-run: check --run would execute {len(will_run)} of {len(plan)} "
+          f"[commands] entries; workdir={command_workdir(cfg)}", file=out)
+
+    records: list[dict] = []
+    for name, command, decision, reason in plan:
+        if decision == "skipped":
+            print(f"run: {name} skipped ({reason})", file=out)
+            records.append({"name": name, "status": "skipped", "reason": reason})
+            continue
+        limit = command_timeout(cfg, name)
+        print(f"run: {name} would run "
+              f"({'no limit' if limit is None else f'limit {limit}s'})", file=out)
+        print(f"  $ {command}", file=out)
+        records.append({"name": name, "status": "planned", "command": command,
+                        "timeout": limit})
+    # Same closing sentence as `test --dry-run`, and for the same reason: a
+    # preview must never be mistaken for the proof the validate stage requires.
+    print("dry-run: no command run; no verification result recorded", file=out)
+    return records
+
+
 def run_configured_commands(cfg: dict, findings: list,
                             stream=None) -> list[dict]:
     """
@@ -2843,8 +3543,7 @@ def run_configured_commands(cfg: dict, findings: list,
              `--json`, so stdout stays one parseable document). Returns one
              record per configured command for the JSON envelope.
     """
-    entries = runnable_commands(cfg)
-    allowed = str_list(cfg_table(cfg, "check").get("run"))
+    entries = plan_configured_commands(cfg)
     out = stream if stream is not None else sys.stdout
     results: list[dict] = []
     workdir = command_workdir(cfg)
@@ -2853,17 +3552,11 @@ def run_configured_commands(cfg: dict, findings: list,
     def say(text: str) -> None:
         print(text, file=out, flush=True)  # live: each command lands visibly
 
-    for name, command in entries:
-        if allowed and name not in allowed:
-            say(f"run: {name} skipped (not listed in [check] run)")
+    for name, command, decision, reason in entries:
+        if decision == "skipped":
+            say(f"run: {name} skipped ({reason})")
             results.append({"name": name, "status": "skipped",
-                            "reason": "not listed in [check] run"})
-            continue
-        if not allowed and SIDE_EFFECT_NAME_RE.search(name):
-            say(f"run: {name} skipped (name suggests side effects - "
-                "list it in [check] run to include it)")
-            results.append({"name": name, "status": "skipped",
-                            "reason": "name suggests side effects"})
+                            "reason": reason})
             continue
         say(f"run: {name} started")  # a 20-minute suite must not look hung
         limit = command_timeout(cfg, name)
@@ -2916,9 +3609,16 @@ def cmd_check(args: argparse.Namespace) -> int:
     findings = run_checks(cfg, args.task)
     # under --json stdout must stay one parseable document, so live progress
     # goes to stderr instead of being lost.
-    runs = (run_configured_commands(cfg, findings,
-                                    sys.stderr if args.json else None)
-            if args.run else [])
+    progress = sys.stderr if args.json else None
+    if args.dry_run:
+        # The preview never appends `nothing-ran`: that ERROR exists because
+        # `--run` promised verification and delivered none. `--dry-run`
+        # promised a plan, and delivering one is not a failed proof.
+        runs = preview_configured_commands(cfg, progress)
+    elif args.run:
+        runs = run_configured_commands(cfg, findings, progress)
+    else:
+        runs = []
 
     counts = {"ERROR": 0, "WARN": 0, "NOTE": 0}
     promoted = set(str_list(cfg_table(cfg, "check").get("strict_promote")))
@@ -2941,6 +3641,8 @@ def cmd_check(args: argparse.Namespace) -> int:
                         "notes": counts["NOTE"]},
             "result": worst or "ok",
             "run": runs,
+            # explicit, so a consumer can never read a plan as a proof
+            "dry_run": bool(args.dry_run),
             "strict": {"enabled": bool(args.strict),
                        "promoted_warnings": promoted_warns,
                        "passed": not failed} if args.strict else None,
@@ -3119,18 +3821,7 @@ def append_log(task_id: str, message: str) -> None:
              next `## ` heading rather than blindly at end of file.
     """
     path, _data = read_journal(task_id)
-    text = read_text(path)
-    line = f"- {today()} {message}"
-    heading = re.search(r"^## Log[ \t]*$", text, re.MULTILINE)
-    following = re.search(r"^## ", text[heading.end():], re.MULTILINE) if heading else None
-    if heading and following:
-        pos = heading.end() + following.start()
-        head = text[:pos].rstrip("\n")
-        write_text(path, f"{head}\n{line}\n\n{text[pos:]}")
-    else:
-        if not text.endswith("\n"):
-            text += "\n"
-        write_text(path, f"{text}{line}\n")
+    write_text(path, log_with(read_text(path), message))
 
 
 def cmd_test(args: argparse.Namespace) -> int:
@@ -3151,14 +3842,14 @@ def cmd_test(args: argparse.Namespace) -> int:
     if (args.name in RESERVED_COMMAND_KEYS or not isinstance(command, str)
             or not command.strip() or "{" in command):
         raise UserError(
-            f"no runnable [commands] entry named '{args.name}' in aegis.toml")
+            f"no runnable [commands] entry named '{args.name}' in .agentic/aegis.toml")
 
     label = args.name
     fallback = ""
     if args.impacted:
         template_cmd = commands.get("test_impacted")
         if not isinstance(template_cmd, str) or "{tests}" not in template_cmd:
-            fallback = "no test_impacted template in aegis.toml"
+            fallback = "no test_impacted template in .agentic/aegis.toml"
         else:
             tests, reason = impacted_tests(cfg, getattr(args, "base", "") or "")
             substituted, tests, reason = fit_impacted(template_cmd, tests, reason)
@@ -3845,8 +4536,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         review_line = "- explicit review: disabled; existing validation remains required"
     else:
         try:
-            review_record, review_notice = bound_stage_report(
-                text, header.get("stage", ""))
+            review_record, review_notice = journal_state(text, header.get("stage", ""))
         except UserError:
             review_record, review_notice = {}, "malformed verdict evidence; read journal"
         if review_notice:
@@ -3919,6 +4609,16 @@ def cmd_report(args: argparse.Namespace) -> int:
 # entry point
 
 
+def state_arguments(parser: argparse.ArgumentParser) -> None:
+    """@brief The State options shared by pause and advance; omitted ones keep their value."""
+    parser.add_argument("--read", action="append",
+                        help="a repository path the next session must read "
+                             "(repeatable or comma-separated)")
+    parser.add_argument("--changed", help="what changed, one line")
+    parser.add_argument("--evidence", help="what shows it works, one line")
+    parser.add_argument("--issues", help="open issues or risks, one line")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """@brief The argparse tree for every implemented command."""
     parser = argparse.ArgumentParser(
@@ -3970,7 +4670,10 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--strict", action="store_true",
                        help="CI mode: exit 1 on errors and promoted warnings")
     check.add_argument("--run", action="store_true",
-                       help="also execute the [commands] entries from aegis.toml")
+                       help="also execute the [commands] entries from .agentic/aegis.toml")
+    check.add_argument("--dry-run", action="store_true",
+                       help="list what --run would execute, with each command's"
+                            " limit, and run none of it")
     check.add_argument("--full", action="store_true",
                        help=f"print every finding (default caps at {FINDING_CAP};"
                             " --strict implies --full)")
@@ -3999,6 +4702,54 @@ def build_parser() -> argparse.ArgumentParser:
         "report", help="append the delivery summary to a task journal")
     report.add_argument("task", help="TASK-<id> or <id>")
     report.set_defaults(func=cmd_report)
+
+    pause = subs.add_parser("pause", help="record a pause or blocker in the journal State")
+    pause.add_argument("task", help="TASK-<id> or <id>")
+    pause.add_argument("--next", required=True,
+                       help="the one action or question that resumes the work")
+    pause.add_argument("--blocked", action="store_true",
+                       help="the work cannot continue until the issue is resolved")
+    state_arguments(pause)
+    pause.set_defaults(func=cmd_pause)
+
+    advance = subs.add_parser(
+        "advance", help="move a task to its next stage and record the State")
+    advance.add_argument("task", help="TASK-<id> or <id>")
+    advance.add_argument("--to", help="the target stage (default: the next one on the path)")
+    advance.add_argument("--path", choices=tuple(PATH_STAGES),
+                         help="record the chosen path first (normally at frame)")
+    advance.add_argument("--reason", help="why, kept in the Log line (returns and skips)")
+    advance.add_argument("--skipped", action="store_true",
+                         help="the stage was skipped rather than completed")
+    advance.add_argument("--next", help="the next action (default: start the next stage)")
+    state_arguments(advance)
+    advance.set_defaults(func=cmd_advance)
+
+    log = subs.add_parser("log", help="append one dated line to the journal Log")
+    log.add_argument("task", help="TASK-<id> or <id>")
+    log.add_argument("text", nargs="+", help="the line to append")
+    log.set_defaults(func=cmd_log)
+
+    ruling = subs.add_parser("ruling", help="append one durable decision to Rulings")
+    ruling.add_argument("task", help="TASK-<id> or <id>")
+    ruling.add_argument("--decision", required=True, help="what was decided, one line")
+    ruling.add_argument("--reason", required=True, help="why, one line")
+    ruling.add_argument("--source", required=True, choices=RULING_SOURCES,
+                        help="who or what settled it")
+    ruling.add_argument("--supersedes",
+                        help="an earlier RULING-NNN this one replaces; the link marks it "
+                             "superseded, so the earlier line stays as written")
+    ruling.set_defaults(func=cmd_ruling)
+
+    verdict = subs.add_parser(
+        "verdict", help="record explicit review verdicts in the journal State")
+    verdict.add_argument("task", help="TASK-<id> or <id>")
+    verdict.add_argument("--spec", choices=("approved", "changes_required"),
+                         help="the specification-compliance reviewer's verdict")
+    verdict.add_argument("--quality", choices=("approved", "changes_required"),
+                         help="the implementation-quality reviewer's verdict")
+    verdict.add_argument("--round", type=int, help="the review round (default: kept, else 1)")
+    verdict.set_defaults(func=cmd_verdict)
 
     summary = subs.add_parser(
         "summary", help="print a compact recorded stage summary (read-only)")

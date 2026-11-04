@@ -258,14 +258,13 @@ class _WorkflowStepper(QWidget):
 
 class HomeProjectPage(QWidget):
     """
-    @brief      Display the project dashboard and source-import controls.
+    @brief      Display the project dashboard, audiobook options and exports.
     @exception  None
     """
 
-    import_requested = Signal()
     project_snapshot_requested = Signal()
     export_requested = Signal(str, str)
-    project_options_lock_requested = Signal(str, str)
+    project_options_change_requested = Signal(str, str)
 
     def __init__(self, parent=None) -> None:
         """
@@ -277,8 +276,6 @@ class HomeProjectPage(QWidget):
         super().__init__(parent)
         self._project_active = False
         self._operation_busy = False
-        self._source_locked = False
-        self._project_options_locked = False
         self._target_language = config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
         self._voice_assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
         self._current_language = "en"
@@ -286,7 +283,6 @@ class HomeProjectPage(QWidget):
         self._current_project_path: str | None = None
         self._current_stage_name: str | None = None
         self._current_source_summary: str | None = None
-        self._current_locked_source_name: str | None = None
         self._stage_entries: list[dict[str, str]] = []
         self._stage_rows: list[QLineEdit] = []
         self._export_states: dict[str, dict[str, object]] = {}
@@ -313,8 +309,6 @@ class HomeProjectPage(QWidget):
         self._path_label.setWordWrap(True)
         self._source_label = QLabel("Source: none")
         self._source_label.setWordWrap(True)
-        self._options_status_label = QLabel("Project options are not locked.")
-        self._options_status_label.setWordWrap(True)
         self._target_language_caption = QLabel("Translation language")
         self._narration_mode_caption = QLabel("Audio output style")
         self._target_language_combo = QComboBox(self)
@@ -323,10 +317,8 @@ class HomeProjectPage(QWidget):
         self._narration_mode_combo = QComboBox(self)
         self._narration_mode_combo.addItem("Same narrator for whole book", "same_narrator")
         self._narration_mode_combo.addItem("Narrator + character voices", "narrator_and_characters")
-        self._start_project_button = QPushButton("Start Project")
-        self._start_project_button.clicked.connect(self._emit_lock_project_options)
-        self._import_button = QPushButton("Select Source File")
-        self._import_button.clicked.connect(self.import_requested.emit)
+        self._target_language_combo.activated.connect(self._emit_project_options_change)
+        self._narration_mode_combo.activated.connect(self._emit_project_options_change)
         self._snapshot_button = QPushButton("Export Project ZIP")
         self._snapshot_button.clicked.connect(self.project_snapshot_requested.emit)
         summary_action_layout = QVBoxLayout()
@@ -336,15 +328,11 @@ class HomeProjectPage(QWidget):
         summary_action_layout.addWidget(self._target_language_combo)
         summary_action_layout.addWidget(self._narration_mode_caption)
         summary_action_layout.addWidget(self._narration_mode_combo)
-        summary_action_layout.addWidget(self._import_button)
-        summary_action_layout.addWidget(self._start_project_button)
         summary_action_layout.addWidget(self._snapshot_button)
         summary_layout.addWidget(self._name_label, 0, 0)
-        summary_layout.addLayout(summary_action_layout, 0, 1, 5, 1)
+        summary_layout.addLayout(summary_action_layout, 0, 1, 3, 1)
         summary_layout.addWidget(self._path_label, 1, 0)
         summary_layout.addWidget(self._source_label, 2, 0)
-        summary_layout.addWidget(self._options_status_label, 3, 0)
-        summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0)
         summary_layout.setColumnStretch(0, 1)
         summary_layout.setColumnStretch(1, 0)
         root_layout.addWidget(summary_group)
@@ -432,7 +420,7 @@ class HomeProjectPage(QWidget):
         self._exports_group = exports_group
         self._stage_group = stage_group
         self._apply_workflow_row_heights()
-        self._refresh_import_button()
+        self._refresh_summary_actions()
         self._refresh_project_options_controls()
         self._refresh_summary_labels()
         self.set_export_states(project_export_service.build_export_states(None, None))
@@ -475,7 +463,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         """
         self._project_active = is_active
-        self._refresh_import_button()
+        self._refresh_summary_actions()
         self._refresh_project_options_controls()
 
     def set_operation_busy(self, is_busy: bool) -> None:
@@ -486,21 +474,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         """
         self._operation_busy = is_busy
-        self._refresh_import_button()
-        self._refresh_project_options_controls()
-
-    def set_source_locked(self, is_locked: bool, source_name: str | None) -> None:
-        """
-        @brief      Update the source-lock state and explanatory note.
-        @param[in]  is_locked True when the project already has a source.
-        @param[in]  source_name Optional source-file display name.
-        @return     None.
-        @exception  None
-        """
-        self._source_locked = is_locked
-        self._current_locked_source_name = source_name
-        self._refresh_summary_labels()
-        self._refresh_import_button()
+        self._refresh_summary_actions()
         self._refresh_project_options_controls()
 
     def set_project_options(
@@ -511,13 +485,12 @@ class HomeProjectPage(QWidget):
     ) -> None:
         """
         @brief      Update the displayed and editable project-level audiobook options.
-        @param[in]  project_options_locked True when project options are immutable.
+        @param[in]  project_options_locked Legacy flag retained for manifest compatibility.
         @param[in]  target_language Selected audiobook target language code.
         @param[in]  voice_assignment_mode Selected narration mode.
         @return     None.
         @exception  None
         """
-        self._project_options_locked = bool(project_options_locked)
         self._target_language = _normalize_language_code(target_language)
         self._voice_assignment_mode = _normalize_voice_assignment_mode(voice_assignment_mode)
         target_index = self._target_language_combo.findData(self._target_language)
@@ -528,11 +501,11 @@ class HomeProjectPage(QWidget):
             self._narration_mode_combo.setCurrentIndex(mode_index)
         self._refresh_summary_labels()
         self._refresh_project_options_controls()
-        self._refresh_import_button()
+        self._refresh_summary_actions()
 
     def selected_project_options(self) -> tuple[str, str]:
         """
-        @brief      Return the currently selected draft project options.
+        @brief      Return the currently displayed project options.
         @return     Tuple of target language and voice-assignment mode tokens.
         @exception  None
         """
@@ -578,13 +551,12 @@ class HomeProjectPage(QWidget):
         }
         self._refresh_export_rows()
 
-    def _refresh_import_button(self) -> None:
+    def _refresh_summary_actions(self) -> None:
         """
         @brief      Apply the current summary button-enabled state.
         @return     None.
         @exception  None
         """
-        self._import_button.setEnabled(self._project_active and not self._project_options_locked)
         self._snapshot_button.setEnabled(self._project_active and not self._operation_busy)
 
     def _refresh_project_options_controls(self) -> None:
@@ -593,10 +565,9 @@ class HomeProjectPage(QWidget):
         @return     None.
         @exception  None
         """
-        can_edit_options = self._project_active and not self._project_options_locked and not self._operation_busy
+        can_edit_options = self._project_active and not self._operation_busy
         self._target_language_combo.setEnabled(can_edit_options)
         self._narration_mode_combo.setEnabled(can_edit_options)
-        self._start_project_button.setEnabled(can_edit_options and self._source_locked)
 
     def apply_language(self, language: str) -> None:
         """
@@ -612,9 +583,7 @@ class HomeProjectPage(QWidget):
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
         self._target_language_caption.setText(ui_state_service.translate("home.translation_language", language))
         self._narration_mode_caption.setText(ui_state_service.translate("home.audio_output_style", language))
-        self._import_button.setText(ui_state_service.translate("home.select_source", language))
         self._snapshot_button.setText(ui_state_service.translate("home.export_project_zip", language))
-        self._start_project_button.setText(ui_state_service.translate("home.start_project", language))
         for index in range(self._target_language_combo.count()):
             language_code = str(self._target_language_combo.itemData(index) or "")
             self._target_language_combo.setItemText(
@@ -752,47 +721,14 @@ class HomeProjectPage(QWidget):
                 self._current_source_summary or none_text,
             )
         )
-        self._options_status_label.setText(
-            ui_state_service.translate(
-                "home.options_locked" if self._project_options_locked else "home.options_unlocked",
-                self._current_language,
-            )
-        )
-        self._source_lock_label.setText(
-            _build_source_status_text(
-                self._current_language,
-                self._source_locked,
-                self._project_options_locked,
-                self._current_locked_source_name,
-            )
-        )
-        self._source_lock_label.setStyleSheet(
-            f"color: {self._theme_colors['danger']};"
-            if self._source_locked and self._project_options_locked
-            else f"color: {self._theme_colors['text_primary']};"
-        )
 
-    def _source_lock_label_placeholder(self) -> QLabel:
+    def _emit_project_options_change(self, _index: int = -1) -> None:
         """
-        @brief      Build the retained source-status label used in summary.
-        @return     Configured source-status label.
-        @exception  None
-        """
-        self._source_lock_label = QLabel("No source imported yet.")
-        self._source_lock_label.setWordWrap(True)
-        locked_font = QFont(self.font())
-        locked_font.setBold(True)
-        self._source_lock_label.setFont(locked_font)
-        self._source_lock_label.setStyleSheet(f"color: {self._theme_colors['danger']};")
-        return self._source_lock_label
-
-    def _emit_lock_project_options(self) -> None:
-        """
-        @brief      Emit the selected immutable project options.
+        @brief      Request saving options after a deliberate operator selection.
         @return     None.
         @exception  None
         """
-        self.project_options_lock_requested.emit(*self.selected_project_options())
+        self.project_options_change_requested.emit(*self.selected_project_options())
 
 
 def _status_title(status: str, language: str) -> str:
@@ -901,60 +837,6 @@ def _normalize_voice_assignment_mode(value: object) -> str:
     if normalized_value in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
         return normalized_value
     return config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
-
-
-def _build_locked_source_text(language: str, source_name: str | None) -> str:
-    """
-    @brief      Build the translated locked-source status line.
-    @param[in]  language Target UI language code.
-    @param[in]  source_name Optional locked source display name.
-    @return     One translated locked-source text string.
-    @exception  None
-    """
-    resolved_source = source_name or "selected source"
-    return (
-        f"{ui_state_service.translate('home.locked_source_prefix', language)}: "
-        f"{resolved_source}"
-        f"{ui_state_service.translate('home.locked_source_suffix', language)}"
-    )
-
-
-def _build_selected_source_text(language: str, source_name: str | None) -> str:
-    """
-    @brief      Build the translated selected-source status line before project start.
-    @param[in]  language Target UI language code.
-    @param[in]  source_name Optional selected source display name.
-    @return     One translated selected-source text string.
-    @exception  None
-    """
-    resolved_source = source_name or "selected source"
-    return (
-        f"{ui_state_service.translate('home.selected_source_prefix', language)}: "
-        f"{resolved_source}"
-        f"{ui_state_service.translate('home.selected_source_suffix', language)}"
-    )
-
-
-def _build_source_status_text(
-    language: str,
-    has_source: bool,
-    is_project_locked: bool,
-    source_name: str | None,
-) -> str:
-    """
-    @brief      Build one translated source-status text line.
-    @param[in]  language Target UI language code.
-    @param[in]  has_source True when a source has been selected.
-    @param[in]  is_project_locked True when the source selection is locked.
-    @param[in]  source_name Optional source display name.
-    @return     One translated source-status text line.
-    @exception  None
-    """
-    if has_source and is_project_locked:
-        return _build_locked_source_text(language, source_name)
-    if has_source:
-        return _build_selected_source_text(language, source_name)
-    return ui_state_service.translate("home.no_source", language)
 
 
 class _StageRowListProxy:

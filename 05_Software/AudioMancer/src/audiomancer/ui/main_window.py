@@ -347,7 +347,6 @@ class MainWindow(QMainWindow):
             stage_name,
         )
         self._home_page.set_source_summary(source_name)
-        self._home_page.set_source_locked(source_name is not None, source_name)
         manifest_payload = {} if manifest is None else manifest
         self._home_page.set_project_options(
             bool(manifest_payload.get("project_options_locked", False)),
@@ -792,6 +791,14 @@ class MainWindow(QMainWindow):
         """
         misc_ui_controller.show_message(self, message, timeout_ms)
 
+    def createPopupMenu(self) -> None:  # noqa: N802
+        """
+        @brief      Keep essential toolbar actions accessible by disabling its visibility menu.
+        @return     None, so Qt does not offer toolbar visibility toggles on right-click.
+        @exception  None
+        """
+        return None
+
     # LOCAL HELPERS
 
     def _wordmark_html(self, accent: str) -> str:
@@ -878,7 +885,6 @@ class MainWindow(QMainWindow):
             stage_name=None,
         )
         home_page.set_source_summary(None)
-        home_page.set_source_locked(False, None)
         home_page.set_project_options(
             False,
             config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
@@ -886,10 +892,9 @@ class MainWindow(QMainWindow):
         )
         home_page.set_stage_statuses(home_presenter_service.build_stage_statuses(None, current_language))
         home_page.set_export_states(project_export_service.build_export_states(None, None))
-        home_page.import_requested.connect(lambda: home_ui_controller.handle_import_source_requested(self))
         home_page.project_snapshot_requested.connect(lambda: home_ui_controller.handle_project_snapshot_requested(self))
-        home_page.project_options_lock_requested.connect(
-            lambda target_language, voice_assignment_mode: home_ui_controller.handle_project_options_lock_requested(
+        home_page.project_options_change_requested.connect(
+            lambda target_language, voice_assignment_mode: home_ui_controller.handle_project_options_change_requested(
                 self,
                 target_language,
                 voice_assignment_mode,

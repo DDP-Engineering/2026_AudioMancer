@@ -36,9 +36,11 @@ from audiomancer.ui.main_window import MainWindow
 
 
 def test_book_analysis_page_follows_text_chunking() -> None:
+    """@brief Test book analysis page follows text chunking."""
     page_ids = [page_id for page_id, _label in MainWindow.PAGE_ORDER]
 
     assert page_ids.index("book_analysis") == page_ids.index("text_chunking") + 1
+
 
 # PUBLIC API
 
@@ -64,6 +66,9 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
         lambda *args, **kwargs: ("Book5_CAL_CAL", True),
     )
 
+    source = tmp_path / "book.txt"
+    source.write_text("Book contents", encoding="utf-8")
+    monkeypatch.setattr(home_ui_controller.QFileDialog, "getOpenFileName", lambda *args: (str(source), ""))
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
 
@@ -149,7 +154,7 @@ def test_main_window_shows_message_after_chunking_self_heal(
     qtbot.addWidget(window)
 
     def _capture_information(*args, **kwargs):
-        """Capture the post-activation recovery message."""
+        """@brief Capture the post-activation recovery message."""
         information_calls.append((window._current_project_root, args, kwargs))
         return QMessageBox.StandardButton.Ok
 
@@ -339,21 +344,24 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    window._home_page.import_requested.emit()
+    home_ui_controller.handle_import_source_requested(window)
 
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "source_selected"
     assert window._current_manifest["source_document"]["original_name"] == "story.epub"
     assert window._home_page._source_label.text() == "Source: story.epub"
     assert window._home_page._stage_list.item(0).text() == "Text Cleanup | Not Started"
-    assert window._home_page._import_button.isEnabled() is True
+    assert not hasattr(window._home_page, "_import_button")
 
+    warnings = []
+    monkeypatch.setattr(home_ui_controller.QMessageBox, "warning", lambda *args: warnings.append(args))
     selected_source_path[0] = replacement_source_path
-    window._home_page.import_requested.emit()
+    home_ui_controller.handle_import_source_requested(window)
 
-    assert window._current_manifest["source_document"]["original_name"] == "replacement.txt"
-    assert (project_root / "story.epub").exists() is False
-    assert (project_root / "replacement.txt").read_text(encoding="utf-8") == "replacement"
+    assert window._current_manifest["source_document"]["original_name"] == "story.epub"
+    assert (project_root / "story.epub").exists() is True
+    assert not (project_root / "replacement.txt").exists()
+    assert warnings
 
 
 def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_path, default_settings_payload) -> None:
@@ -549,6 +557,7 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
     def _run_synchronously(
         _window,
         _operation_kind,
@@ -823,10 +832,10 @@ def test_main_window_prevents_reimport_when_source_is_locked(
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    window._home_page.import_requested.emit()
+    home_ui_controller.handle_import_source_requested(window)
 
     assert popup_calls
-    assert "already started" in popup_calls[0][2]
+    assert "locked source" in popup_calls[0][2]
 
 
 def test_main_window_offers_repair_and_opens_repaired_project(

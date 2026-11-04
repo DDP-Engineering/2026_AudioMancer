@@ -16,6 +16,11 @@ with book text, AI-assisted text workflows, voice profiles and generated audio.
 
 ## Product responsibilities
 
+Project Lifecycle publishes a new project with its selected book, keeps the book
+fixed in Home, and saves language/narration options automatically with confirmed
+resets of affected results. Mode changes preserve text, characters and narrator
+data; language changes preserve source and text through Chunking.
+
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.
