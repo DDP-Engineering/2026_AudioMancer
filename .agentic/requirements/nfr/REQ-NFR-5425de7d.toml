@@ -4,7 +4,7 @@ title = "Cleanup shall resume from cleanup.json without repeating compatible"
 status = "active"
 
 requirement = """
-Cleanup shall resume from cleanup.json without repeating compatible completed deterministic or AI work.
+Cleanup shall resume from the current cleanup.json or replacement cleanup_pending.json checkpoint without repeating compatible completed deterministic or AI work.
 """
 
 verification = "Compatible and changed-profile resume tests pass."
@@ -24,4 +24,4 @@ rationale = """
 Long books and local inference must recover from cancellation while incompatible source, policy, prompt, or profile changes invalidate only the affected layer.
 """
 created = 2026-07-18
-updated = 2026-07-30
+updated = 2026-11-05

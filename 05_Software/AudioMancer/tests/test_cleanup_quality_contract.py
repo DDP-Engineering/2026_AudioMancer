@@ -13,6 +13,8 @@
          roles, fusion safety, script eligibility, resume, and manual edits.
 """
 
+# IMPORTS
+
 from __future__ import annotations
 
 import json
@@ -20,11 +22,11 @@ import json
 import pytest
 
 from audiomancer import config
+from audiomancer.cleanup import analysis as cleanup_analysis_service
+from audiomancer.cleanup import render as cleanup_renderer_service
+from audiomancer.cleanup import text as cleanup_text_analysis_service
 from audiomancer.services import (
     cleanup_ai_adjudication_service,
-    cleanup_analysis_service,
-    cleanup_renderer_service,
-    cleanup_text_analysis_service,
     operation_runtime_service,
     project_workspace_service,
     source_ledger_service,
@@ -44,7 +46,7 @@ from cleanup_test_support import (
 
 
 def _build_completed_cleanup(tmp_path):
-    """Build one valid completed Cleanup document for corruption checks."""
+    """@brief Build one valid completed Cleanup document for corruption checks."""
     canonical_text, ledger = build_ledger(
         ["A complete paragraph.", "A second paragraph."],
         kinds=["paragraph", "paragraph"],
@@ -63,7 +65,7 @@ def _build_completed_cleanup(tmp_path):
 
 
 def test_cleanup_persists_exactly_one_metadata_file_and_one_text_file(tmp_path) -> None:
-    """Cover S-0007/S-0008 and REQ-FUNC-50c48e76-aa6a-4a54-840b-ece463309faf."""
+    """@brief Cover S-0007/S-0008 and REQ-FUNC-50c48e76-aa6a-4a54-840b-ece463309faf."""
     canonical_text, ledger = build_ledger(
         ["A complete paragraph.", "A second paragraph."],
         kinds=["paragraph", "paragraph"],
@@ -102,7 +104,7 @@ def test_load_cleanup_document_rejects_malformed_blocking_quality_metrics(
     invalid_value,
     remove_field,
 ) -> None:
-    """Cover S-0001 and REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a."""
+    """@brief Cover S-0001 and REQ-FUNC-554ffe77-0dff-49d8-b4ad-8df145532b8a."""
     project_root, document = _build_completed_cleanup(tmp_path)
     if remove_field:
         del document["quality_report"][field]
@@ -129,7 +131,7 @@ def test_load_cleanup_document_rejects_malformed_blocking_quality_metrics(
     ],
 )
 def test_load_cleanup_document_rejects_malformed_progress(tmp_path, case) -> None:
-    """Cover S-0002 and REQ-FUNC-cdb7617a-5ec1-44b9-9ea5-a650e3f7f3e6."""
+    """@brief Cover S-0002 and REQ-FUNC-cdb7617a-5ec1-44b9-9ea5-a650e3f7f3e6."""
     project_root, document = _build_completed_cleanup(tmp_path)
     progress = document["progress"]
     if case == "missing_field":
@@ -172,7 +174,7 @@ def test_malformed_reuse_checkpoint_starts_fresh_analysis(
     monkeypatch,
     case,
 ) -> None:
-    """Malformed nested state is rejected strictly and never partially reused."""
+    """@brief Malformed nested state is rejected strictly and never partially reused."""
     project_root, document = _build_completed_cleanup(tmp_path)
     if case == "missing_progress_field":
         del document["progress"]["completed_request_count"]
@@ -205,6 +207,7 @@ def test_malformed_reuse_checkpoint_starts_fresh_analysis(
     original_analyze = cleanup_analysis_service.analyze_cleanup
 
     def _count_analysis(*args, **kwargs):
+        """@brief Count real analysis calls to verify checkpoint reuse."""
         analysis_calls["count"] += 1
         return original_analyze(*args, **kwargs)
 
@@ -217,7 +220,7 @@ def test_malformed_reuse_checkpoint_starts_fresh_analysis(
 
 
 def test_malformed_reuse_checkpoint_uses_fresh_cancellation_path(tmp_path) -> None:
-    """Cancellation wins before analysis instead of exposing corrupt internals."""
+    """@brief Cancellation wins before analysis instead of exposing corrupt internals."""
     project_root, document = _build_completed_cleanup(tmp_path)
     del document["progress"]["completed_request_count"]
     (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
@@ -237,7 +240,7 @@ def test_profile_change_cannot_reset_invalid_boundary_layer(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Profile invalidation occurs only after deterministic structure validates."""
+    """@brief Profile invalidation occurs only after deterministic structure validates."""
     project_root, document = _build_completed_cleanup(tmp_path)
     del document["boundaries"][0]["adjudication"]
     (project_root / config.CLEANUP_DOCUMENT_FILE_NAME).write_text(
@@ -248,6 +251,7 @@ def test_profile_change_cannot_reset_invalid_boundary_layer(
     original_analyze = cleanup_analysis_service.analyze_cleanup
 
     def _count_analysis(*args, **kwargs):
+        """@brief Count real analysis calls to verify checkpoint reuse."""
         analysis_calls["count"] += 1
         return original_analyze(*args, **kwargs)
 
@@ -285,7 +289,7 @@ def test_valid_checkpoint_lifecycle_states_remain_reusable(
     status,
     phase,
 ) -> None:
-    """Strict reuse validation preserves every supported recovery branch."""
+    """@brief Strict reuse validation preserves every supported recovery branch."""
     project_root, document = _build_completed_cleanup(tmp_path)
     document["status"] = status
     document["phase"] = phase
@@ -312,7 +316,7 @@ def test_valid_checkpoint_lifecycle_states_remain_reusable(
 
 
 def test_analysis_assigns_roles_before_classifying_every_boundary() -> None:
-    """Cover S-0003/S-0004 and REQ-FUNC-4b0701b7-2967-4a42-aa20-a368ba13a0c0."""
+    """@brief Cover S-0003/S-0004 and REQ-FUNC-4b0701b7-2967-4a42-aa20-a368ba13a0c0."""
     canonical_text, ledger = build_ledger(
         ["CHAPTER ONE", "Body continues", "on the next line.", "* * *"],
         kinds=["heading", "paragraph", "paragraph", "scene_separator"],
@@ -342,7 +346,7 @@ def test_analysis_assigns_roles_before_classifying_every_boundary() -> None:
 
 
 def test_renderer_rejects_unsupported_boundary_choice() -> None:
-    """Cover S-0001/S-0002 and REQ-FUNC-e42171cc-9c36-4327-87ba-c0f13da05c8c."""
+    """@brief Cover S-0001/S-0002 and REQ-FUNC-e42171cc-9c36-4327-87ba-c0f13da05c8c."""
     canonical_text, ledger = build_ledger(["evacuation", "dropships"])
     boundary_id = str(ledger["boundaries"][0]["boundary_id"])
 
@@ -374,7 +378,7 @@ def test_renderer_allows_only_safe_boundary_join_forms(
     expected_choice,
     expected_text,
 ) -> None:
-    """Cover S-0001/S-0002 and REQ-FUNC-6eb73209-e81b-4413-b03e-4f183487618c."""
+    """@brief Cover S-0001/S-0002 and REQ-FUNC-6eb73209-e81b-4413-b03e-4f183487618c."""
     canonical_text, ledger = build_ledger([left, right])
     analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
     decision = analysis["boundaries"][0]
@@ -395,7 +399,7 @@ def test_renderer_allows_only_safe_boundary_join_forms(
 def test_renderer_rejects_controlled_unauthorized_empty_separator(
     monkeypatch,
 ) -> None:
-    """Reject an alphanumeric join introduced by a regressed separator renderer."""
+    """@brief Reject an alphanumeric join introduced by a regressed separator renderer."""
     canonical_text, ledger = build_ledger(["alpha", "beta"])
     analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
 
@@ -407,6 +411,7 @@ def test_renderer_rejects_controlled_unauthorized_empty_separator(
         *,
         at_document_start,
     ):
+        """@brief Inject an unsafe separator omission for the fusion guard."""
         del at_document_start
         return (
             output_length,
@@ -516,7 +521,7 @@ def test_rendered_projection_fusion_counter_is_not_constant(
     boundaries,
     expected,
 ) -> None:
-    """Count only unsafe Unicode-alphanumeric joins across rendered spans."""
+    """@brief Count only unsafe Unicode-alphanumeric joins across rendered spans."""
     assert cleanup_renderer_service._introduced_fusion_count(
         cleaned_text,
         spans,
@@ -537,7 +542,7 @@ def test_renderer_scopes_dropped_chain_dehyphenation_to_retained_left_span(
     raises,
     expected_text,
 ) -> None:
-    """Authorize a dropped-chain join only from its retained left endpoint."""
+    """@brief Authorize a dropped-chain join only from its retained left endpoint."""
     canonical_text, ledger = build_ledger(["alpha-", "artifact-", "beta"])
     analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
     unit_ids = [str(item["unit_id"]) for item in ledger["units"]]
@@ -607,7 +612,7 @@ def test_pdf_geometry_distinguishes_indent_dedent_and_full_width_lines(
     left,
     expected_choice,
 ) -> None:
-    """Cover S-0003 and the typed-boundary geometry requirements."""
+    """@brief Cover S-0003 and the typed-boundary geometry requirements."""
     right = "The next source line provides enough text for a stable width."
     canonical_text, ledger = build_ledger(
         [left, right],
@@ -638,7 +643,7 @@ def test_pdf_geometry_distinguishes_indent_dedent_and_full_width_lines(
 
 
 def test_removed_page_artifact_keeps_a_typed_safe_gap() -> None:
-    """Cover S-0001/S-0004 and REQ-FUNC-4d57e621-74db-40e7-b9ec-f268dadc431c."""
+    """@brief Cover S-0001/S-0004 and REQ-FUNC-4d57e621-74db-40e7-b9ec-f268dadc431c."""
     edge_layout = {
         "bbox": [200.0, 780.0, 220.0, 792.0],
         "font_signature": "Book:9",
@@ -814,7 +819,7 @@ def test_cleanup_preserves_artifact_only_pages(
 
 
 def test_non_native_verse_uses_semantic_line_breaks_and_excludes_dialogue() -> None:
-    """Cover S-0003/S-0004 and REQ-FUNC-8034d33d-df7f-412f-ae51-45e3dc8cb017."""
+    """@brief Cover S-0003/S-0004 and REQ-FUNC-8034d33d-df7f-412f-ae51-45e3dc8cb017."""
     canonical_text, ledger = build_ledger(
         [
             "The moon is low",
@@ -851,7 +856,7 @@ def test_non_native_verse_uses_semantic_line_breaks_and_excludes_dialogue() -> N
 
 @pytest.mark.parametrize("text", ["这是一本中文书。" * 20, "이것은 한국어 책입니다." * 20])
 def test_cleanup_rejects_predominantly_cjk_or_hangul(text, tmp_path) -> None:
-    """Cover S-0005 and REQ-FUNC-ff2e2c94-93ef-4e77-89e9-4bc0f69a72aa."""
+    """@brief Cover S-0005 and REQ-FUNC-ff2e2c94-93ef-4e77-89e9-4bc0f69a72aa."""
     canonical_text, ledger = build_ledger([text])
     project_root, manifest = build_project(tmp_path, "UnsupportedScript", canonical_text, ledger)
 
@@ -889,7 +894,7 @@ def test_cleanup_persists_one_warning_only_for_detected_unsupported_language(
     detected_language: str | None,
     expected_warning: str | None,
 ) -> None:
-    """Verify supported and unavailable detection do not receive an unsupported-language warning."""
+    """@brief Verify supported and unavailable detection do not receive an unsupported-language warning."""
     canonical_text, ledger = build_ledger(["A reviewable paragraph."])
     project_root, manifest = build_project(tmp_path, "LanguageWarning", canonical_text, ledger)
     monkeypatch.setattr(
@@ -917,13 +922,14 @@ def test_cleanup_unsupported_language_warning_survives_resume_and_finalization(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Verify the warning survives cancelled AI resume and rerendering without duplication."""
+    """@brief Verify the warning survives cancelled AI resume and rerendering without duplication."""
     canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
     project_root, manifest = build_project(tmp_path, "LanguageWarningRecovery", canonical_text, ledger)
     monkeypatch.setattr(cleanup_text_analysis_service, "detect_language", lambda _text: "el")
     calls: list[int] = []
 
     def _adjudicate(questions, profile_payload, **_kwargs):
+        """@brief Return controlled adjudication records for the checkpoint fixture."""
         calls.append(len(questions))
         if len(calls) == 1:
             raise operation_runtime_service.OperationCancelledError()
@@ -981,7 +987,7 @@ def test_cleanup_unsupported_language_warning_survives_resume_and_finalization(
 
 
 def test_cleanup_without_usable_ai_completes_from_deterministic_priors(tmp_path) -> None:
-    """Cover S-0005 and REQ-FUNC-26df5531-3acf-4c18-98ab-06d4e79112eb."""
+    """@brief Cover S-0005 and REQ-FUNC-26df5531-3acf-4c18-98ab-06d4e79112eb."""
     canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
     project_root, manifest = build_project(tmp_path, "NoUsableAi", canonical_text, ledger)
 
@@ -1005,7 +1011,7 @@ def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Checkpoint batches remain identical to runtime requests across resume."""
+    """@brief Checkpoint batches remain identical to runtime requests across resume."""
     canonical_text, ledger = build_ledger(
         [
             "Line-" if index % 3 == 0 else f"Line {index}"
@@ -1033,6 +1039,7 @@ def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
     cancel = {"value": False}
 
     def _chat_json(_profile, _system, user_prompt, **kwargs):
+        """@brief Return deterministic schema answers for the test request."""
         payload = json.loads(user_prompt)
         assert kwargs["log_context"]["pass"] == "primary"
         question_ids = [
@@ -1127,7 +1134,7 @@ def test_recursive_split_resume_expands_durable_request_total(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Split child requests are counted once across cancellation and resume."""
+    """@brief Split child requests are counted once across cancellation and resume."""
     canonical_text, ledger = build_ledger([f"Line {index}" for index in range(5)])
     project_root, manifest = build_project(
         tmp_path,
@@ -1148,6 +1155,7 @@ def test_recursive_split_resume_expands_durable_request_total(
         cancel_requested,
         submission_callback=None,
     ):
+        """@brief Inject controlled responses and cancellation or context splitting."""
         _ = verifier, log_path, cancel_requested, submission_callback
         if len(questions) > 1:
             raise cleanup_ai_adjudication_service.ContextBudgetExceededError(
@@ -1210,7 +1218,7 @@ def test_recursive_split_resume_expands_durable_request_total(
 
 
 def _manifest(project_root):
-    """Load the current project manifest for checkpoint run-path tests."""
+    """@brief Load the current project manifest for checkpoint run-path tests."""
     return project_workspace_service.load_manifest(project_root)
 
 
@@ -1218,7 +1226,7 @@ def test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requ
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Cover S-0007 and REQ-NFR-5425de7d-350c-4377-86fa-89225619be7e."""
+    """@brief Cover S-0007 and REQ-NFR-5425de7d-350c-4377-86fa-89225619be7e."""
     canonical_text, ledger = build_ledger(
         ["First ambiguous line", "continues here", "Second ambiguous line", "continues too."],
     )
@@ -1229,6 +1237,7 @@ def test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requ
     cancel = {"value": False}
 
     def _chat_json(_profile, _system, user_prompt, **kwargs):
+        """@brief Return deterministic schema answers for the test request."""
         payload = json.loads(user_prompt)
         calls.append((str(payload["batch_id"]), str(kwargs["log_context"]["pass"])))
         answers = [
@@ -1283,7 +1292,7 @@ def test_cancel_persists_paused_checkpoint_and_exact_resume_skips_completed_requ
 
 
 def test_changed_model_reuses_analysis_but_restarts_all_ai_decisions(tmp_path, monkeypatch) -> None:
-    """Cover S-0007 and REQ-NFR-5425de7d-350c-4377-86fa-89225619be7e."""
+    """@brief Cover S-0007 and REQ-NFR-5425de7d-350c-4377-86fa-89225619be7e."""
     canonical_text, ledger = build_ledger(["One ambiguous line", "continues here."])
     project_root, manifest = build_project(tmp_path, "ResumeChangedModel", canonical_text, ledger)
     analysis_calls = {"count": 0}
@@ -1292,10 +1301,12 @@ def test_changed_model_reuses_analysis_but_restarts_all_ai_decisions(tmp_path, m
     cancel = {"value": False}
 
     def _count_analysis(*args, **kwargs):
+        """@brief Count real analysis calls to verify checkpoint reuse."""
         analysis_calls["count"] += 1
         return original_analyze(*args, **kwargs)
 
     def _chat_json(profile, _system, user_prompt, **_kwargs):
+        """@brief Return deterministic schema answers for the test request."""
         requested_models.append(str(profile["model_name"]))
         payload = json.loads(user_prompt)
         answers = [
@@ -1335,7 +1346,7 @@ def test_changed_model_reuses_analysis_but_restarts_all_ai_decisions(tmp_path, m
 
 
 def test_finalizing_recovery_renders_without_an_llm_call(tmp_path, monkeypatch) -> None:
-    """Cover S-0008 and REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2."""
+    """@brief Cover S-0008 and REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2."""
     canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
     project_root, manifest = build_project(tmp_path, "FinalizingRecovery", canonical_text, ledger)
     completed = text_cleanup_service.clean_text(project_root, manifest)
@@ -1369,7 +1380,7 @@ def test_completed_cleanup_rerenders_when_output_missing_or_mismatched(
     monkeypatch,
     artifact_state,
 ) -> None:
-    """Cover S-0003 and REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2."""
+    """@brief Cover S-0003 and REQ-FUNC-d6c69fe1-830e-4cbd-8278-26f24737b6f2."""
     canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
     project_root, manifest = build_project(
         tmp_path,
@@ -1398,7 +1409,7 @@ def test_completed_cleanup_rerenders_when_output_missing_or_mismatched(
 
 
 def test_manual_whitespace_and_lexical_edits_keep_truthful_structure(tmp_path) -> None:
-    """Cover S-0009 and REQ-FUNC-807c56f0-12b7-42e9-bd8f-0d562c903e70."""
+    """@brief Cover S-0009 and REQ-FUNC-807c56f0-12b7-42e9-bd8f-0d562c903e70."""
     canonical_text, ledger = build_ledger(
         ["First paragraph.", "Second paragraph."],
         kinds=["paragraph", "paragraph"],
@@ -1430,12 +1441,13 @@ def test_manual_whitespace_and_lexical_edits_keep_truthful_structure(tmp_path) -
 
     assert lexical["user_modified"] is True
     assert lexical["structure_source"] == "user_edited"
-    assert all(item["source_unit_ids"] == [] for item in lexical["paragraphs"])
-    assert all(item["provenance_available"] is False for item in lexical["paragraphs"])
+    assert lexical["paragraphs"][0]["source_unit_ids"] == []
+    assert [item["provenance_available"] for item in lexical["paragraphs"]] == [False, True]
+    assert lexical["paragraphs"][1]["source_unit_ids"] == whitespace["paragraphs"][1]["source_unit_ids"]
 
 
 def test_user_edited_cleanup_reclassifies_only_explicit_scene_separators(tmp_path) -> None:
-    """Cover S-0015 and REQ-FUNC-ecb1e86f-7899-4734-8432-db376f8c7b99."""
+    """@brief Cover S-0015 and REQ-FUNC-ecb1e86f-7899-4734-8432-db376f8c7b99."""
     canonical_text, ledger = build_ledger(
         ["Opening narration.", "Closing narration."],
         boundaries=[("\n\n", "native_paragraph")],
@@ -1455,7 +1467,7 @@ def test_user_edited_cleanup_reclassifies_only_explicit_scene_separators(tmp_pat
         "body",
         "body",
     ]
-    assert all(item["provenance_available"] is False for item in edited["paragraphs"])
+    assert [item["provenance_available"] for item in edited["paragraphs"]] == [True, False, False, True]
 
     whitespace_realign = text_cleanup_service.save_user_cleaned_text(
         project_root,
@@ -1473,7 +1485,7 @@ def test_online_disclosure_metrics_do_not_persist_fragments_or_secrets(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Cover S-0007/S-0012 and the Cleanup data-privacy requirements."""
+    """@brief Cover S-0007/S-0012 and the Cleanup data-privacy requirements."""
     canonical_text, ledger = build_ledger(
         ["Private line", "continues safely across a much longer source line."]
     )
@@ -1488,6 +1500,7 @@ def test_online_disclosure_metrics_do_not_persist_fragments_or_secrets(
     profile["api_key"] = "test-api-key-must-not-persist"
 
     def _chat_json(_profile, _system, user_prompt, **_kwargs):
+        """@brief Return deterministic schema answers for the test request."""
         request = json.loads(user_prompt)
         return {
             "payload": {
@@ -1532,7 +1545,7 @@ def test_online_disclosure_counts_failed_submission_attempts(
     tmp_path,
     monkeypatch,
 ) -> None:
-    """Cover S-0012 and the online-fragment disclosure requirement."""
+    """@brief Cover S-0012 and the online-fragment disclosure requirement."""
     canonical_text, ledger = build_ledger(
         ["Private line", "continues safely across a much longer source line."]
     )
@@ -1568,7 +1581,7 @@ def test_online_disclosure_counts_failed_submission_attempts(
 
 
 def test_ai_reset_clears_replaced_manual_edit_provenance(tmp_path) -> None:
-    """Verify fresh AI adjudication no longer presents overwritten output as user-authored."""
+    """@brief Verify fresh AI adjudication no longer presents overwritten output as user-authored."""
     _project_root, document = _build_completed_cleanup(tmp_path)
     document["user_modified"] = True
     document["structure_source"] = "user_edited"

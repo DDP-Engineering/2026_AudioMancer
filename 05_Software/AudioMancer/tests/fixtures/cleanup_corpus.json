@@ -310,5 +310,77 @@
     "origins": ["inferred", "inferred"],
     "boundaries": [{"separator": "\n", "kind": "physical_line", "choice": "dehyphenate"}],
     "expected_output": "international.\n"
+  },
+  {
+    "name": "html_en_native_structure",
+    "format": "html",
+    "language": "en",
+    "tier": "native",
+    "structure_quality": "native",
+    "archetype": "native_line_break",
+    "units": [
+      "Chapter 1",
+      "A first line",
+      "A second line"
+    ],
+    "kinds": [
+      "heading",
+      "verse",
+      "verse"
+    ],
+    "origins": [
+      "native",
+      "native",
+      "native"
+    ],
+    "boundaries": [
+      {
+        "separator": "\n\n",
+        "kind": "native_paragraph",
+        "choice": "set_paragraph_break"
+      },
+      {
+        "separator": "\n",
+        "kind": "native_line_break",
+        "choice": "set_semantic_line_break"
+      }
+    ],
+    "expected_output": "Chapter 1\n\nA first line\nA second line\n"
+  },
+  {
+    "name": "fb2_en_native_structure",
+    "format": "fb2",
+    "language": "en",
+    "tier": "native",
+    "structure_quality": "native",
+    "archetype": "native_line_break",
+    "units": [
+      "Chapter 1",
+      "A first line",
+      "A second line"
+    ],
+    "kinds": [
+      "heading",
+      "verse",
+      "verse"
+    ],
+    "origins": [
+      "native",
+      "native",
+      "native"
+    ],
+    "boundaries": [
+      {
+        "separator": "\n\n",
+        "kind": "native_paragraph",
+        "choice": "set_paragraph_break"
+      },
+      {
+        "separator": "\n",
+        "kind": "native_line_break",
+        "choice": "set_semantic_line_break"
+      }
+    ],
+    "expected_output": "Chapter 1\n\nA first line\nA second line\n"
   }
 ]

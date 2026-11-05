@@ -478,6 +478,8 @@ CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 
 # @brief Authoritative AI-assisted cleanup document file name.
 CLEANUP_DOCUMENT_FILE_NAME = "cleanup.json"
+# @brief Temporary resumable replacement while completed Cleanup stays available.
+CLEANUP_PENDING_FILE_NAME = "cleanup_pending.json"
 
 # @brief Supported source-content language codes for Cleanup.
 CLEANUP_SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")

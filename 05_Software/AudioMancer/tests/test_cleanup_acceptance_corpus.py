@@ -14,24 +14,27 @@
          in runtime metadata.
 """
 
+# IMPORTS
+
 from __future__ import annotations
 
 from collections import defaultdict
 import json
 from pathlib import Path
 
-from audiomancer.services import cleanup_analysis_service, cleanup_renderer_service
+from audiomancer.cleanup import analysis as cleanup_analysis_service
+from audiomancer.cleanup import render as cleanup_renderer_service
 from cleanup_test_support import build_ledger
 
 _CORPUS_PATH = Path(__file__).parent / "fixtures" / "cleanup_corpus.json"
 
 
 def test_acceptance_corpus_has_required_size_and_domain_coverage() -> None:
-    """Cover S-0012 and REQ-TEST-1b7844b3-7408-419e-ac14-2c9c236182d8."""
+    """@brief Cover S-0012 and REQ-TEST-1b7844b3-7408-419e-ac14-2c9c236182d8."""
     corpus = _load_corpus()
 
     assert 20 <= len(corpus) <= 25
-    assert {item["format"] for item in corpus} == {"txt", "md", "rtf", "docx", "odt", "epub", "pdf"}
+    assert {item["format"] for item in corpus} == {"txt", "md", "rtf", "docx", "odt", "epub", "pdf", "html", "fb2"}
     assert {item["language"] for item in corpus} == {"en", "ro", "de", "fr", "ru", "pt", "es", "it"}
     assert {
         "poetry",
@@ -45,7 +48,7 @@ def test_acceptance_corpus_has_required_size_and_domain_coverage() -> None:
 
 
 def test_acceptance_corpus_meets_boundary_and_projection_thresholds() -> None:
-    """Cover S-0001/S-0003/S-0012 and REQ-TEST-1b7844b3-7408-419e-ac14-2c9c236182d8."""
+    """@brief Cover S-0001/S-0003/S-0012 and REQ-TEST-1b7844b3-7408-419e-ac14-2c9c236182d8."""
     expected_by_tier: dict[str, list[str]] = defaultdict(list)
     actual_by_tier: dict[str, list[str]] = defaultdict(list)
     introduced_fusions = 0
@@ -98,7 +101,7 @@ def test_acceptance_corpus_meets_boundary_and_projection_thresholds() -> None:
 
 
 def test_all_27_synthetic_page_transitions_receive_safe_typed_decisions() -> None:
-    """Cover S-0003/S-0012 and REQ-FUNC-4b0701b7-2967-4a42-aa20-a368ba13a0c0."""
+    """@brief Cover S-0003/S-0012 and REQ-FUNC-4b0701b7-2967-4a42-aa20-a368ba13a0c0."""
     texts = [f"Page {index + 1} narrative ends safely." for index in range(28)]
     canonical_text, ledger = build_ledger(
         texts,
@@ -118,7 +121,7 @@ def test_all_27_synthetic_page_transitions_receive_safe_typed_decisions() -> Non
 
 
 def test_runtime_quality_report_excludes_oracle_only_metrics() -> None:
-    """Cover S-0012 and REQ-FUNC-f9125c01-1a7a-4e84-8451-60b63f4b5dc8."""
+    """@brief Cover S-0012 and REQ-FUNC-f9125c01-1a7a-4e84-8451-60b63f4b5dc8."""
     canonical_text, ledger = build_ledger(["One wrapped line", "continues safely."])
     analysis = cleanup_analysis_service.analyze_cleanup(canonical_text, ledger)
 
@@ -135,7 +138,7 @@ def test_runtime_quality_report_excludes_oracle_only_metrics() -> None:
 
 
 def _load_corpus() -> list[dict[str, object]]:
-    """Load the immutable JSON acceptance corpus."""
+    """@brief Load the immutable JSON acceptance corpus."""
     payload = json.loads(_CORPUS_PATH.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         raise AssertionError("Cleanup corpus must be a list.")
@@ -143,7 +146,7 @@ def _load_corpus() -> list[dict[str, object]]:
 
 
 def _micro_f1(expected: list[str], actual: list[str]) -> float:
-    """Return exact-label micro F1 for one ordered boundary sequence."""
+    """@brief Return exact-label micro F1 for one ordered boundary sequence."""
     if len(expected) != len(actual) or not expected:
         return 0.0
     true_positive = sum(left == right for left, right in zip(expected, actual, strict=True))

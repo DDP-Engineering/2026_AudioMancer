@@ -7,25 +7,26 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file cleanup_renderer_service.py
+@file render.py
 @brief Pure source-ledger renderer for typed Cleanup decisions.
 @details Validates unit operations and every boundary, renders only source
          slices plus typed separators, and reports projection/fusion quality.
 """
+
+# IMPORTS
 
 from __future__ import annotations
 
 from collections import Counter
 from typing import Any
 
-from audiomancer.services.cleanup_analysis_service import (
+from audiomancer.extraction.document import validate_source_ledger
+
+from .analysis import (
     BOUNDARY_CHOICES,
     UNIT_ROLES,
 )
-from audiomancer.services.source_ledger_service import (
-    unit_text,
-    validate_source_ledger,
-)
+from .source import unit_text
 
 ALLOWED_ACTIONS = frozenset(
     (
@@ -44,7 +45,7 @@ _CONFIDENCE_ORDER = {"strong": 2, "medium": 1, "low": 0}
 
 
 class CleanupRenderError(ValueError):
-    """Raised when a Cleanup decision could damage the source contract."""
+    """@brief Raised when a Cleanup decision could damage the source contract."""
 
 
 def render_cleanup(
@@ -52,8 +53,12 @@ def render_cleanup(
     ledger: dict[str, object],
     unit_operations: list[dict[str, object]],
     boundary_decisions: list[dict[str, object]],
+    *,
+    check_cancelled=None,
 ) -> tuple[str, dict[str, object]]:
-    """Render typed decisions and return clean text plus derived metadata."""
+    """@brief Render typed decisions and return clean text plus derived metadata."""
+    if check_cancelled is not None:
+        check_cancelled()
     validate_source_ledger(ledger, canonical_text)
     validate_operations(
         canonical_text,
@@ -61,35 +66,15 @@ def render_cleanup(
         unit_operations,
         boundary_decisions,
     )
-    units = {
-        str(item["unit_id"]): dict(item)
-        for item in ledger["units"]
-    }
-    boundaries = {
-        str(item["boundary_id"]): dict(item)
-        for item in ledger["boundaries"]
-    }
-    drops = {
-        str(item["target_id"])
-        for item in unit_operations
-        if item["action"] == "drop_page_artifact"
-    }
-    roles = {
-        str(item["target_id"]): str(item["role"])
-        for item in unit_operations
-        if item["action"] == "set_role"
-    }
-    decisions = {
-        str(item["boundary_id"]): dict(item)
-        for item in boundary_decisions
-    }
+    units = {str(item["unit_id"]): dict(item) for item in ledger["units"]}
+    boundaries = {str(item["boundary_id"]): dict(item) for item in ledger["boundaries"]}
+    drops = {str(item["target_id"]) for item in unit_operations if item["action"] == "drop_page_artifact"}
+    roles = {str(item["target_id"]): str(item["role"]) for item in unit_operations if item["action"] == "set_role"}
+    decisions = {str(item["boundary_id"]): dict(item) for item in boundary_decisions}
 
     ordered: list[tuple[int, str, dict[str, object]]] = []
     ordered.extend((int(item["start"]), "unit", item) for item in units.values())
-    ordered.extend(
-        (int(item["start"]), "boundary", item)
-        for item in boundaries.values()
-    )
+    ordered.extend((int(item["start"]), "boundary", item) for item in boundaries.values())
     ordered.sort(key=lambda item: item[0])
     parts: list[str] = []
     spans: list[dict[str, object]] = []
@@ -97,10 +82,10 @@ def render_cleanup(
     pending_boundaries: list[dict[str, object]] = []
     output_length = 0
     for _start, item_type, item in ordered:
+        if check_cancelled is not None:
+            check_cancelled()
         if item_type == "boundary":
-            pending_boundaries.append(
-                decisions[str(item["boundary_id"])]
-            )
+            pending_boundaries.append(decisions[str(item["boundary_id"])])
             continue
 
         unit_id = str(item["unit_id"])
@@ -150,13 +135,12 @@ def render_cleanup(
         rendered_boundaries,
     )
     if introduced_fusions:
-        raise CleanupRenderError(
-            "Cleanup would introduce alphanumeric source adjacency."
-        )
+        raise CleanupRenderError("Cleanup would introduce alphanumeric source adjacency.")
     paragraphs = _paragraph_records(
         cleaned_text,
         spans,
         rendered_boundaries,
+        check_cancelled=check_cancelled,
     )
     metadata = {
         "length_codepoints": len(cleaned_text),
@@ -179,10 +163,11 @@ def _render_boundary_group(
     *,
     at_document_start: bool,
 ) -> tuple[int, list[dict[str, object]]]:
-    """Render one separator across direct or dropped-unit boundary chains."""
+    """@brief Render one separator across direct or dropped-unit boundary chains."""
     choices = [
         str(item["final"]["choice"])
         for item in decisions
+        if "page_artifact_bridge_filler" not in item["final"]["reason_codes"]
     ]
     dehyphenated_left_unit_id: str | None = None
     if at_document_start:
@@ -223,8 +208,7 @@ def _render_boundary_group(
                 "dehyphenation_applied": (
                     dehyphenated_left_unit_id is not None
                     and str(decision["final"]["choice"]) == "dehyphenate"
-                    and str(decision.get("left_unit_id"))
-                    == dehyphenated_left_unit_id
+                    and str(decision.get("left_unit_id")) == dehyphenated_left_unit_id
                 ),
             }
             for decision in decisions
@@ -238,32 +222,20 @@ def validate_operations(
     unit_operations: list[dict[str, object]],
     boundary_decisions: list[dict[str, object]],
 ) -> None:
-    """Reject unknown, incomplete, duplicate, or structurally unsafe changes."""
+    """@brief Reject unknown, incomplete, duplicate, or structurally unsafe changes."""
     if not isinstance(unit_operations, list):
         raise CleanupRenderError("Cleanup unit operations must be a list.")
     if not isinstance(boundary_decisions, list):
         raise CleanupRenderError("Cleanup boundary decisions must be a list.")
     for decision in boundary_decisions:
         if not isinstance(decision, dict):
-            raise CleanupRenderError(
-                "Each Cleanup boundary decision must be an object."
-            )
+            raise CleanupRenderError("Each Cleanup boundary decision must be an object.")
         final = decision.get("final")
-        choice = (
-            str(final.get("choice") or "")
-            if isinstance(final, dict)
-            else ""
-        )
+        choice = str(final.get("choice") or "") if isinstance(final, dict) else ""
         if choice not in BOUNDARY_CHOICES:
             raise CleanupRenderError(f"Unsupported Cleanup action: {choice}")
-    units = {
-        str(item["unit_id"]): item
-        for item in ledger["units"]
-    }
-    boundaries = {
-        str(item["boundary_id"]): item
-        for item in ledger["boundaries"]
-    }
+    units = {str(item["unit_id"]): item for item in ledger["units"]}
+    boundaries = {str(item["boundary_id"]): item for item in ledger["boundaries"]}
     seen_operations: set[tuple[str, str]] = set()
     dropped_by_page: Counter[int] = Counter()
     total_by_page: Counter[int] = Counter()
@@ -281,14 +253,10 @@ def validate_operations(
         if action not in _UNIT_ACTIONS:
             raise CleanupRenderError(f"Unsupported Cleanup action: {action}")
         if target_id not in units:
-            raise CleanupRenderError(
-                f"Cleanup action references unknown target: {target_id}"
-            )
+            raise CleanupRenderError(f"Cleanup action references unknown target: {target_id}")
         operation_key = (action, target_id)
         if operation_key in seen_operations:
-            raise CleanupRenderError(
-                f"Duplicate Cleanup action {action} targets {target_id}."
-            )
+            raise CleanupRenderError(f"Duplicate Cleanup action {action} targets {target_id}.")
         seen_operations.add(operation_key)
         if action == "set_role":
             role = str(operation.get("role") or "")
@@ -298,9 +266,7 @@ def validate_operations(
             continue
         source_slice = unit_text(canonical_text, units[target_id])
         if len(source_slice) > 160 or len(source_slice.splitlines()) > 3:
-            raise CleanupRenderError(
-                "Page-artifact removal exceeds the conservative size limit."
-            )
+            raise CleanupRenderError("Page-artifact removal exceeds the conservative size limit.")
         page_index = _page_index(units[target_id])
         if page_index is not None:
             dropped_by_page[page_index] += 1
@@ -309,27 +275,17 @@ def validate_operations(
         raise CleanupRenderError("Every source unit requires one resolved role.")
     for page_index, dropped_count in dropped_by_page.items():
         if total_by_page[page_index] and dropped_count >= total_by_page[page_index]:
-            raise CleanupRenderError(
-                "Cleanup may not remove every text unit on a page."
-            )
+            raise CleanupRenderError("Cleanup may not remove every text unit on a page.")
 
     seen_boundaries: set[str] = set()
     for decision in boundary_decisions:
         final = decision.get("final")
-        choice = (
-            str(final.get("choice") or "")
-            if isinstance(final, dict)
-            else ""
-        )
+        choice = str(final.get("choice") or "") if isinstance(final, dict) else ""
         boundary_id = str(decision.get("boundary_id") or "")
         if boundary_id not in boundaries:
-            raise CleanupRenderError(
-                f"Cleanup decision references unknown boundary: {boundary_id}"
-            )
+            raise CleanupRenderError(f"Cleanup decision references unknown boundary: {boundary_id}")
         if boundary_id in seen_boundaries:
-            raise CleanupRenderError(
-                f"Multiple Cleanup decisions target {boundary_id}."
-            )
+            raise CleanupRenderError(f"Multiple Cleanup decisions target {boundary_id}.")
         seen_boundaries.add(boundary_id)
         source_boundary = boundaries[boundary_id]
         if decision.get("left_unit_id") != source_boundary.get("left_unit_id"):
@@ -345,9 +301,7 @@ def validate_operations(
             left_id = str(source_boundary.get("left_unit_id"))
             left_text = unit_text(canonical_text, units[left_id])
             if not left_text.endswith(("-", "\u00ad")):
-                raise CleanupRenderError(
-                    f"{choice} requires a source hyphen at the boundary."
-                )
+                raise CleanupRenderError(f"{choice} requires a source hyphen at the boundary.")
     if seen_boundaries != set(boundaries):
         raise CleanupRenderError("Every source boundary requires one typed decision.")
 
@@ -357,13 +311,9 @@ def _introduced_fusion_count(
     spans: list[dict[str, object]],
     rendered_boundaries: list[dict[str, object]],
 ) -> int:
-    """Count unsafe alphanumeric joins across separate rendered source spans."""
+    """@brief Count unsafe alphanumeric joins across separate rendered source spans."""
     count = 0
-    nonempty_spans = [
-        item
-        for item in spans
-        if int(item["end"]) > int(item["start"])
-    ]
+    nonempty_spans = [item for item in spans if int(item["end"]) > int(item["start"])]
     for left_span, right_span in zip(
         nonempty_spans,
         nonempty_spans[1:],
@@ -374,10 +324,7 @@ def _introduced_fusion_count(
             continue
         if join_offset <= 0 or join_offset >= len(cleaned_text):
             continue
-        if not (
-            cleaned_text[join_offset - 1].isalnum()
-            and cleaned_text[join_offset].isalnum()
-        ):
+        if not (cleaned_text[join_offset - 1].isalnum() and cleaned_text[join_offset].isalnum()):
             continue
         if any(
             item.get("dehyphenation_applied") is True
@@ -396,12 +343,17 @@ def _paragraph_records(
     cleaned_text: str,
     spans: list[dict[str, object]],
     boundaries: list[dict[str, object]],
+    *,
+    check_cancelled=None,
 ) -> list[dict[str, object]]:
-    """Build non-duplicating paragraph offsets and source provenance."""
+    """@brief Build non-duplicating paragraph offsets and source provenance."""
     limit = len(cleaned_text.rstrip("\n"))
     records: list[dict[str, object]] = []
     cursor = 0
+    span_cursor = boundary_cursor = preceding_cursor = 0
     while cursor < limit:
+        if check_cancelled is not None:
+            check_cancelled()
         separator_start = cleaned_text.find("\n\n", cursor, limit)
         raw_end = limit if separator_start < 0 else separator_start
         start = cursor
@@ -411,13 +363,26 @@ def _paragraph_records(
         while end > start and cleaned_text[end - 1] in "\r\n":
             end -= 1
         if start < end and cleaned_text[start:end].strip():
+            while span_cursor < len(spans) and int(spans[span_cursor]["end"]) <= start:
+                span_cursor += 1
+            span_end = span_cursor
+            while span_end < len(spans) and int(spans[span_end]["start"]) < end:
+                span_end += 1
+            while boundary_cursor < len(boundaries) and int(boundaries[boundary_cursor]["output_start"]) < start:
+                boundary_cursor += 1
+            boundary_end = boundary_cursor
+            while boundary_end < len(boundaries) and int(boundaries[boundary_end]["output_start"]) <= end:
+                boundary_end += 1
+            while preceding_cursor < len(boundaries) and int(boundaries[preceding_cursor]["output_end"]) <= start:
+                preceding_cursor += 1
             records.append(
                 _paragraph_record(
                     len(records) + 1,
                     start,
                     end,
-                    spans,
-                    boundaries,
+                    spans[span_cursor:span_end],
+                    boundaries[boundary_cursor:boundary_end],
+                    boundaries[preceding_cursor - 1] if preceding_cursor else None,
                 )
             )
         if separator_start < 0:
@@ -434,50 +399,24 @@ def _paragraph_record(
     end: int,
     spans: list[dict[str, object]],
     boundaries: list[dict[str, object]],
+    preceding_boundary: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Build one paragraph metadata record from rendered source spans."""
-    paragraph_spans = [
-        item
-        for item in spans
-        if int(item["end"]) > start and int(item["start"]) < end
-    ]
+    """@brief Build one paragraph metadata record from rendered source spans."""
+    paragraph_spans = spans
     source_unit_ids = [str(item["unit_id"]) for item in paragraph_spans]
     roles = [str(item["role"]) for item in paragraph_spans]
     role = next((item for item in roles if item != "body"), roles[0] if roles else "body")
-    page_values = [
-        int(item["source_page"]) + 1
-        for item in paragraph_spans
-        if isinstance(item.get("source_page"), int)
-    ]
-    relevant_boundaries = [
-        item
-        for item in boundaries
-        if start <= int(item["output_start"]) <= end
-    ]
-    confidences = [
-        str(item["final"]["confidence"])
-        for item in relevant_boundaries
-    ]
+    page_values = [int(item["source_page"]) + 1 for item in paragraph_spans if isinstance(item.get("source_page"), int)]
+    relevant_boundaries = boundaries
+    confidences = [str(item["final"]["confidence"]) for item in relevant_boundaries]
     confidence = min(
         confidences or ["strong"],
         key=lambda item: _CONFIDENCE_ORDER.get(item, 0),
     )
-    reason_codes = sorted(
-        {
-            str(code)
-            for item in relevant_boundaries
-            for code in item["final"]["reason_codes"]
-        }
-    )
-    preceding = [
-        item
-        for item in boundaries
-        if int(item["output_end"]) <= start
-    ]
-    starts_after_page = bool(preceding and preceding[-1]["page_transition"])
+    reason_codes = sorted({str(code) for item in relevant_boundaries for code in item["final"]["reason_codes"]})
+    starts_after_page = bool(preceding_boundary and preceding_boundary["page_transition"])
     crosses_page = any(
-        bool(item["page_transition"])
-        and item["final"]["choice"] != "set_paragraph_break"
+        bool(item["page_transition"]) and item["final"]["choice"] != "set_paragraph_break"
         for item in relevant_boundaries
     )
     return {
@@ -501,45 +440,23 @@ def _quality_report(
     boundaries: list[dict[str, object]],
     introduced_fusions: int,
 ) -> dict[str, object]:
-    """Build runtime-computable Cleanup quality counters."""
-    origin_counts = Counter(
-        str(item["final"]["origin"])
-        for item in boundaries
-    )
-    override_count = sum(
-        bool(item["adjudication"]["accepted"])
-        for item in boundaries
-    )
-    adjudicated_count = sum(
-        item["adjudication"]["state"] == "completed"
-        for item in boundaries
-    )
+    """@brief Build runtime-computable Cleanup quality counters."""
+    origin_counts = Counter(str(item["final"]["origin"]) for item in boundaries)
+    override_count = sum(bool(item["adjudication"]["accepted"]) for item in boundaries)
+    adjudicated_count = sum(item["adjudication"]["state"] == "completed" for item in boundaries)
     return {
         "introduced_fusion_count": introduced_fusions,
         "projection_violation_count": 0,
         "invalid_operation_count": 0,
         "unclassified_boundary_count": 0,
-        "low_confidence_count": sum(
-            item["final"]["confidence"] == "low"
-            for item in boundaries
-        ),
-        "page_transition_count": sum(
-            bool(item["page_transition"])
-            for item in boundaries
-        ),
-        "artifact_removal_count": sum(
-            item["action"] == "drop_page_artifact"
-            for item in unit_operations
-        ),
+        "low_confidence_count": sum(item["final"]["confidence"] == "low" for item in boundaries),
+        "page_transition_count": sum(bool(item["page_transition"]) for item in boundaries),
+        "artifact_removal_count": sum(item["action"] == "drop_page_artifact" for item in unit_operations),
         "deterministic_count": origin_counts["deterministic"] + origin_counts["native"],
         "llm_count": origin_counts["llm"],
         "fallback_count": origin_counts["fallback"],
         "override_count": override_count,
-        "override_rate": (
-            override_count / adjudicated_count
-            if adjudicated_count
-            else 0.0
-        ),
+        "override_rate": (override_count / adjudicated_count if adjudicated_count else 0.0),
         "failed_batch_count": 0,
         "online_fragment_count": 0,
         "online_backend": None,
@@ -547,7 +464,7 @@ def _quality_report(
 
 
 def _page_index(unit: dict[str, Any]) -> int | None:
-    """Return one optional source page index."""
+    """@brief Return one optional source page index."""
     locator = unit.get("locator")
     if not isinstance(locator, dict) or not isinstance(locator.get("page_index"), int):
         return None

@@ -4,7 +4,7 @@ title = "Saving a lexical manual Cleanup edit shall rebuild minimal paragraph"
 status = "active"
 
 requirement = """
-Saving a lexical manual Cleanup edit shall rebuild minimal paragraph structure marked user_edited.
+Saving a lexical manual Cleanup edit shall rebuild user_edited paragraph structure while retaining metadata only for exact matches unique in both old and edited paragraph sets.
 """
 
 verification = "Lexical edit truthful-structure test passes."
@@ -23,4 +23,4 @@ rationale = """
 Manual correction is authoritative but must not leave false source provenance.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-11-05

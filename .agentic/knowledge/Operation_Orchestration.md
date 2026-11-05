@@ -22,7 +22,8 @@ worker lifecycle used by all long-running workflow pages.
   identities, and delete only operation-owned root artifacts, AI logs, and safe
   targeted audio/assembly files.
 - Publish the exact root-level artifact file names owned by the reset registry
-  so source storage cannot claim a generated-artifact path.
+  so source storage cannot claim a generated-artifact path. Cleanup owns both
+  cleanup.json and the optional cleanup_pending.json replacement checkpoint.
 - Run worker callables on a dedicated `QThread`, marshal progress/success/
   failure/cancellation back to the UI thread, and safely handle shutdown.
 - Present the modal operation-progress dialog, including factory-applied current

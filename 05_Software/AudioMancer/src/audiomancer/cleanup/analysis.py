@@ -7,12 +7,14 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file cleanup_analysis_service.py
+@file analysis.py
 @brief Deterministic structural analysis for the typed Cleanup contract.
 @details Resolves unit roles before classifying every source-ledger boundary,
          records conservative priors, and exposes only low/medium-confidence
          boundaries to optional LLM adjudication.
 """
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -20,11 +22,11 @@ from collections import Counter, defaultdict
 import re
 import statistics
 
-from audiomancer import config
-from audiomancer.services import cleanup_text_analysis_service
-from audiomancer.services.source_ledger_service import unit_text
+from . import text as cleanup_text_analysis_service
+from .source import unit_text
 
-ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-10-29"
+SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", "it")
+ANALYSIS_POLICY_ID = "cleanup-typed-boundaries-2026-11-05"
 UNIT_ROLES = frozenset(
     (
         "body",
@@ -70,28 +72,18 @@ _ADJUDICATION_FIELDS = frozenset(
         "accepted",
     )
 )
-_FINAL_FIELDS = frozenset(
-    ("choice", "origin", "confidence", "reason_codes")
-)
+_FINAL_FIELDS = frozenset(("choice", "origin", "confidence", "reason_codes"))
 _CONFIDENCE_VALUES = frozenset(("strong", "medium", "low"))
-_ADJUDICATION_STATES = frozenset(
-    ("not_required", "pending", "completed", "fallback")
-)
-_FINAL_ORIGINS = frozenset(
-    ("native", "deterministic", "llm", "fallback", "user")
-)
+_ADJUDICATION_STATES = frozenset(("not_required", "pending", "completed", "fallback"))
+_FINAL_ORIGINS = frozenset(("native", "deterministic", "llm", "fallback", "user"))
 
 _PAGE_NUMBER = re.compile(
     r"^(?:page\s+)?(\d{1,5})(?:\s*(?:/|of)\s*\d+)?[.]?$",
     re.IGNORECASE,
 )
 _DIALOGUE_PREFIX = re.compile(r"^\s*(?:[-\u2013\u2014]\s+|[A-Z][^:]{0,40}:\s+)")
-_PARAGRAPH_KINDS = frozenset(
-    ("native_paragraph", "blank_paragraph", "paragraph")
-)
-_LINE_KINDS = frozenset(
-    ("visual_line", "physical_line", "line", "native_line_break")
-)
+_PARAGRAPH_KINDS = frozenset(("native_paragraph", "blank_paragraph", "paragraph"))
+_LINE_KINDS = frozenset(("visual_line", "physical_line", "line", "native_line_break"))
 _ROLE_BY_KIND = {
     "heading": "heading",
     "scene_separator": "scene_separator",
@@ -114,23 +106,17 @@ def analyze_cleanup(
     canonical_text: str,
     ledger: dict[str, object],
 ) -> dict[str, object]:
-    """Return deterministic roles, typed boundaries, questions, and profile."""
+    """@brief Return deterministic roles, typed boundaries, questions, and profile."""
     units = [dict(item) for item in ledger["units"]]
     boundaries = [dict(item) for item in ledger["boundaries"]]
     warnings = [str(item) for item in ledger.get("warnings", [])]
     artifact_evidence = _page_artifact_evidence(canonical_text, units)
     # Keep all artifact text on otherwise text-empty pages, such as illustrated
     # covers with just a page number. The renderer requires a surviving unit.
-    pages_with_non_artifacts = {
-        _page_index(unit)
-        for unit in units
-        if str(unit["unit_id"]) not in artifact_evidence
-    }
+    pages_with_non_artifacts = {_page_index(unit) for unit in units if str(unit["unit_id"]) not in artifact_evidence}
     roles = {
         str(unit["unit_id"]): (
-            "page_artifact"
-            if str(unit["unit_id"]) in artifact_evidence
-            else _initial_role(canonical_text, unit)
+            "page_artifact" if str(unit["unit_id"]) in artifact_evidence else _initial_role(canonical_text, unit)
         )
         for unit in units
     }
@@ -148,10 +134,7 @@ def analyze_cleanup(
                 role=role,
             )
         )
-        if (
-            unit_id in artifact_evidence
-            and _page_index(unit) in pages_with_non_artifacts
-        ):
+        if unit_id in artifact_evidence and _page_index(unit) in pages_with_non_artifacts:
             unit_operations.append(
                 _unit_operation(
                     "drop_page_artifact",
@@ -167,8 +150,7 @@ def analyze_cleanup(
     body_widths = [
         len(unit_text(canonical_text, unit).strip())
         for unit in units
-        if roles[str(unit["unit_id"])] == "body"
-        and len(unit_text(canonical_text, unit).strip()) >= 20
+        if roles[str(unit["unit_id"])] == "body" and len(unit_text(canonical_text, unit).strip()) >= 20
     ]
     median_width = statistics.median(body_widths) if body_widths else 0.0
     decisions = [
@@ -187,19 +169,9 @@ def analyze_cleanup(
         roles,
         decisions,
         median_width,
+        {str(op["target_id"]) for op in unit_operations if op["action"] == "drop_page_artifact"},
     )
-    questions = []
-    for decision in decisions:
-        if decision["adjudication"]["state"] != "pending":
-            continue
-        questions.append(
-            _question_from_decision(
-                canonical_text,
-                decision,
-                unit_by_id,
-                len(questions) + 1,
-            )
-        )
+    questions = questions_from_boundaries(canonical_text, ledger, decisions)
 
     role_counts = Counter(roles.values())
     detected_language = cleanup_text_analysis_service.detect_language(canonical_text)
@@ -225,11 +197,8 @@ def analyze_cleanup(
 
 
 def _unsupported_language_warning(detected_language: str | None) -> str | None:
-    """Return the one operator warning required for a detected unsupported source language."""
-    if (
-        not detected_language
-        or detected_language in config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES
-    ):
+    """@brief Return the one operator warning required for a detected unsupported source language."""
+    if not detected_language or detected_language in SUPPORTED_SOURCE_LANGUAGES:
         return None
     return (
         f"Detected source language '{detected_language}' is outside the supported Cleanup languages; "
@@ -247,15 +216,9 @@ def validate_persisted_boundaries(decisions: object) -> None:
     if not isinstance(decisions, list):
         raise ValueError("Cleanup boundaries must be a list.")
     for decision in decisions:
-        if (
-            not isinstance(decision, dict)
-            or set(decision) != BOUNDARY_DECISION_FIELDS
-        ):
+        if not isinstance(decision, dict) or set(decision) != BOUNDARY_DECISION_FIELDS:
             raise ValueError("Cleanup boundary fields are invalid.")
-        if (
-            not isinstance(decision["boundary_id"], str)
-            or not decision["boundary_id"]
-        ):
+        if not isinstance(decision["boundary_id"], str) or not decision["boundary_id"]:
             raise ValueError("Cleanup boundary ID is invalid.")
         for field in ("left_unit_id", "right_unit_id"):
             value = decision[field]
@@ -275,7 +238,7 @@ def validate_persisted_boundaries(decisions: object) -> None:
 
 
 def _validate_prior(prior: object) -> None:
-    """Validate one deterministic boundary prior."""
+    """@brief Validate one deterministic boundary prior."""
     if not isinstance(prior, dict) or set(prior) != _PRIOR_FIELDS:
         raise ValueError("Cleanup boundary prior is invalid.")
     _validate_choice(prior["choice"], allow_none=False)
@@ -284,11 +247,8 @@ def _validate_prior(prior: object) -> None:
 
 
 def _validate_adjudication(adjudication: object) -> None:
-    """Validate one resumable boundary adjudication record."""
-    if (
-        not isinstance(adjudication, dict)
-        or set(adjudication) != _ADJUDICATION_FIELDS
-    ):
+    """@brief Validate one resumable boundary adjudication record."""
+    if not isinstance(adjudication, dict) or set(adjudication) != _ADJUDICATION_FIELDS:
         raise ValueError("Cleanup boundary adjudication is invalid.")
     if adjudication["state"] not in _ADJUDICATION_STATES:
         raise ValueError("Cleanup boundary adjudication state is invalid.")
@@ -299,7 +259,7 @@ def _validate_adjudication(adjudication: object) -> None:
 
 
 def _validate_final(final: object) -> None:
-    """Validate one final typed boundary choice."""
+    """@brief Validate one final typed boundary choice."""
     if not isinstance(final, dict) or set(final) != _FINAL_FIELDS:
         raise ValueError("Cleanup boundary final record is invalid.")
     _validate_choice(final["choice"], allow_none=False)
@@ -310,7 +270,7 @@ def _validate_final(final: object) -> None:
 
 
 def _validate_choice(value: object, *, allow_none: bool) -> None:
-    """Validate one optional or required boundary choice."""
+    """@brief Validate one optional or required boundary choice."""
     if value is None and allow_none:
         return
     if not isinstance(value, str) or value not in BOUNDARY_CHOICES:
@@ -318,16 +278,14 @@ def _validate_choice(value: object, *, allow_none: bool) -> None:
 
 
 def _validate_confidence(value: object) -> None:
-    """Validate one deterministic or final confidence token."""
+    """@brief Validate one deterministic or final confidence token."""
     if not isinstance(value, str) or value not in _CONFIDENCE_VALUES:
         raise ValueError("Cleanup boundary confidence is invalid.")
 
 
 def _validate_reason_codes(value: object) -> None:
-    """Validate one persisted reason-code list."""
-    if not isinstance(value, list) or any(
-        not isinstance(item, str) for item in value
-    ):
+    """@brief Validate one persisted reason-code list."""
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ValueError("Cleanup boundary reason codes are invalid.")
 
 
@@ -336,28 +294,29 @@ def questions_from_boundaries(
     ledger: dict[str, object],
     decisions: list[dict[str, object]],
 ) -> list[dict[str, object]]:
-    """Rebuild stable pending-question payloads from persisted deterministic analysis."""
-    unit_by_id = {
-        str(item["unit_id"]): dict(item)
-        for item in ledger["units"]
-    }
+    """@brief Rebuild stable pending-question payloads from persisted deterministic analysis."""
+    unit_by_id = {str(item["unit_id"]): dict(item) for item in ledger["units"]}
     questions = []
+    decision_by_left = {str(item["left_unit_id"]): item for item in decisions}
     for decision in decisions:
         if decision["adjudication"]["state"] == "not_required":
             continue
-        questions.append(
-            _question_from_decision(
-                canonical_text,
-                decision,
-                unit_by_id,
-                len(questions) + 1,
-            )
-        )
+        question = _question_from_decision(canonical_text, decision, unit_by_id, len(questions) + 1)
+        # Bridge questions describe the nearest surviving right unit, never the
+        # discarded footer. Following fillers is linear over disjoint runs.
+        right_id = decision.get("right_unit_id")
+        next_decision = decision_by_left.get(str(right_id))
+        while next_decision and "page_artifact_bridge_filler" in next_decision["prior"]["reason_codes"]:
+            right_id = next_decision.get("right_unit_id")
+            next_decision = decision_by_left.get(str(right_id))
+        if right_id != decision.get("right_unit_id"):
+            question["right_text"] = unit_text(canonical_text, unit_by_id[str(right_id)])[:240]
+        questions.append(question)
     return questions
 
 
 def _initial_role(canonical_text: str, unit: dict[str, object]) -> str:
-    """Resolve one source unit role before any boundary decision."""
+    """@brief Resolve one source unit role before any boundary decision."""
     text = unit_text(canonical_text, unit).strip()
     kind = str(unit.get("kind") or "unknown").casefold()
     role = _ROLE_BY_KIND.get(kind, "body")
@@ -374,7 +333,7 @@ def _apply_non_native_verse_roles(
     boundaries: list[dict[str, object]],
     roles: dict[str, str],
 ) -> None:
-    """Apply the conservative three-line verse heuristic to inferred/layout runs."""
+    """@brief Apply the conservative three-line verse heuristic to inferred/layout runs."""
     if len(units) < 3:
         return
     boundary_by_pair = {
@@ -395,10 +354,7 @@ def _apply_non_native_verse_roles(
                 break
             end += 1
         run = units[start : end + 1]
-        isolated = (
-            len(run) < len(units)
-            or any(isinstance(item.get("layout"), dict) for item in run)
-        )
+        isolated = len(run) < len(units) or any(isinstance(item.get("layout"), dict) for item in run)
         if isolated and _is_verse_run(canonical_text, run, roles):
             for unit in run:
                 roles[str(unit["unit_id"])] = "verse"
@@ -410,7 +366,7 @@ def _is_verse_run(
     units: list[dict[str, object]],
     roles: dict[str, str],
 ) -> bool:
-    """Return whether one isolated line run satisfies the approved verse rule."""
+    """@brief Return whether one isolated line run satisfies the approved verse rule."""
     if len(units) < 3:
         return False
     texts = [unit_text(canonical_text, item).strip() for item in units]
@@ -421,19 +377,16 @@ def _is_verse_run(
         return False
     if any(_DIALOGUE_PREFIX.match(text) for text in texts):
         return False
-    no_terminal = sum(
-        not cleanup_text_analysis_service.has_sentence_terminal(text)
-        for text in texts
-    )
+    no_terminal = sum(not cleanup_text_analysis_service.has_sentence_terminal(text) for text in texts)
     if no_terminal / len(texts) < 2 / 3:
         return False
     x_positions = []
-    for unit, text in zip(units, texts, strict=True):
+    for unit in units:
         layout = unit.get("layout")
         if isinstance(layout, dict) and isinstance(layout.get("bbox"), list):
             x_positions.append(float(layout["bbox"][0]))
         else:
-            x_positions.append(float(len(text) - len(text.lstrip())))
+            x_positions.append(float(unit.get("locator", {}).get("leading_spaces", 0)))
     tolerance = 4.0 if any(isinstance(item.get("layout"), dict) for item in units) else 2.0
     return max(x_positions) - min(x_positions) <= tolerance
 
@@ -445,7 +398,7 @@ def _classify_boundary(
     roles: dict[str, str],
     median_width: float,
 ) -> dict[str, object]:
-    """Resolve one source-ledger boundary to a complete typed decision."""
+    """@brief Resolve one source-ledger boundary to a complete typed decision."""
     boundary_id = str(boundary["boundary_id"])
     left_id = boundary.get("left_unit_id")
     right_id = boundary.get("right_unit_id")
@@ -504,26 +457,21 @@ def _boundary_prior(
     page_transition: bool,
     median_width: float,
 ) -> tuple[str, str, list[str], str]:
-    """Return choice, confidence, reason codes, and origin for one boundary."""
+    """@brief Return choice, confidence, reason codes, and origin for one boundary."""
     kind = str(boundary.get("kind") or "line")
     if right is None or kind == "document_end":
         return "document_end", "strong", ["document_end"], "deterministic"
     assert left is not None
     left_text = unit_text(canonical_text, left)
     native = str(boundary.get("structure_origin") or "") == "native"
+    if left_role == right_role == "page_artifact" and not page_transition:
+        return "join_with_space", "strong", ["retained_page_artifact_continuation"], "deterministic"
     if left_role == "page_artifact" or right_role == "page_artifact":
         return (
             "set_paragraph_break",
             "strong",
             ["page_artifact_safe_boundary"],
             "deterministic",
-        )
-    if page_transition or kind == "page":
-        return _cross_page_prior(
-            canonical_text,
-            left,
-            right,
-            median_width,
         )
     if kind in _PARAGRAPH_KINDS:
         return (
@@ -545,6 +493,8 @@ def _boundary_prior(
             [f"{left_role}_line"],
             "deterministic",
         )
+    if left_role in {"verse", "preformatted", "list_item"} or right_role in {"verse", "preformatted", "list_item"}:
+        return "set_paragraph_break", "strong", ["structural_role_transition"], "deterministic"
     if left_text.endswith("\u00ad"):
         return "dehyphenate", "strong", ["soft_hyphen"], "deterministic"
     if left_text.endswith("-"):
@@ -553,6 +503,13 @@ def _boundary_prior(
             "medium",
             ["visible_hyphen_line_wrap"],
             "deterministic",
+        )
+    if page_transition or kind == "page":
+        return _cross_page_prior(
+            canonical_text,
+            left,
+            right,
+            median_width,
         )
     geometry_choice = _geometry_prior(
         left,
@@ -595,7 +552,7 @@ def _geometry_prior(
     left_text: str,
     median_width: float,
 ) -> tuple[str, str, list[str], str] | None:
-    """Return a layout prior when both units expose comparable geometry."""
+    """@brief Return a layout prior when both units expose comparable geometry."""
     left_layout = left.get("layout")
     right_layout = right.get("layout")
     if not isinstance(left_layout, dict) or not isinstance(right_layout, dict):
@@ -668,7 +625,7 @@ def _cross_page_prior(
     right: dict[str, object],
     median_width: float,
 ) -> tuple[str, str, list[str], str]:
-    """Classify one narrative page transition without forcing a paragraph."""
+    """@brief Classify one narrative page transition without forcing a paragraph."""
     left_text = unit_text(canonical_text, left)
     left_layout = left.get("layout")
     right_layout = right.get("layout")
@@ -739,8 +696,9 @@ def _apply_page_artifact_bridge_priors(
     roles: dict[str, str],
     decisions: list[dict[str, object]],
     median_width: float,
+    dropped_unit_ids: set[str],
 ) -> None:
-    """Assign one effective narrative prior across each dropped-artifact run."""
+    """@brief Assign one effective narrative prior across each dropped-artifact run."""
     decision_by_pair = {
         (
             str(item.get("left_unit_id")),
@@ -752,14 +710,11 @@ def _apply_page_artifact_bridge_priors(
     index = 0
     while index < len(units):
         unit_id = str(units[index]["unit_id"])
-        if roles[unit_id] != "page_artifact":
+        if unit_id not in dropped_unit_ids:
             index += 1
             continue
         run_start = index
-        while (
-            index + 1 < len(units)
-            and roles[str(units[index + 1]["unit_id"])] == "page_artifact"
-        ):
+        while index + 1 < len(units) and str(units[index + 1]["unit_id"]) in dropped_unit_ids:
             index += 1
         run_end = index
         if run_start == 0 or run_end + 1 >= len(units):
@@ -767,19 +722,38 @@ def _apply_page_artifact_bridge_priors(
             continue
         left = units[run_start - 1]
         right = units[run_end + 1]
-        if (
-            roles[str(left["unit_id"])] == "page_artifact"
-            or roles[str(right["unit_id"])] == "page_artifact"
-        ):
+        if roles[str(left["unit_id"])] == "page_artifact" or roles[str(right["unit_id"])] == "page_artifact":
             index += 1
             continue
-        choice, _confidence, reasons, origin = _cross_page_prior(
+        chain = units[run_start - 1 : run_end + 2]
+        chain_decisions = [
+            decision_by_pair[(str(left_unit["unit_id"]), str(right_unit["unit_id"]))]
+            for left_unit, right_unit in zip(chain, chain[1:], strict=False)
+        ]
+        # Removing an artifact removes its text, not an explicit paragraph or
+        # line boundary. Carry the strongest authoritative boundary in the run.
+        chain_kinds = {str(item["kind"]) for item in chain_decisions}
+        effective_kind = next(
+            (
+                kind
+                for kind in ("native_paragraph", "blank_paragraph", "paragraph", "native_line_break")
+                if kind in chain_kinds
+            ),
+            "page",
+        )
+        choice, confidence, reasons, origin = _boundary_prior(
             canonical_text,
+            {
+                "kind": effective_kind,
+                "structure_origin": "native" if effective_kind.startswith("native_") else "inferred",
+            },
             left,
             right,
+            roles[str(left["unit_id"])],
+            roles[str(right["unit_id"])],
+            True,
             median_width,
         )
-        chain = units[run_start - 1 : run_end + 2]
         for chain_index in range(len(chain) - 1):
             decision = decision_by_pair.get(
                 (
@@ -789,25 +763,27 @@ def _apply_page_artifact_bridge_priors(
             )
             if decision is None:
                 continue
-            reason_codes = [
-                *reasons,
-                "page_artifact_bridge",
-            ]
+            filler = chain_index > 0
+            effective_choice = "join_with_space" if filler else choice
+            effective_confidence = "strong" if filler else confidence
+            reason_codes = [*reasons, "page_artifact_bridge"]
+            if filler:
+                reason_codes.append("page_artifact_bridge_filler")
             decision["prior"] = {
-                "choice": choice,
-                "confidence": "strong",
+                "choice": effective_choice,
+                "confidence": effective_confidence,
                 "reason_codes": reason_codes,
             }
             decision["adjudication"] = {
-                "state": "not_required",
+                "state": "not_required" if effective_confidence == "strong" else "pending",
                 "primary_choice": None,
                 "verifier_choice": None,
                 "accepted": False,
             }
             decision["final"] = {
-                "choice": choice,
+                "choice": effective_choice,
                 "origin": origin,
-                "confidence": "strong",
+                "confidence": effective_confidence,
                 "reason_codes": list(reason_codes),
             }
         index += 1
@@ -819,7 +795,7 @@ def _question_from_decision(
     unit_by_id: dict[str, dict[str, object]],
     index: int,
 ) -> dict[str, object]:
-    """Build one bounded classification question without a strong prior."""
+    """@brief Build one bounded classification question without a strong prior."""
     left = unit_by_id.get(str(decision.get("left_unit_id")))
     right = unit_by_id.get(str(decision.get("right_unit_id")))
     left_text = "" if left is None else unit_text(canonical_text, left)
@@ -856,7 +832,7 @@ def _page_artifact_evidence(
     canonical_text: str,
     units: list[dict[str, object]],
 ) -> dict[str, str]:
-    """Return only page artifacts supported by repetition or sequence evidence."""
+    """@brief Return only page artifacts supported by repetition or sequence evidence."""
     edge_groups: dict[str, list[dict[str, object]]] = defaultdict(list)
     page_numbers: list[tuple[int, dict[str, object], int]] = []
     observed_pages: set[int] = set()
@@ -890,8 +866,7 @@ def _page_artifact_evidence(
                 evidence[str(unit["unit_id"])] = "repeated_page_edge"
     page_numbers.sort(key=lambda item: item[0])
     if len(page_numbers) >= 4 and all(
-        page_numbers[index][2] == page_numbers[index - 1][2] + 1
-        for index in range(1, len(page_numbers))
+        page_numbers[index][2] == page_numbers[index - 1][2] + 1 for index in range(1, len(page_numbers))
     ):
         for _page, unit, _number in page_numbers:
             evidence[str(unit["unit_id"])] = "sequential_page_number"
@@ -905,7 +880,7 @@ def _unit_operation(
     *,
     role: str | None,
 ) -> dict[str, object]:
-    """Build one typed unit operation."""
+    """@brief Build one typed unit operation."""
     return {
         "operation_id": "",
         "action": action,
@@ -920,7 +895,7 @@ def _is_page_transition(
     left: dict[str, object] | None,
     right: dict[str, object] | None,
 ) -> bool:
-    """Return whether one boundary crosses source pages."""
+    """@brief Return whether one boundary crosses source pages."""
     if right is None:
         return False
     if kind == "page":
@@ -931,7 +906,7 @@ def _is_page_transition(
 
 
 def _page_index(unit: dict[str, object] | None) -> int | None:
-    """Return a unit's optional zero-based source page."""
+    """@brief Return a unit's optional zero-based source page."""
     if not isinstance(unit, dict):
         return None
     locator = unit.get("locator")

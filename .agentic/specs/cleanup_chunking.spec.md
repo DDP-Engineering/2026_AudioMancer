@@ -17,7 +17,7 @@ document structure and unit roles are resolved before line-boundary decisions.
 PDF and TXT use deterministic layout/text evidence; only contradictory or
 low-confidence cases may be adjudicated by an optional LLM.
 
-The durable Cleanup state is one `cleanup.json`. It is both checkpoint and final
+The authoritative completed Cleanup state is `cleanup.json`. A replacement run uses `cleanup_pending.json` until publication. The first run uses `cleanup.json` as both checkpoint and final
 metadata. `clean_text.txt` is the Cleanup text output.
 
 Cleanup remains usable without an LLM. Provider incompatibility, insufficient
@@ -44,7 +44,8 @@ bounded reset prevents incompatible derived data from being treated as current.
 
 ## Supported domain
 
-- Formats: TXT, Markdown, RTF, DOCX, ODT, EPUB, and PDF with extractable text.
+- Formats: TXT, Markdown, RTF, DOCX, ODT, EPUB, local HTML/HTM/XHTML, FB2,
+  and PDF with extractable text.
 - Source-content languages: `en`, `ro`, `de`, `fr`, `ru`, `pt`, `es`, and `it`,
   exposed as `config.CLEANUP_SUPPORTED_SOURCE_LANGUAGES`.
 - Operator interface languages are a separate platform contract and do not
@@ -272,7 +273,7 @@ automatically.
 
 ## Stop, resume, and publication
 
-`cleanup.json` is written atomically after deterministic analysis, after every
+The active checkpoint (`cleanup.json` for the first run, `cleanup_pending.json` when replacing a completed result) is written atomically after deterministic analysis, after every
 primary/verifier request, on cancellation, and before rendering.
 
 - Exact source, ledger, policy, prompt, and profile: resume the first incomplete
@@ -302,34 +303,22 @@ render byte-identically.
 
 ### Canonical Cleanup publication transition
 
-Automatic Cleanup finalization and manual cleaned-text save use the same
-Cleanup-owned publication transition. A successful transition has one ordering
-contract:
+Automatic finalization and manual edits share `cleanup_publication_service`.
+The text, completed metadata and updated manifest are validated/staged before
+moving existing outputs, pending checkpoint and reset-owned downstream files
+into a project-local relative-path backup. Publication replaces the three staged
+files; success discards the backup and pending checkpoint. The manifest reset
+builder and artifact registry remain owned by Project Lifecycle and Operation
+Orchestration respectively.
 
-1. Build and validate the new canonical text and completed Cleanup document in
-   memory.
-2. Ask Operation Orchestration's centralized reset to delete Chunking and every
-   downstream operation's owned files, logs, generated block audio, and
-   assembly output; Cleanup and Extraction are outside this reset scope.
-3. Atomically write `clean_text.txt` and `cleanup.json`.
-4. Reload `project.json`, use Project Lifecycle's shared manifest-reset builder
-   to default the Chunking-and-downstream compact summaries, write the completed
-   Cleanup summary into the same manifest value, force `current_stage` to
-   `text_chunking_ready`, preserve the source, Extraction state and artifacts,
-   options, and unrelated fields, and atomically save the manifest once.
-5. Only after every persistence step succeeds may the caller receive the
-   completed document or a 100-percent Cleanup progress update.
-
-The artifact registry remains the sole owner of file deletion lists. The
-manifest reset builder belongs to Project Lifecycle rather than the Cleanup
-page-state projection, so Cleanup orchestration can use it without creating a
-service dependency cycle. The page-state service may retain compatibility
-wrappers, but those wrappers delegate to the Project Lifecycle implementation.
-
-An `OSError` from artifact deletion or any atomic write is propagated. Cross-file
-rollback is not promised; a failed transition is never reported as successful,
-and successful transitions are the only ones required to reopen without a
-stale-downstream metadata repair.
+A handled IO failure restores moved originals and propagates the error without
+reporting 100 percent. A restoration failure propagates a diagnostic naming the
+retained recovery folder. The transaction is recoverable for handled exceptions;
+it does not promise atomicity across process termination or power loss.
+Cancellation checkpoints run on entry, through rendering and before mutation;
+publication completes or restores once replacement begins. Source and Extraction
+artifacts remain preserved. Explicit Reset Cleanup remains destructive after
+confirmation and clears both completed and pending artifacts.
 
 ## Validation and quality
 
@@ -373,14 +362,14 @@ paragraph content, never by list index:
 
 This rule applies even when a merge before a scene separator and a split after
 it preserve the total paragraph count. Lexical edits set `user_modified=true`
-and `structure_source="user_edited"`, rebuild minimal paragraph records, mark
-unavailable provenance explicitly, and run the canonical Cleanup publication
+and `structure_source="user_edited"`, retain metadata only for exact paragraph
+text unique in both the previous and edited sets, mark changed or ambiguous
+paragraph provenance unavailable, and run the canonical Cleanup publication
 transition so all downstream artifacts and compact summaries are invalidated.
 When paragraph records are rebuilt from user-edited text, conservative explicit
 scene-separator forms are assigned `role="scene_separator"` instead of the
 generic `body` fallback. Ambiguous punctuation and lexical content remain
-`body`. This classification does not restore source provenance that was made
-unknown by a lexical edit.
+`body`. Modified content receives no inferred source provenance.
 
 
 ## Existing UI
@@ -576,3 +565,15 @@ Thresholds:
 
 Real online/offline model verification is manual and includes at least 9B/16K,
 20B/16K, 27B/32K, and one online model. Automated tests use provider stubs.
+
+## Cleanup isolation and structural priority
+
+The `cleanup` package consumes canonical text and the source ledger without
+project IO, Qt or provider imports. Structural paragraph/native line boundaries,
+protected roles and terminal hyphens take priority over generic page heuristics.
+Dropped-artifact chains carry one effective decision on the retained left unit;
+strong filler decisions preserve the complete boundary projection. AI questions
+use the nearest retained right text. Inferred text-only verse reads recorded
+leading-space indentation. Paragraph metadata walks ordered spans/boundaries
+with cursors; exact text offsets and quality/provenance fields remain the output
+contract. Validation certifies permitted transformations, not semantic accuracy.

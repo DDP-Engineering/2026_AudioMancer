@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-REL-ab1ad6e4"
+
+title = "Honor cancellation through Cleanup finalization"
+
+status = "active"
+
+requirement = """
+When cancellation is requested before Cleanup publication, AudioMancer shall stop finalization without replacing the completed result or invalidating downstream artifacts.
+"""
+
+verification = "Cancel on finalizing resume, during rendering and on persistence progress; assert unchanged output and manifest and retained resumable decisions."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

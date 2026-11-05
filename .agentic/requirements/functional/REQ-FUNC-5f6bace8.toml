@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-5f6bace8"
+
+title = "Honor structural roles and hyphenation across page boundaries"
+
+status = "active"
+
+requirement = """
+When a Cleanup boundary crosses pages or removed page artifacts, Cleanup shall prioritize native structural breaks, protected roles and terminal hyphenation before narrative page-continuation heuristics.
+"""
+
+verification = "Exercise headings, verse, preformatted lines, soft and visible hyphens across pages and dropped artifacts; inspect final text and available AI choices."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/cleanup/analysis.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

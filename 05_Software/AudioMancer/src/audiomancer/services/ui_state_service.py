@@ -1104,7 +1104,7 @@ _UI_STRINGS = {
             "Continue?"
         ),
         "project.confirm_extraction_rerun": "A successful extraction will replace the current extraction and reset all later results, including text, characters, voices and audio. If extraction fails or is cancelled before saving, the existing results are kept. Continue?",
-        "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data and every downstream result. Continue?",
+        "project.confirm_cleanup_rerun": "A successful Cleanup replacement will reset every downstream result. Cancellation or a saving error keeps the current results. Continue?",
         "project.confirm_cleanup_draft_discard": "You have unsaved changes to cleaned text. Discard them and switch projects?",
         "project.confirm_cleanup_mode_switch": "Changing Cleanup mode will delete the current Cleanup result and every downstream result. Continue?",
         "project.confirm_cleanup_reset": "Reset Cleanup will delete cleanup.json, clean_text.txt, legacy Cleanup metadata, Cleanup logs, and every downstream result, including characters, voices, and audio. Continue?",
@@ -2320,7 +2320,7 @@ _UI_STRINGS = {
             "Fisierul sursa, limba traducerii si stilul audio selectate vor ramane fixe pentru acest proiect. Continui?"
         ),
         "project.confirm_extraction_rerun": "O extragere reusita va inlocui extragerea curenta si va reseta toate rezultatele ulterioare, inclusiv textul, personajele, vocile si audio. Daca extragerea esueaza sau este anulata inainte de salvare, rezultatele existente sunt pastrate. Continui?",
-        "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare si toate rezultatele ulterioare. Continui?",
+        "project.confirm_cleanup_rerun": "O inlocuire reusita a Curatarii va reseta toate rezultatele ulterioare. Anularea sau o eroare de salvare pastreaza rezultatele curente. Continui?",
         "project.confirm_cleanup_draft_discard": "Ai modificari nesalvate ale textului curatat. Renunti la ele si schimbi proiectul?",
         "project.confirm_cleanup_mode_switch": "Schimbarea modului de curatare va sterge rezultatul Cleanup curent si toate rezultatele ulterioare. Continui?",
         "project.confirm_cleanup_reset": "Reseteaza Curatarea va sterge cleanup.json, clean_text.txt, metadatele vechi de curatare, jurnalele de curatare si toate rezultatele ulterioare, inclusiv personajele, vocile si fisierele audio. Continui?",

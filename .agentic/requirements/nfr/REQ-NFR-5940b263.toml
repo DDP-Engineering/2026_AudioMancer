@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-NFR-5940b263"
+
+title = "Isolate Cleanup processing and traverse paragraph provenance once"
+
+status = "active"
+
+requirement = """
+The Cleanup processing engine shall analyze and render source-ledger inputs without importing application configuration, project services, Qt or provider adapters.
+"""
+
+verification = "Block forbidden imports in a fresh Python process and analyze/render a native document."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/cleanup/", "05_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

@@ -21,9 +21,9 @@ from pathlib import Path
 import pytest
 
 from audiomancer import config
+from audiomancer.cleanup import text as cleanup_text_analysis_service
 from audiomancer.services import (
     chunking_document_service,
-    cleanup_text_analysis_service,
     deterministic_chunking_service,
     operation_runtime_service,
     project_workspace_service,
@@ -92,7 +92,7 @@ def test_bare_roman_chapter_detection_requires_valid_uppercase_numerals(
     candidate,
     expected,
 ) -> None:
-    """Cover S-0002 and REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74."""
+    """@brief Cover S-0002 and REQ-FUNC-cf65391c-89ba-4787-8df3-33eb22337b74."""
     cleanup_label = cleanup_text_analysis_service.detect_chapter_label(candidate)
     shared_label = chunking_document_service.chapter_label_from_text(candidate)
     document_count = chunking_document_service._chapter_count([{"text": candidate}])
@@ -412,7 +412,7 @@ def test_chunking_persists_one_cancelled_terminal_document(tmp_path, monkeypatch
     writes: list[tuple[str, int | None, int]] = []
 
     def _cancel_after_two_paragraphs() -> bool:
-        """Request cancellation before processing the third paragraph."""
+        """@brief Request cancellation before processing the third paragraph."""
         cancel_checks["count"] += 1
         return cancel_checks["count"] >= 3
 
@@ -456,7 +456,7 @@ def test_chunking_persists_one_failed_terminal_document(tmp_path, monkeypatch) -
     writes: list[tuple[str, int | None, int]] = []
 
     def _fail_on_second_paragraph(*args, **kwargs):
-        """Raise one deterministic processing failure after the first committed prefix."""
+        """@brief Raise one deterministic processing failure after the first committed prefix."""
         build_calls["count"] += 1
         if build_calls["count"] == 2:
             raise RuntimeError("synthetic chunking failure")
@@ -608,7 +608,7 @@ def _create_ready_chunking_project(
 
 @pytest.mark.parametrize("heading", ["Chapitre 3", "Kapitel IV", "Capítulo 7", "Глава 2"])
 def test_chunking_uses_cleanup_chapter_labels_for_supported_european_languages(heading: str) -> None:
-    """Verify Chunking recognizes the same supported European headings as Cleanup."""
+    """@brief Verify Chunking recognizes the same supported European headings as Cleanup."""
     assert cleanup_text_analysis_service.detect_chapter_label(heading) == heading
     assert chunking_document_service.chapter_label_from_text(f"Preface line\n{heading}\nBody") == heading
 

@@ -158,8 +158,8 @@ def test_completed_cleanup_rerun_decline_keeps_manifest_and_starts_no_worker(mon
     assert starts == []
 
 
-def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monkeypatch, tmp_path) -> None:
-    """@brief Verify confirmed completed Cleanup rerun installs the reset manifest first."""
+def test_completed_cleanup_rerun_preserves_manifest_until_publication(monkeypatch, tmp_path) -> None:
+    """@brief Verify confirmed Cleanup rerun defers all reset work until successful publication."""
     original_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "original"}
     reset_manifest = {"source_document": {"original_name": "story.txt"}, "marker": "reset"}
     window = SimpleNamespace(
@@ -187,8 +187,8 @@ def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monk
     def _start(_window, operation_kind, _name, _message, worker, _success, _failure):
         """@brief Verify the Cleanup worker receives the reset manifest."""
         assert operation_kind == "cleanup"
-        assert events == ["reset"]
-        assert window._current_manifest is reset_manifest
+        assert events == []
+        assert window._current_manifest is original_manifest
         captured["worker"] = worker
 
     monkeypatch.setattr(text_cleanup_ui_controller.text_cleanup_state_service, "reset_cleanup", _reset)
@@ -197,7 +197,8 @@ def test_completed_cleanup_rerun_resets_before_starting_with_reset_manifest(monk
     text_cleanup_ui_controller.handle_cleanup_requested(window, None)
 
     assert captured["worker"].func is text_cleanup_ui_controller.text_cleanup_service.clean_text
-    assert window._current_manifest is reset_manifest
+    assert captured["worker"].keywords["force"] is True
+    assert window._current_manifest is original_manifest
 
 
 @pytest.mark.parametrize("status", ["running", "paused", "finalizing", "failed"])
@@ -241,7 +242,7 @@ def test_resumable_cleanup_starts_without_destructive_reset(monkeypatch, tmp_pat
     assert starts == ["started"]
 
 
-def test_completed_cleanup_rerun_reset_failure_starts_no_worker(monkeypatch, tmp_path) -> None:
+def test_completed_cleanup_rerun_does_not_call_destructive_reset(monkeypatch, tmp_path) -> None:
     """@brief Verify a failed completed-rerun reset cannot start or report Cleanup success."""
     window = SimpleNamespace(
         _current_project_root=tmp_path,
@@ -267,8 +268,8 @@ def test_completed_cleanup_rerun_reset_failure_starts_no_worker(monkeypatch, tmp
 
     text_cleanup_ui_controller.handle_cleanup_requested(window, None)
 
-    assert starts == []
-    assert warnings[-1][2] == "reset failed"
+    assert starts == ["started"]
+    assert warnings == []
 
 
 def test_failed_cleaned_text_save_keeps_editable_draft(monkeypatch, qtbot, tmp_path) -> None:

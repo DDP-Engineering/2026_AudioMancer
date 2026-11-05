@@ -9,9 +9,9 @@
 """
 @file text_cleanup_service.py
 @brief Resumable single-document Cleanup orchestration.
-@details Owns deterministic analysis, optional bounded adjudication, atomic
-         checkpoints, source-only rendering, publication, and manual edits
-         through cleanup.json plus clean_text.txt.
+@details Coordinates the pure Cleanup engine, optional bounded adjudication,
+         resumable checkpoints and recoverable publication. Completed text
+         remains available while a replacement uses cleanup_pending.json.
 """
 
 # IMPORTS
@@ -24,12 +24,14 @@ from pathlib import Path
 import re
 
 from audiomancer import config
+from audiomancer.cleanup import analysis as cleanup_analysis_service
+from audiomancer.cleanup import editing as cleanup_editing
+from audiomancer.cleanup import render as cleanup_renderer_service
+from audiomancer.cleanup import text as cleanup_text_analysis_service
 from audiomancer.services import (
     cleanup_ai_adjudication_service,
-    cleanup_analysis_service,
     cleanup_metadata_service,
-    cleanup_renderer_service,
-    cleanup_text_analysis_service,
+    cleanup_publication_service,
     project_workspace_service,
     prompt_template_service,
     source_ledger_service,
@@ -43,7 +45,6 @@ from audiomancer.services.operation_runtime_service import (
 )
 from audiomancer.services.persistence_service import (
     write_json_atomic,
-    write_text_atomic,
 )
 from audiomancer.services.time_service import utc_now_iso
 
@@ -112,9 +113,12 @@ def clean_text(
     ai_profile_payload: dict[str, object] | None = None,
     progress_callback=None,
     cancel_requested=None,
+    *,
+    force: bool = False,
 ) -> dict[str, object]:
     """@brief Start or resume Cleanup and publish only a validated completed result."""
-    root = Path(project_root)
+    root = Path(project_root).resolve()
+    raise_if_cancelled(cancel_requested)
     if not isinstance(manifest.get("source_document"), dict):
         raise ValueError("No imported source is available for Cleanup.")
     ledger = source_ledger_service.load_source_ledger(root)
@@ -133,7 +137,7 @@ def clean_text(
     ledger_hash = _json_hash(ledger)
     profile_fingerprint = _profile_fingerprint(ai_profile_payload)
     prompt_hash = _prompt_hash()
-    existing = _read_checkpoint(root)
+    existing = None if force else _read_checkpoint(root)
 
     document: dict[str, object]
     questions: list[dict[str, object]]
@@ -150,6 +154,7 @@ def clean_text(
                 ledger,
                 document,
                 progress_callback,
+                cancel_requested=cancel_requested,
             )
         if (
             document["status"] == "completed"
@@ -169,6 +174,7 @@ def clean_text(
                     ledger,
                     document,
                     progress_callback,
+                    cancel_requested=cancel_requested,
                 )
             _emit(progress_callback, 1, 1, 100, "Cleanup completed.")
             return document
@@ -395,12 +401,11 @@ def clean_text(
         document["phase"] = "adjudication"
         document["updated_at"] = utc_now_iso()
         _write_checkpoint(root, document)
-        project_workspace_service.sync_manifest_operation_summary(
-            root,
-            "cleanup",
-            _manifest_summary(document),
-            current_stage="text_cleanup_ready",
-        )
+        if not (root / config.CLEANUP_PENDING_FILE_NAME).is_file():
+            project_workspace_service.sync_manifest_operation_summary(
+                root, "cleanup", _manifest_summary(document),
+                current_stage="text_cleanup_ready",
+            )
         raise
 
     _emit(
@@ -426,6 +431,7 @@ def clean_text(
         ledger,
         document,
         progress_callback,
+        cancel_requested=cancel_requested,
     )
 
 
@@ -482,13 +488,8 @@ def save_user_cleaned_text(
     whitespace_only = _lexical_projection(current_text) == _lexical_projection(
         edited_text
     )
+    previous_records = cleanup_metadata_service.load_completed_paragraph_records(root, current_text)
     if whitespace_only:
-        previous_records = (
-            cleanup_metadata_service.load_completed_paragraph_records(
-                root,
-                current_text,
-            )
-        )
         _realign_whitespace_boundaries(
             root,
             document,
@@ -497,7 +498,7 @@ def save_user_cleaned_text(
         runtime_records = cleanup_metadata_service.build_paragraph_records_from_text(
             edited_text
         )
-        _realign_whitespace_roles(previous_records, runtime_records)
+        cleanup_editing.realign_paragraph_roles(previous_records, runtime_records)
         document["paragraphs"] = (
             cleanup_metadata_service.persisted_paragraph_records(runtime_records)
         )
@@ -506,6 +507,7 @@ def save_user_cleaned_text(
         runtime_records = cleanup_metadata_service.build_paragraph_records_from_text(
             edited_text
         )
+        cleanup_editing.realign_paragraph_roles(previous_records, runtime_records, exact=True)
         document["paragraphs"] = (
             cleanup_metadata_service.persisted_paragraph_records(runtime_records)
         )
@@ -671,6 +673,8 @@ def _finalize_document(
     ledger: dict[str, object],
     document: dict[str, object],
     progress_callback,
+    *,
+    cancel_requested=None,
 ) -> dict[str, object]:
     """@brief Render and atomically publish one finalizing Cleanup document."""
     _emit(
@@ -680,11 +684,13 @@ def _finalize_document(
         _VALIDATION_PERCENT,
         "Validating and rendering Cleanup...",
     )
+    raise_if_cancelled(cancel_requested)
     cleaned_text, render_metadata = cleanup_renderer_service.render_cleanup(
         canonical_text,
         ledger,
         list(document["unit_operations"]),
         list(document["boundaries"]),
+        check_cancelled=lambda: raise_if_cancelled(cancel_requested),
     )
     quality_report = dict(render_metadata["quality_report"])
     previous_quality = dict(document.get("quality_report") or {})
@@ -715,7 +721,11 @@ def _finalize_document(
         canonical_text=canonical_text,
         ledger=ledger,
     )
-    _publish_completed_cleanup(root, cleaned_text, document)
+    raise_if_cancelled(cancel_requested)
+    _publish_completed_cleanup(
+        root, cleaned_text, document,
+        check_cancelled=lambda: raise_if_cancelled(cancel_requested),
+    )
     _emit(
         progress_callback,
         1,
@@ -731,41 +741,12 @@ def _finalize_document(
 
 
 def _publish_completed_cleanup(
-    root: Path,
-    cleaned_text: str,
-    document: dict[str, object],
+    root: Path, cleaned_text: str, document: dict[str, object], *, check_cancelled=None,
 ) -> None:
-    """
-    @brief      Publish canonical Cleanup artifacts and synchronized downstream reset state.
-    @param[in]  root Active project root folder.
-    @param[in]  cleaned_text Validated canonical cleaned text.
-    @param[in]  document Validated completed Cleanup document.
-    @return     None.
-    @exception  OSError Raised when artifact or manifest persistence fails.
-    """
-    reset_operation_data(root, "chunking", include_current=True)
-    write_text_atomic(root / config.CLEANED_TEXT_FILE_NAME, cleaned_text)
-    _write_checkpoint(root, document)
-
-    manifest = project_workspace_service.load_manifest(root)
-    updated_manifest = (
-        project_workspace_service.build_manifest_after_operation_reset(
-            manifest,
-            "chunking",
-        )
+    """@brief Delegate validated Cleanup replacement and downstream invalidation."""
+    cleanup_publication_service.publish_cleanup(
+        root, cleaned_text, document, _manifest_summary(document), check_cancelled=check_cancelled,
     )
-    operations = dict(updated_manifest["operations"])
-    operations["cleanup"] = (
-        project_workspace_service.project_manifest_operation_summary(
-            "cleanup",
-            _manifest_summary(document),
-        )
-    )
-    updated_manifest["operations"] = operations
-    updated_manifest["original_language"] = document["document_profile"].get(
-        "language"
-    )
-    project_workspace_service.save_manifest(updated_manifest, root)
 
 
 def _apply_ai_result(
@@ -974,92 +955,6 @@ def _resume_answers(
     }
 
 
-def _realign_whitespace_roles(
-    previous_records: list[dict[str, object]],
-    current_records: list[dict[str, object]],
-) -> None:
-    """
-    @brief      Carry prior Cleanup metadata across unambiguous content matches.
-    @param[in]  previous_records Prior runtime paragraph records with text.
-    @param[out] current_records Rebuilt runtime records receiving safe metadata.
-    @return     None.
-    @exception  None
-    """
-    previous_by_text: dict[str, list[dict[str, object]]] = {}
-    for record in previous_records:
-        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
-            str(record.get("text") or "")
-        )
-        if comparison_key:
-            previous_by_text.setdefault(comparison_key, []).append(record)
-
-    current_by_text: dict[str, list[dict[str, object]]] = {}
-    for record in current_records:
-        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
-            str(record.get("text") or "")
-        )
-        if comparison_key:
-            current_by_text.setdefault(comparison_key, []).append(record)
-
-    for record in current_records:
-        classified_role = str(record.get("role") or "body")
-        record["role"] = classified_role
-        record["reason_codes"] = _reason_codes_with_whitespace_realign(
-            record.get("reason_codes")
-        )
-        comparison_key = cleanup_text_analysis_service.normalized_compare_key(
-            str(record.get("text") or "")
-        )
-        prior_matches = previous_by_text.get(comparison_key, [])
-        current_matches = current_by_text.get(comparison_key, [])
-        if len(prior_matches) != 1 or len(current_matches) != 1:
-            continue
-
-        prior = prior_matches[0]
-        prior_role = str(prior.get("role") or "body")
-        if classified_role != "scene_separator" and prior_role != "scene_separator":
-            record["role"] = prior_role
-        record["confidence"] = str(prior.get("confidence") or "strong")
-        record["reason_codes"] = _reason_codes_with_whitespace_realign(
-            prior.get("reason_codes")
-        )
-
-        raw_source_ids = prior.get("source_unit_ids")
-        source_ids = (
-            list(
-                dict.fromkeys(
-                    str(unit_id)
-                    for unit_id in raw_source_ids
-                    if str(unit_id)
-                )
-            )
-            if isinstance(raw_source_ids, list)
-            else []
-        )
-        if prior.get("provenance_available") is not True or not source_ids:
-            continue
-        record["source_unit_ids"] = source_ids
-        record["provenance_available"] = True
-        record["source_page_start"] = prior.get("source_page_start")
-        record["source_page_end"] = prior.get("source_page_end")
-        record["starts_after_page_transition"] = bool(
-            prior.get("starts_after_page_transition", False)
-        )
-        record["crosses_page_transition"] = bool(
-            prior.get("crosses_page_transition", False)
-        )
-
-
-def _reason_codes_with_whitespace_realign(value: object) -> list[str]:
-    """@brief Return ordered unique reason codes with the realignment marker."""
-    existing = (
-        [str(item) for item in value]
-        if isinstance(value, list)
-        else []
-    )
-    return list(dict.fromkeys([*existing, "user_whitespace_realign"]))
-
-
 def _realign_whitespace_boundaries(
     root: Path,
     document: dict[str, object],
@@ -1161,8 +1056,10 @@ def _validate_completed_output(
 
 
 def _read_checkpoint(root: Path) -> dict[str, object] | None:
-    """@brief Read cleanup.json without requiring a completed output artifact."""
-    path = root / config.CLEANUP_DOCUMENT_FILE_NAME
+    """@brief Prefer a pending replacement checkpoint, otherwise read cleanup.json."""
+    path = root / config.CLEANUP_PENDING_FILE_NAME
+    if not path.is_file():
+        path = root / config.CLEANUP_DOCUMENT_FILE_NAME
     if not path.is_file():
         return None
     try:
@@ -1173,8 +1070,24 @@ def _read_checkpoint(root: Path) -> dict[str, object] | None:
 
 
 def _write_checkpoint(root: Path, document: dict[str, object]) -> None:
-    """@brief Atomically persist the sole Cleanup metadata/checkpoint document."""
-    write_json_atomic(root / config.CLEANUP_DOCUMENT_FILE_NAME, document)
+    """@brief Checkpoint active work while preserving any completed result."""
+    target = root / config.CLEANUP_DOCUMENT_FILE_NAME
+    if (root / config.CLEANUP_PENDING_FILE_NAME).is_file() or _published_cleanup_exists(root):
+        target = root / config.CLEANUP_PENDING_FILE_NAME
+    write_json_atomic(target, document)
+
+
+def _published_cleanup_exists(root: Path) -> bool:
+    """@brief Recognize published metadata independently of a pending rerun."""
+    path = root / config.CLEANUP_DOCUMENT_FILE_NAME
+    if not path.is_file() or not (root / config.CLEANED_TEXT_FILE_NAME).is_file():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(payload, dict) and payload.get("status") == "completed"
+
 
 
 def _policy_hash(

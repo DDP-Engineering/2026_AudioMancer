@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-d3d0f343"
+
+title = "Use recorded indentation for inferred verse"
+
+status = "active"
+
+requirement = """
+When inferring verse from text without geometry, Cleanup shall use recorded leading-space indentation to reject line runs exceeding its indentation tolerance.
+"""
+
+verification = "Compare equal versus 0/8/1 indentation in otherwise identical isolated three-line runs."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/cleanup/analysis.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

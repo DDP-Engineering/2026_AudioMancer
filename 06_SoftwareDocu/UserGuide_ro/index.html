@@ -565,6 +565,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     stanga, mereu doar pentru citire, si <strong>Previzualizare Text Curatat</strong> in dreapta.
                 </p>
                 <p>Extragerea reporneste mereu din sursa, fara checkpoint de reluare. Citeste notele inainte de Curatare: paginile PDF doar cu imagini pot necesita OCR, iar paginile goale pot fi intentionate. Obiectele text incorporate si notele DOCX sunt semnalate cand sunt detectate, dar nu sunt extrase. Continutul auxiliar EPUB este pastrat in ordinea spine si semnalat pentru verificare. Separarile explicite de linie sunt pastrate in continutul XHTML. Extragerea nu executa OCR.</p>
+                <p>Curatarea pastreaza separarile de capitol, randurile de poezie si regulile pentru cratime intre pagini. Dupa o corectura manuala, paragrafele neschimbate, cu text identic si unic, isi pastreaza rolurile si referintele la sursa; cele modificate sau duplicate primesc o structura conservatoare. Salvarea unei editari reseteaza etapele ulterioare numai dupa salvarea reusita a textului nou.</p>
+                <p>Validarea reusita confirma transformarile permise si integritatea fisierelor. Verifica sensul textului, separarile dintre paragrafe si eliminarea artefactelor de pagina inainte de a continua.</p>
                 <h3>Cum se ruleaza</h3>
                 <p>
                     Daca o pagina contine numai numere de pagina, antete sau subsoluri recunoscute,
@@ -574,8 +576,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ol>
                     <li>Apasa <strong>Extrage Textul</strong>. Daca exista deja o extragere finalizata, AudioMancer intreaba intai, pentru ca o extragere reusita inlocuieste extragerea curenta si reseteaza toate rezultatele ulterioare. Daca esueaza sau este anulata, rezultatele existente sunt pastrate.</li>
-                    <li>Alege un <strong>Profil AI (optional)</strong>. Lasa-l pe <strong>(niciunul)</strong> pentru o trecere pur determinista, cu reguli locale &mdash; cea mai sigura prima incercare. Alege un profil activ pentru ca un model sa ajute la OCR stricat, artefacte de pagina si paragrafe prost formatate.</li>
-                    <li>Apasa <strong>Curatare</strong>. Exista un singur buton de Curatare pentru ambele cazuri; profilul decide daca este implicat un model. Daca exista deja o curatare finalizata, AudioMancer intreaba inainte de a o inlocui impreuna cu tot ce vine dupa ea.</li>
+                    <li>Alege un <strong>Profil AI (optional)</strong>. Lasa-l pe <strong>(niciunul)</strong> pentru o trecere pur determinista, cu reguli locale &mdash; cea mai sigura prima incercare. Alege un profil activ pentru clasificarea separarilor de linie si a cratimelor ambigue. Curatarea nu rescrie propozitii si nu corecteaza cuvintele recunoscute gresit prin OCR; foloseste Editare pentru aceste corecturi.</li>
+                    <li>Apasa <strong>Curatare</strong>. Exista un singur buton de Curatare pentru ambele cazuri; profilul decide daca este implicat un model. Daca exista deja o curatare finalizata, AudioMancer intreaba inainte de a o inlocui impreuna cu tot ce vine dupa ea. Rezultatul existent si munca ulterioara raman disponibile pana cand noua curatare reuseste. Anularea sau o eroare de salvare le pastreaza; apasa din nou Curatare pentru a relua inlocuirea intrerupta.</li>
                     <li>Citeste rezultatul. Apasa <strong>Editeaza</strong> pentru a-l corecta manual, apoi <strong>Salveaza</strong> &mdash; sau <strong>Anuleaza</strong> pentru a renunta la ciorna si a reveni la textul salvat.</li>
                 </ol>
                 <p>

@@ -59,6 +59,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
         config.CLEANUP_DOCUMENT_FILE_NAME,
+        config.CLEANUP_PENDING_FILE_NAME,
         # Reset-only legacy sidecars; Cleanup never reads or writes them.
         "clean_text_metadata.json",
         "cleanup_report.json",

@@ -13,6 +13,8 @@
          filtering, and resumable deterministic materialization.
 """
 
+# IMPORTS
+
 from __future__ import annotations
 
 import json
@@ -20,8 +22,8 @@ import json
 import pytest
 
 from audiomancer import config
+from audiomancer.cleanup import text as cleanup_text_analysis_service
 from audiomancer.services import (
-    cleanup_text_analysis_service,
     deterministic_chunking_service,
 )
 from chunking_test_support import write_chunking_document
@@ -29,7 +31,7 @@ from cleanup_test_support import build_ledger, build_project, write_completed_cl
 
 
 def test_chunking_rejects_noncompleted_cleanup_even_when_text_exists(tmp_path) -> None:
-    """Cover S-0008/S-0011 and REQ-FUNC-bd7cd503-2d84-4adb-94bc-d8f31d297368."""
+    """@brief Cover S-0008/S-0011 and REQ-FUNC-bd7cd503-2d84-4adb-94bc-d8f31d297368."""
     canonical_text, ledger = build_ledger(["Paragraph one.", "Paragraph two."])
     project_root, manifest = build_project(tmp_path, "PausedCleanup", canonical_text, ledger)
     document = write_completed_cleanup(
@@ -53,7 +55,7 @@ def test_chunking_rejects_noncompleted_cleanup_even_when_text_exists(tmp_path) -
 
 
 def test_chunking_rejects_clean_text_hash_mismatch(tmp_path) -> None:
-    """Cover S-0008 and REQ-FUNC-bd7cd503-2d84-4adb-94bc-d8f31d297368."""
+    """@brief Cover S-0008 and REQ-FUNC-bd7cd503-2d84-4adb-94bc-d8f31d297368."""
     canonical_text, ledger = build_ledger(["Paragraph one."])
     project_root, manifest = build_project(tmp_path, "HashMismatch", canonical_text, ledger)
     write_completed_cleanup(
@@ -70,7 +72,7 @@ def test_chunking_rejects_clean_text_hash_mismatch(tmp_path) -> None:
 
 
 def test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles(tmp_path) -> None:
-    """Cover S-0011/S-0014/S-0016 and the Cleanup-Chunking requirements."""
+    """@brief Cover S-0011/S-0014/S-0016 and the Cleanup-Chunking requirements."""
     cleaned_text = (
         "CHAPTER ONE\n\n"
         "The opening paragraph ends here.\n\n"
@@ -138,7 +140,7 @@ def test_chunking_slices_cleanup_paragraph_offsets_and_propagates_roles(tmp_path
     ],
 )
 def test_scene_separator_artifact_recognition_is_conservative(separator_text) -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """@brief Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
     assert cleanup_text_analysis_service.is_scene_separator_artifact(separator_text)
 
 
@@ -147,14 +149,14 @@ def test_scene_separator_artifact_recognition_is_conservative(separator_text) ->
     ["...", "…", "—", "### Title", "x x x", "o0o", "*** text", "*"],
 )
 def test_ambiguous_punctuation_is_not_a_scene_separator_artifact(narratable_text) -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """@brief Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
     assert not cleanup_text_analysis_service.is_scene_separator_artifact(narratable_text)
 
 
 def test_chunking_omits_scene_separator_artifacts_and_preserves_conservative_punctuation(
     tmp_path,
 ) -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """@brief Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
     paragraphs = [
         ("Opening narration.", "body"),
         ("* * *", "body"),
@@ -202,7 +204,7 @@ def test_chunking_omits_scene_separator_artifacts_and_preserves_conservative_pun
 
 
 def test_chunking_rejects_separator_only_cleanup(tmp_path) -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """@brief Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
     paragraphs = [("* * *", "body"), ("⁂", "scene_separator")]
     cleaned_text = "\n\n".join(item[0] for item in paragraphs) + "\n"
     canonical_text, ledger = build_ledger(
@@ -221,7 +223,7 @@ def test_chunking_rejects_separator_only_cleanup(tmp_path) -> None:
 def test_chunking_resume_counts_processed_separator_without_persisting_it(
     tmp_path,
 ) -> None:
-    """Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
+    """@brief Cover S-0014 and REQ-FUNC-24dd4710-058c-481e-a207-a8252fff8e65."""
     paragraphs = [
         ("Opening narration.", "body"),
         ("* * *", "body"),

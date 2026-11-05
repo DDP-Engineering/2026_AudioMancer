@@ -10,8 +10,8 @@ Cleanup shall preserve verse and preformatted intra-block line structure with ty
 verification = "Verse semantic-line and dialogue-exclusion test passes."
 
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/analysis.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/render.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_non_native_verse_uses_semantic_line_breaks_and_excludes_dialogue",

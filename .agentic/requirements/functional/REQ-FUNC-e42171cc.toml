@@ -10,7 +10,7 @@ When rendering places alphanumeric endpoints from separate retained source spans
 verification = "Rendered-span tests distinguish ordinary separators, preserved punctuation and hyphens, and applicable dehyphenation from unauthorized direct and dropped-unit adjacency, with unsafe renders raising CleanupRenderError before publication."
 
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/render.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",

@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-NFR-8b7ba0b8"
+
+title = "Bound Cleanup paragraph provenance traversal"
+
+status = "active"
+
+requirement = """
+When rendering Cleanup paragraph metadata, the renderer shall traverse ordered source spans and boundaries with work proportional to their total size and output paragraphs.
+"""
+
+verification = "Instrument source-record visits for 2000 paragraphs and assert a linear bound plus exact final offsets, without timing thresholds."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/cleanup/render.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

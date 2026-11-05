@@ -556,6 +556,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     read-only, and <strong>Cleaned Text Preview</strong> on the right.
                 </p>
                 <p>Extraction always restarts from the source; it has no resume checkpoint. Read its notes before Cleanup: image-only PDF pages may need OCR, while blank pages can be intentional. DOCX embedded text objects and notes are reported when detected but are not extracted. EPUB auxiliary content is kept in spine order and identified for review. Explicit line breaks are preserved in XHTML content. OCR is not performed by Extraction.</p>
+                <p>Cleanup preserves chapter boundaries, verse lines and hyphenation across pages. After a manual correction, unchanged paragraphs with unique exact text retain their roles and source references; changed or duplicated paragraphs receive conservative structure. Saving an edit resets later stages only after the new text is safely saved.</p>
+                <p>A passed validation confirms the permitted transformations and file integrity. Review the text for correct meaning, paragraph placement and page-artifact removal before continuing.</p>
                 <h3>Running It</h3>
                 <p>
                     If a page contains only recognized page numbers, headers or footers, Cleanup keeps
@@ -564,8 +566,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ol>
                     <li>Press <strong>Extract Text</strong>. If a completed extraction already exists, AudioMancer asks first, because a successful extraction replaces the current extraction and resets every later result. A failed or cancelled extraction keeps the existing results.</li>
-                    <li>Choose an <strong>AI Profile (optional)</strong>. Leave it at <strong>(none)</strong> for a purely deterministic pass using local rules &mdash; the safest first attempt. Choose an enabled profile to let a model help with broken OCR, page artifacts and poor paragraph formatting.</li>
-                    <li>Press <strong>Cleanup</strong>. There is one Cleanup button for both cases; the profile decides whether a model is involved. If a completed cleanup already exists, AudioMancer asks before replacing it and everything downstream.</li>
+                    <li>Choose an <strong>AI Profile (optional)</strong>. Leave it at <strong>(none)</strong> for a purely deterministic pass using local rules &mdash; the safest first attempt. Choose an enabled profile to let a model classify ambiguous line breaks and hyphenation. Cleanup does not rewrite sentences or correct OCR spelling; use Edit for those corrections.</li>
+                    <li>Press <strong>Cleanup</strong>. There is one Cleanup button for both cases; the profile decides whether a model is involved. If a completed cleanup already exists, AudioMancer asks before replacing it and everything downstream. The existing result and later work stay available until the replacement succeeds. Cancellation or a saving error preserves them; press Cleanup again to resume the pending replacement.</li>
                     <li>Read the result. Press <strong>Edit</strong> to correct it by hand, then <strong>Save</strong> &mdash; or <strong>Cancel</strong> to discard the draft and restore the saved text.</li>
                 </ol>
                 <p>

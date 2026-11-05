@@ -21,6 +21,10 @@ fixed in Home, and saves language/narration options automatically with confirmed
 resets of affected results. Mode changes preserve text, characters and narrator
 data; language changes preserve source and text through Chunking.
 
+Cleanup processes canonical text in an isolated pure package. Completed reruns
+retain the published text and downstream work until recoverable replacement
+succeeds; interrupted replacement AI work uses a separate pending checkpoint.
+
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.

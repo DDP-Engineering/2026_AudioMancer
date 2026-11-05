@@ -16,7 +16,7 @@ If a syntactically readable Cleanup checkpoint fails the strict nested reuse con
 verification = "Run-path corruption tests cover malformed progress, batch plans, boundary prior/final/adjudication data, and non-list boundaries with matching hashes; each proves a fresh analysis without raw built-in exceptions, while strict loads reject the same documents and valid lifecycle states remain reusable."
 
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/analysis.py",
   "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
   "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py",
 ]

@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Cleanup reruns and manual saves retain the previous result and downstream work
+  when cancelled or when saving fails, and resume interrupted replacement work.
+- Cleanup preserves chapter and verse boundaries and hyphenation across pages,
+  respects text indentation when detecting poetry, and builds paragraph metadata
+  efficiently for long books.
+- Manual corrections retain the roles and source references of unchanged, unique
+  paragraphs while leaving modified or ambiguous content available for review.
+
 - Extraction preserves visible EPUB/XHTML tails, explicit line breaks and quoted
   paragraphs, reads embedded HTML blocks in Markdown, and avoids duplicated DOCX
   merged-cell text. Image-only PDF pages and uncertain reading order are reported.
@@ -26,6 +34,9 @@ All notable changes to this project will be documented in this file.
   text to preserve the safeguard against deleting an entire page.
 
 ### Changed
+
+- Isolated Cleanup processing from project storage and the desktop UI; clarified
+  the bounded AI role and validation limits in both user guides.
 
 - Isolated document extraction from the desktop UI and project storage, with
   separate format adapters and a shared canonical text/provenance builder.

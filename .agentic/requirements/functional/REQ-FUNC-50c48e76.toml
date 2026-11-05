@@ -4,7 +4,7 @@ title = "Cleanup shall use cleanup.json as its single durable metadata artifact"
 status = "active"
 
 requirement = """
-Cleanup shall use cleanup.json as its single durable metadata artifact.
+Cleanup shall use cleanup.json as its authoritative completed metadata artifact, with a separate cleanup_pending.json checkpoint only while replacing a completed result.
 """
 
 verification = "The exact Cleanup artifact contract test passes."
@@ -26,4 +26,4 @@ rationale = """
 One authoritative metadata document avoids divergent lifecycle, resume, quality, and paragraph sources of truth.
 """
 created = 2026-07-28
-updated = 2026-07-30
+updated = 2026-11-05

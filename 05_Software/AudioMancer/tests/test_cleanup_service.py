@@ -22,9 +22,9 @@ import json
 import pytest
 
 from audiomancer import config
+from audiomancer.cleanup import render as cleanup_renderer_service
 from audiomancer.services import (
     cleanup_metadata_service,
-    cleanup_renderer_service,
     deterministic_chunking_service,
     operation_runtime_service,
     project_workspace_service,
@@ -165,6 +165,7 @@ def test_cleanup_publication_surfaces_manifest_persistence_failure(
     progress: list[int] = []
 
     def _raise_manifest_failure(*_args, **_kwargs) -> None:
+        """@brief Inject a manifest persistence failure before publication."""
         raise OSError("injected manifest persistence failure")
 
     monkeypatch.setattr(
@@ -362,7 +363,7 @@ def test_whitespace_role_realign_falls_back_for_ambiguous_content(tmp_path) -> N
 def test_whitespace_realign_carries_unique_paragraph_metadata_and_warnings(
     tmp_path,
 ) -> None:
-    """Preserve only truthful local metadata and its downstream warning flags."""
+    """@brief Preserve only truthful local metadata and its downstream warning flags."""
     canonical_text, ledger = build_ledger(
         ["Alpha paragraph.", "Beta paragraph.", "Gamma paragraph."],
         kinds=["heading", "paragraph", "paragraph"],
@@ -503,7 +504,7 @@ def test_whitespace_realign_failure_records_diagnostic(tmp_path, caplog) -> None
 
 
 def _build_extracted_project(tmp_path, name: str):
-    """Build one project with persisted completed Extraction and nondefault options."""
+    """@brief Build one project with persisted completed Extraction and nondefault options."""
     canonical_text, ledger = build_ledger(["Canonical source paragraph."])
     project_root, manifest = build_project(
         tmp_path,
@@ -535,7 +536,7 @@ def _build_extracted_project(tmp_path, name: str):
 
 
 def _seed_completed_downstream_state(project_root):
-    """Persist completed downstream summaries and representative owned artifacts."""
+    """@brief Persist completed downstream summaries and representative owned artifacts."""
     manifest = project_workspace_service.load_manifest(project_root)
     operations = dict(manifest["operations"])
     for operation_kind in operation_runtime_service.downstream_operation_kinds(
@@ -565,6 +566,8 @@ def _seed_completed_downstream_state(project_root):
         artifact_path.write_bytes(b"stale downstream artifact")
         artifact_paths.append(artifact_path)
 
+    (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]", encoding="utf-8")
+
     source_document = dict(manifest["source_document"])
     source_path = project_root / str(source_document["stored_relative_path"])
     extraction_artifacts = {
@@ -592,7 +595,7 @@ def _assert_synchronized_cleanup_transition(
     artifact_paths,
     preserved_state,
 ) -> None:
-    """Assert one successful Cleanup publication is coherent on disk and reopen."""
+    """@brief Assert one successful Cleanup publication is coherent on disk and reopen."""
     assert all(not artifact_path.exists() for artifact_path in artifact_paths)
     manifest = project_workspace_service.load_manifest(project_root)
     default_manifest = project_workspace_service.build_project_manifest("Defaults")

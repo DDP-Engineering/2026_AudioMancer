@@ -10,7 +10,7 @@ When Cleanup detects a non-empty source language outside CLEANUP_SUPPORTED_SOURC
 verification = "Controlled language-detection tests verify every supported code has no unsupported-language warning, unsupported detection completes and publishes clean text with one retained warning in state notes and the manifest summary, and unavailable detection and CJK/Hangul rejection retain their existing outcomes."
 
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_analysis_service.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/analysis.py",
   "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
   "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py",
 ]

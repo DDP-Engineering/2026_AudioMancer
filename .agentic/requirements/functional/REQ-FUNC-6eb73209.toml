@@ -10,7 +10,7 @@ Cleanup rendering shall construct output only from source-ledger slices and vali
 verification = "Source-ledger projection and invalid-action renderer tests pass."
 
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/cleanup_renderer_service.py",
+  "05_Software/AudioMancer/src/audiomancer/cleanup/render.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_renderer_allows_only_safe_boundary_join_forms",

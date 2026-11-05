@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-REL-8421d5d4"
+
+title = "Preserve completed Cleanup during reruns and failed publication"
+
+status = "active"
+
+requirement = """
+When Cleanup is rerun or publication raises an IO error, AudioMancer shall retain or restore the previous completed text, metadata, manifest and downstream artifacts until the replacement is successfully published.
+"""
+
+verification = "Seed completed Cleanup and downstream files, cancel a rerun or fail each publication rename/write, and compare original bytes; successful publication invalidates downstream."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/cleanup_publication_service.py", "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py", "05_Software/AudioMancer/src/audiomancer/config.py", "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

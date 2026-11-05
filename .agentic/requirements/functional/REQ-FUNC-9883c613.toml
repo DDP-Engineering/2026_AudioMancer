@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-9883c613"
+
+title = "Preserve unambiguous unchanged paragraphs after lexical edits"
+
+status = "active"
+
+requirement = """
+When saving a lexical Cleanup edit, AudioMancer shall preserve metadata only for exact paragraph matches unique in both the previous and edited text.
+"""
+
+verification = "Change one body paragraph while retaining heading and verse; verify roles, offsets and provenance, with duplicate and case-changed paragraphs remaining unresolved."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/cleanup/editing.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_cleanup_refinement.py"]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05
