@@ -68,6 +68,20 @@ _SOURCE_PATTERNS = " ".join(f"*{suffix}" for suffix in config.SUPPORTED_SOURCE_S
 # @brief Centralized runtime UI string catalog keyed by language and stable identifier.
 _UI_STRINGS = {
     "en": {
+        "text.undo": "Undo",
+        "text.redo": "Redo",
+        "text.cut": "Cut",
+        "text.copy": "Copy",
+        "text.paste": "Paste",
+        "text.delete": "Delete",
+        "text.select_all": "Select All",
+        "text.find": "Find…",
+        "text.find_next": "Find Next",
+        "text.find_previous": "Find Previous",
+        "text.find_title": "Find text",
+        "text.find_prompt": "Text to find:",
+        "text.not_found": "Text not found: {query}",
+
         "window_title.main": "AudioMancer | Transform written words into real audio experience!",
         "toolbar.new_project": "New Project",
         "toolbar.open_project": "Open Project",
@@ -1276,6 +1290,20 @@ _UI_STRINGS = {
         ),
     },
     "ro": {
+        "text.undo": "Anulează",
+        "text.redo": "Refă",
+        "text.cut": "Decupează",
+        "text.copy": "Copiază",
+        "text.paste": "Lipește",
+        "text.delete": "Șterge",
+        "text.select_all": "Selectează tot",
+        "text.find": "Caută…",
+        "text.find_next": "Caută următorul",
+        "text.find_previous": "Caută precedentul",
+        "text.find_title": "Caută text",
+        "text.find_prompt": "Text de căutat:",
+        "text.not_found": "Textul nu a fost găsit: {query}",
+
         "window_title.main": "AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!",
         "toolbar.new_project": "Proiect Nou",
         "toolbar.open_project": "Deschide Proiect",

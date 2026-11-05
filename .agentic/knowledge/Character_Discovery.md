@@ -1,13 +1,19 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Character Discovery
 
-## 1. Purpose
+## Routing
+
+For domain behavior, start at character_discovery_service and tests/test_characters_page.py. Shared text context menus and
+Find navigation belong to App Shell's ui/text_interaction.py. Domain pages
+retain their existing Edit/Save/Cancel controls and persistence contracts.
+
+## Purpose and boundaries
 
 Character Discovery derives a reviewable inventory of speaking characters from
 the effective project text. Voice Profiles and Speech Blocks consume that
 inventory through the stable profile projection.
 
-## 2. Responsibilities
+### Responsibilities
 
 - Resolve original versus fully approved translated text.
 - Discover candidates in bounded chunk windows and synthesize one character per
@@ -21,7 +27,7 @@ inventory through the stable profile projection.
 - Invalidate its own and downstream output when the effective source changes.
 - It does not select voices or generate speech/audio.
 
-## 3. Implementation Overview
+### Implementation
 
 `05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py`
 owns source resolution, strict persistence, discovery, synthesis, resume, and
@@ -69,7 +75,7 @@ preserve current nested records directly, so operator additions and edits
 survive later checkpoints without normalization, while a deleted completed AI
 record is not reconstructed from stale checkpoint data.
 
-## 4. Dependencies
+### Dependencies
 
 - Internal: strict Chunking and AI Translation documents, project manifest,
   prompt templates, AI provider, budget/token-usage helpers, atomic JSON
@@ -77,7 +83,7 @@ record is not reconstructed from stale checkpoint data.
 - External: the currently selected AI provider is required only for discovery
   and synthesis.
 
-## 5. Inputs And Outputs
+## Public interface
 
 - Inputs: canonical chunks, optional fully approved translations, the current
   enabled AI profile, optional operator instructions, and manual CRUD requests.
@@ -90,7 +96,7 @@ record is not reconstructed from stale checkpoint data.
   reconstructible cache; source changes reset dependent runtime artifacts while
   preserving Narrator Definition.
 
-## 6. Data Contracts
+## Invariants
 
 The root of `characters.json` contains exactly:
 
@@ -150,7 +156,7 @@ mutations, and leaves Reset available to remove the invalid artifact through
 the established reset policy. Completed page summaries state only the persisted
 speaking-character count; they do not invent an analyzed-window count.
 
-## 7. Workflow Integration
+### Workflow integration
 
 Character Discovery follows Chunking and optional Translation. Translation
 approval/edit/reset actions recalculate the effective source and invalidate
@@ -161,7 +167,7 @@ Character Discovery document, export readiness treats the Characters artifact
 as unavailable so project open can reach the existing Reset-only recovery
 state; it does not repair or expose the invalid inventory.
 
-## 8. Usage
+### Usage
 
 Call `start_or_continue_discovery()` with the project root, manifest, and
 current profile. A resumable run retains its saved instructions but always uses
@@ -175,7 +181,13 @@ cancelled or failed document remain authoritative when the run resumes;
 force-rerun and incompatible-source paths retain their established fresh-run
 behavior.
 
-## 9. Validation And Tests
+## Change map
+
+| Change requested | Start with | Focused verification |
+| --- | --- | --- |
+| Domain behavior | character_discovery_service | tests/test_characters_page.py |
+| Text menu/search | ui/text_interaction.py (App Shell) | test_text_interaction.py and page tests |
+
 
 Primary coverage is in:
 
@@ -212,11 +224,18 @@ exchange chunks, windows, or candidates as one unit.
 
 Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
-## 10. Limitations And Future Work
+### Operational limits
 
 Character quality still depends on source clarity, provider behavior, and human
 review. Synthesis deliberately uses one AI call per character; adaptive batch
 synthesis is not implemented.
+
+## Key behaviors
+
+Shared text interaction uses REQ-UX-0ceb3822 and REQ-FUNC-439bbdcf through
+App Shell. The page supplies native text controls; the shared application filter
+owns context menus and Find state. Domain edit/save/reset behavior stays with
+the existing page/controller.
 
 ## Files
 

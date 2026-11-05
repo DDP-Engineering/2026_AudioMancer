@@ -28,6 +28,7 @@ from .services import ui_scroll_service, ui_state_service, ui_theme_service
 from .services.logging_service import get_component_logger, initialize_logging, shutdown_logging
 from .services.settings_service import load_settings
 from .ui.main_window import MainWindow
+from .ui.text_interaction import install_text_interactions
 
 # CONSTANTS
 
@@ -92,6 +93,10 @@ def main() -> int:
         )
 
         window = MainWindow(settings_payload=settings_payload)
+        install_text_interactions(
+            application,
+            lambda: ui_state_service.current_language_from_settings(window._settings_payload),
+        )
         window.show()
 
         exit_code = application.exec()

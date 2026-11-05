@@ -19,18 +19,15 @@
 
 from copy import deepcopy
 
-from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -86,7 +83,6 @@ class CharactersPage(QWidget):
         self._can_edit = False
         self._can_delete = False
         self._ui_language = "en"
-        self._evidence_find_text_by_editor_id: dict[int, str] = {}
         self._clamping_evidence_splitter = False
 
         layout = QVBoxLayout(self)
@@ -243,7 +239,6 @@ class CharactersPage(QWidget):
         self._evidence_list.currentRowChanged.connect(self._show_selected_evidence)
         self._evidence_preview = QPlainTextEdit(self)
         self._evidence_preview.setReadOnly(True)
-        self._install_evidence_find_context_menu(self._evidence_preview)
         self._evidence_splitter.addWidget(self._evidence_list)
         self._evidence_splitter.addWidget(self._evidence_preview)
         self._evidence_splitter.setStretchFactor(0, 1)
@@ -611,101 +606,6 @@ class CharactersPage(QWidget):
         self._gender_confidence_label.setMaximumWidth(confidence_label_width)
         self._age_confidence_label.setMinimumWidth(confidence_label_width)
         self._age_confidence_label.setMaximumWidth(confidence_label_width)
-
-    def _install_evidence_find_context_menu(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Install right-click Find actions on the evidence preview.
-        @param[in]  editor Evidence preview editor receiving the context menu.
-        @return     None.
-        @exception  None
-        """
-        editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        editor.customContextMenuRequested.connect(
-            lambda position, target_editor=editor: self._show_evidence_preview_menu(target_editor, position)
-        )
-
-    def _show_evidence_preview_menu(self, editor: QPlainTextEdit, position: QPoint) -> None:
-        """
-        @brief      Show the evidence preview context menu with Find commands.
-        @param[in]  editor Evidence preview editor that opened the menu.
-        @param[in]  position Local menu position inside the editor.
-        @return     None.
-        @exception  None
-        """
-        menu = editor.createStandardContextMenu()
-        menu.addSeparator()
-        find_action = menu.addAction(ui_state_service.translate("characters.find", self._ui_language))
-        find_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._prompt_evidence_find(target_editor)
-        )
-        find_next_action = menu.addAction(ui_state_service.translate("characters.find_next", self._ui_language))
-        find_next_action.setEnabled(bool(self._evidence_find_text_by_editor_id.get(id(editor), "")))
-        find_next_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._find_next_evidence_text(target_editor)
-        )
-        menu.exec(editor.mapToGlobal(position))
-
-    def _prompt_evidence_find(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Prompt for one search string and select the next evidence match.
-        @param[in]  editor Evidence preview editor that should be searched.
-        @return     None.
-        @exception  None
-        """
-        search_text, accepted = QInputDialog.getText(
-            self,
-            ui_state_service.translate("characters.find_title", self._ui_language),
-            ui_state_service.translate("characters.find_prompt", self._ui_language),
-        )
-        if not accepted or not search_text:
-            return
-        self._evidence_find_text_by_editor_id[id(editor)] = search_text
-        if self._find_evidence_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _find_next_evidence_text(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Select the next match for the current evidence search text.
-        @param[in]  editor Evidence preview editor that should be searched.
-        @return     None.
-        @exception  None
-        """
-        search_text = self._evidence_find_text_by_editor_id.get(id(editor), "")
-        if not search_text:
-            self._prompt_evidence_find(editor)
-            return
-        if self._find_evidence_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _find_evidence_text(self, editor: QPlainTextEdit, search_text: str) -> bool:
-        """
-        @brief      Find the next evidence match, wrapping once from the document start.
-        @param[in]  editor Evidence preview editor to search.
-        @param[in]  search_text Text to find.
-        @return     True when one match was selected.
-        @exception  None
-        """
-        if editor.find(search_text):
-            return True
-        cursor = editor.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Start)
-        editor.setTextCursor(cursor)
-        return editor.find(search_text)
-
-    def _show_find_not_found_message(self, search_text: str) -> None:
-        """
-        @brief      Show one translated message for a missing evidence search term.
-        @param[in]  search_text Text that was not found in the evidence preview.
-        @return     None.
-        @exception  None
-        """
-        QMessageBox.information(
-            self,
-            ui_state_service.translate("characters.find_title", self._ui_language),
-            ui_state_service.translate("characters.find_not_found", self._ui_language).format(search_text=search_text),
-        )
 
     def _apply_control_state(self) -> None:
         """

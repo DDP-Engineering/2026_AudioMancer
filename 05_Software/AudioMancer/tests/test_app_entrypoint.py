@@ -20,6 +20,18 @@ import pytest
 
 import audiomancer.app as app_module
 
+
+@pytest.fixture(autouse=True)
+def text_install_calls(monkeypatch):
+    """@brief Capture shared text installation without constructing Qt in bootstrap fakes."""
+    calls = []
+    monkeypatch.setattr(
+        app_module, "install_text_interactions",
+        lambda app, provider: calls.append((app, provider)), raising=False,
+    )
+    return calls
+
+
 # DATA MODELS / TYPEDEFINITIONS
 
 
@@ -97,7 +109,7 @@ class _FakeMainWindow:
 # PUBLIC API
 
 
-def test_main_creates_application_and_shows_window(monkeypatch) -> None:
+def test_main_creates_application_and_shows_window(monkeypatch, text_install_calls) -> None:
     """
     @brief      Verify the application bootstrap creates and shows the UI shell.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -127,6 +139,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         created.setdefault("construction_order", []).append("main_window")
         created["window_settings_payload"] = kwargs.get("settings_payload")
         created["window"] = _FakeMainWindow()
+        created["window"]._settings_payload = kwargs.get("settings_payload")
         return created["window"]
 
     def _initialize_logging():
@@ -256,6 +269,11 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     assert created["construction_order"] == ["theme", "main_window"]
     assert created["application"].exec_called is True
     assert created["window"].show_called is True
+    assert len(text_install_calls) == 1
+    assert text_install_calls[0][0] is created["application"]
+    assert text_install_calls[0][1]() == "en"
+    created["window"]._settings_payload = {"language": "ro"}
+    assert text_install_calls[0][1]() == "ro"
 
 
 def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:

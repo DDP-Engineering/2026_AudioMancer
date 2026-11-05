@@ -20,6 +20,7 @@ from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
+from audiomancer.ui.text_interaction import TextInteractionController
 
 
 def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
@@ -303,7 +304,7 @@ def test_text_chunking_page_emits_insert_and_delete_requests(qtbot) -> None:
 
 def test_text_chunking_page_installs_preview_find_context_menus(qtbot) -> None:
     """
-    @brief      Verify both text previews expose right-click custom menus for Find.
+    @brief      Verify both text previews use the shared state-aware Find menu.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
@@ -311,8 +312,11 @@ def test_text_chunking_page_installs_preview_find_context_menus(qtbot) -> None:
     page = TextChunkingPage()
     qtbot.addWidget(page)
 
-    assert page._cleaned_text_edit.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu
-    assert page._chunk_text_edit.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu
+    controller = TextInteractionController(lambda: "en", page)
+    for editor in (page._cleaned_text_edit, page._chunk_text_edit):
+        menu = controller.build_menu(editor)
+        names = {action.objectName() for action in menu.actions()}
+        assert {"text.find", "text.find_next", "text.find_previous"} <= names
 
 
 def test_text_chunking_page_find_next_uses_last_preview_search(monkeypatch, qtbot) -> None:
@@ -331,14 +335,14 @@ def test_text_chunking_page_find_next_uses_last_preview_search(monkeypatch, qtbo
     page._chunk_text_edit.setTextCursor(cursor)
     information_messages: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        "audiomancer.ui.pages.text_chunking_page.QMessageBox.information",
+        "audiomancer.ui.text_interaction.QMessageBox.information",
         lambda _parent, title, message: information_messages.append((title, message)),
     )
 
-    page._preview_find_text_by_editor_id[id(page._chunk_text_edit)] = "Beta"
-    page._find_next_preview_text(page._chunk_text_edit)
+    controller = TextInteractionController(lambda: "en", page)
+    assert controller.find_text(page._chunk_text_edit, "Beta")
     first_selection_start = page._chunk_text_edit.textCursor().selectionStart()
-    page._find_next_preview_text(page._chunk_text_edit)
+    controller.find_next(page._chunk_text_edit)
     second_selection_start = page._chunk_text_edit.textCursor().selectionStart()
 
     assert page._chunk_text_edit.textCursor().selectedText() == "Beta"

@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-UX-0ceb3822"
+
+title = "Provide state-aware text context menus across desktop controls"
+
+status = "active"
+
+requirement = """
+When a normal enabled text control receives a context-menu request, AudioMancer shall expose the localized shared menu appropriate to its current editability, selection, text, undo history and clipboard.
+"""
+
+verification = "Parameterize line/plain/rich editors, previews and later-created dialogs; assert read-only versus editable commands, disabled states, language changes and single application-wide installation."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py", "05_Software/AudioMancer/src/audiomancer/app.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

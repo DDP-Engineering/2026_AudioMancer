@@ -11,6 +11,7 @@ verification = "Automated: 2 linked pytest selector(s)."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/ui/pages/text_chunking_page.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_text_chunking_page.py::test_text_chunking_page_installs_preview_find_context_menus",
@@ -22,4 +23,4 @@ rationale = """
 Operators need find support within the preview.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-05

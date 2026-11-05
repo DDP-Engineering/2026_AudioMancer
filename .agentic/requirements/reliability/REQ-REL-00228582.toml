@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-REL-00228582"
+
+title = "Preserve text selection when search is cancelled or not found"
+
+status = "active"
+
+requirement = """
+When Find is cancelled or no match exists after wrapping, AudioMancer shall preserve the previous selection and text while retaining any previously accepted query on cancellation.
+"""
+
+verification = "Cancel a prefilled query and search missing text in line/plain/rich editors; verify exact selection, contents and prior query plus a localized no-match notification."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-SEC-ea6952c2"
+
+title = "Preserve native masked-field clipboard and search behavior"
+
+status = "active"
+
+requirement = """
+While a line editor uses a masked or non-normal echo mode, AudioMancer shall preserve its native clipboard and keyboard behavior without offering shared search or exposing its text in a search dialog.
+"""
+
+verification = "Send context-menu, Find and Paste events to password modes; assert the shared filter does not intercept or seed any search while ordinary editors remain supported."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

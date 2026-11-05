@@ -37,7 +37,9 @@ are verified separately from sign-in. Account-scoped model discovery supplies pr
 text models and per-model reasoning choices, with cached fallback and explicit effort
 persisted per subscription profile. Subscription model selection applies its reported
 default context while allowing manual edits until a different model is selected.
-The operator interface supports English and Romanian.
+The operator interface supports English and Romanian. Normal text fields and
+previews share localized context menus and local Find navigation, including
+dynamically created dialogs; edit commands follow the control's current state.
 
 ## Established constraints
 

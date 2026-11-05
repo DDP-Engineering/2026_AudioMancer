@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-05f3481f"
+
+title = "Route text search shortcuts to the focused control"
+
+status = "active"
+
+requirement = """
+When Ctrl+F, F3 or Shift+F3 is pressed in a normal text control, AudioMancer shall route Find, Find Next or Find Previous respectively to that control.
+"""
+
+verification = "Send real Qt key events to editors and viewports, including nested dialogs and a parent shortcut, and assert the target selection/query without duplicate dispatch."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

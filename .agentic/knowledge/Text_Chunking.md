@@ -7,14 +7,20 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 # Text Chunking
 
-## 1. Purpose
+## Routing
+
+For domain behavior, start at text_chunking_state_service and tests/test_text_chunking_page.py. Shared text context menus and
+Find navigation belong to App Shell's ui/text_interaction.py. Domain pages
+retain their existing Edit/Save/Cancel controls and persistence contracts.
+
+## Purpose and boundaries
 
 Text Chunking turns canonical cleaned text into ordered, persisted chunks that
 operators can inspect and edit before translation, character discovery, and
 speech generation. It consumes Cleanup's typed paragraph roles and provenance
 rather than rediscovering document structure from plain text.
 
-## 2. Responsibilities
+### Responsibilities
 
 - Accept only a completed Cleanup document whose output hash matches
   `clean_text.txt`.
@@ -37,12 +43,12 @@ rather than rediscovering document structure from plain text.
   insert, delete, and text edits only for completed documents, while resumable
   documents retain their checkpoints unchanged.
 - Present deterministic/AI actions, profile and strategy selection, previews,
-  editing, and localized find behavior through the existing page/controller.
+  editing through the existing page/controller; App Shell owns shared localized Find.
 
 It consumes Cleanup output but does not own extraction, Cleanup adjudication,
 generic AI transport, or downstream translation/speech semantics.
 
-## 3. Implementation Overview
+### Implementation
 
 `chunking_document_service` is the strict persistence boundary for the sole authoritative
 `chunks_text.json` document. Its public `chapter_label_from_text` helper owns
@@ -82,13 +88,13 @@ write or downstream invalidation, preserving the resume checkpoint and all
 artifacts; completed documents retain the existing manual-mutation behavior.
 The controller dispatches work through the
 shared operation runner and refreshes the project state. `TextChunkingPage`
-renders profiles, strategy, previews, edits, and search. Saving leaves edit
+renders profiles, strategy, previews and edits; the shared application filter supplies search. Saving leaves edit
 mode and reprojects the current durable page model before the synchronous
 controller request; a successful request refreshes that model from persisted
 state, while a rejected request cannot leave the draft in the model, list, or
 read-only editor.
 
-## 4. Dependencies
+### Dependencies
 
 Internal dependencies include Text Cleanup artifacts, AI Runtime budget,
 prompt/provider/token services, Project Lifecycle manifest persistence,
@@ -96,7 +102,7 @@ Operation Orchestration state/impact/runtime helpers, settings/UI state, and
 Qt widgets. External dependencies are PySide6 and project-local JSON/text
 storage.
 
-## 5. Inputs And Outputs
+## Public interface
 
 Inputs are the active project and manifest, completed `cleanup.json`,
 hash-matching `clean_text.txt`, chosen deterministic or AI strategy, enabled
@@ -111,7 +117,7 @@ A manual edit, insert, or delete atomically rewrites the canonical document
 and manifest, synchronizes affected translations, removes affected character
 evidence, Speech Blocks, and Audio Blocks, then resets Audio Assembly.
 
-## 6. Data Contracts
+## Invariants
 
 The document has an exact root-object schema containing lifecycle, mode,
 manual-adjustment, source fingerprint, semantic strategy, operator
@@ -194,7 +200,7 @@ marked chunk transfers the flag to the next surviving chunk when one exists.
 They preserve unrelated root metadata and set `manual_adjusted` in the
 authoritative document.
 
-## 7. Workflow Integration
+### Workflow integration
 
 The component begins only after validated Text Cleanup completion. Paused,
 running, malformed, or output-hash-mismatched Cleanup state is rejected even
@@ -204,7 +210,7 @@ recomputation uses Operation Orchestration to reset only affected downstream
 state. Those downstream components currently consume chunk content and
 provenance but do not consume `starts_after_scene_separator`.
 
-## 8. Usage
+### Usage
 
 Operators select deterministic chunking or an enabled AI profile/semantic
 strategy on the Text Chunking page. Controllers dispatch the requested mode
@@ -215,7 +221,13 @@ confirmation dialog. Page open is read-only and does not create state.
 Direct callers must provide a valid project manifest plus the same profile,
 cancellation, and progress contracts used by the UI.
 
-## 9. Validation And Tests
+## Change map
+
+| Change requested | Start with | Focused verification |
+| --- | --- | --- |
+| Domain behavior | text_chunking_state_service | tests/test_text_chunking_page.py |
+| Text menu/search | ui/text_interaction.py (App Shell) | test_text_interaction.py and page tests |
+
 
 Primary automated coverage:
 
@@ -238,7 +250,7 @@ state edits/invalidation, controller dispatch, and page behavior.
 Minimum validation after a change: run the focused modules above with
 `uv run pytest`, plus `uv run ruff check` on changed files.
 
-## 10. Limitations And Future Work
+### Operational limits
 
 AI boundaries remain advisory. Invalid tails are retried after committed valid
 prefixes; responses with no valid prefix use deterministic structural
@@ -255,6 +267,13 @@ chunks and is deliberately excluded from Chunking downstream reset ownership;
 chunk edits leave an older completed report visible but stale. A whole chunk
 that exceeds the selected model's safe Book Analysis source budget must be made
 smaller here or analyzed with a wider-context profile.
+
+## Key behaviors
+
+Shared text interaction uses REQ-UX-0ceb3822 and REQ-FUNC-439bbdcf through
+App Shell. The page supplies native text controls; the shared application filter
+owns context menus and Find state. Domain edit/save/reset behavior stays with
+the existing page/controller.
 
 ## Files
 

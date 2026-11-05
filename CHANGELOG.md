@@ -67,6 +67,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Text fields and previews throughout the application now share right-click
+  copy/edit commands, Select All, Undo/Redo and local Find with forward/backward
+  wraparound navigation. Ctrl+F, F3 and Shift+F3 work in pages and dialogs;
+  Paste inserts plain text and read-only fields remain protected.
+
 - HTML, HTM and XHTML books can be selected when creating a project and extracted
   locally without executing scripts or loading external resources.
 - FictionBook 2 (.fb2) extraction preserves body text, headings, poetry, tables

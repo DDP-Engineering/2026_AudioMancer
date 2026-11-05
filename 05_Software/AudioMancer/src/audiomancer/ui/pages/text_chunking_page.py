@@ -16,13 +16,11 @@
 
 # IMPORTS
 
-from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QListWidget,
     QMessageBox,
@@ -68,7 +66,6 @@ class TextChunkingPage(QWidget):
         self._editing_chunk = False
         self._has_ai_profiles = False
         self._language = config.DEFAULT_LANGUAGE
-        self._preview_find_text_by_editor_id: dict[int, str] = {}
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -114,7 +111,6 @@ class TextChunkingPage(QWidget):
         cleaned_layout = QVBoxLayout(cleaned_group)
         self._cleaned_text_edit = QPlainTextEdit(self)
         self._cleaned_text_edit.setReadOnly(True)
-        self._install_preview_find_context_menu(self._cleaned_text_edit)
         self._cleaned_text_edit.setPlainText("Cleaned text will appear here and serve as the chunking reference.")
         cleaned_layout.addWidget(self._cleaned_text_edit)
         left_layout.addWidget(cleaned_group, 5)
@@ -133,7 +129,6 @@ class TextChunkingPage(QWidget):
         chunk_preview_layout = QVBoxLayout(chunk_preview_group)
         self._chunk_text_edit = QPlainTextEdit(self)
         self._chunk_text_edit.setReadOnly(True)
-        self._install_preview_find_context_menu(self._chunk_text_edit)
         self._chunk_text_edit.setPlainText("The full text of the selected chunk will appear here.")
         chunk_preview_layout.addWidget(self._chunk_text_edit)
         chunk_action_row = QHBoxLayout()
@@ -432,105 +427,6 @@ class TextChunkingPage(QWidget):
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
-
-    def _install_preview_find_context_menu(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Install right-click Find actions on one text preview.
-        @param[in]  editor Preview editor receiving the custom context menu.
-        @return     None.
-        @exception  None
-        """
-        editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        editor.customContextMenuRequested.connect(
-            lambda position, target_editor=editor: self._show_preview_menu(target_editor, position)
-        )
-
-    def _show_preview_menu(self, editor: QPlainTextEdit, position: QPoint) -> None:
-        """
-        @brief      Show one preview editor context menu with Find commands.
-        @param[in]  editor Preview editor that opened the menu.
-        @param[in]  position Local menu position inside the editor.
-        @return     None.
-        @exception  None
-        """
-        menu = editor.createStandardContextMenu()
-        menu.addSeparator()
-        find_action = menu.addAction(ui_state_service.translate("text_chunking.find", self._current_language()))
-        find_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._prompt_preview_find(target_editor)
-        )
-        find_next_action = menu.addAction(
-            ui_state_service.translate("text_chunking.find_next", self._current_language())
-        )
-        find_next_action.setEnabled(bool(self._preview_find_text_by_editor_id.get(id(editor), "")))
-        find_next_action.triggered.connect(
-            lambda _checked=False, target_editor=editor: self._find_next_preview_text(target_editor)
-        )
-        menu.exec(editor.mapToGlobal(position))
-
-    def _prompt_preview_find(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Prompt for one search string and select the next preview match.
-        @param[in]  editor Preview editor that should be searched.
-        @return     None.
-        @exception  None
-        """
-        search_text, accepted = QInputDialog.getText(
-            self,
-            ui_state_service.translate("text_chunking.find_title", self._current_language()),
-            ui_state_service.translate("text_chunking.find_prompt", self._current_language()),
-        )
-        if not accepted or not search_text:
-            return
-        self._preview_find_text_by_editor_id[id(editor)] = search_text
-        if self._find_preview_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _find_next_preview_text(self, editor: QPlainTextEdit) -> None:
-        """
-        @brief      Select the next match for the current preview search text.
-        @param[in]  editor Preview editor that should be searched.
-        @return     None.
-        @exception  None
-        """
-        search_text = self._preview_find_text_by_editor_id.get(id(editor), "")
-        if not search_text:
-            self._prompt_preview_find(editor)
-            return
-        if self._find_preview_text(editor, search_text):
-            return
-        self._show_find_not_found_message(search_text)
-
-    def _find_preview_text(self, editor: QPlainTextEdit, search_text: str) -> bool:
-        """
-        @brief      Find the next preview match, wrapping once from the document start.
-        @param[in]  editor Preview editor to search.
-        @param[in]  search_text Text to find.
-        @return     True when one match was selected.
-        @exception  None
-        """
-        if editor.find(search_text):
-            return True
-        cursor = editor.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Start)
-        editor.setTextCursor(cursor)
-        return editor.find(search_text)
-
-    def _show_find_not_found_message(self, search_text: str) -> None:
-        """
-        @brief      Show one translated message for a missing preview search term.
-        @param[in]  search_text Text that was not found in the preview.
-        @return     None.
-        @exception  None
-        """
-        QMessageBox.information(
-            self,
-            ui_state_service.translate("text_chunking.find_title", self._current_language()),
-            ui_state_service.translate("text_chunking.find_not_found", self._current_language()).format(
-                search_text=search_text
-            ),
-        )
 
     def _begin_chunk_edit(self) -> None:
         """

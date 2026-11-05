@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-094a7552"
+
+title = "Paste plain text through native editor validation and undo"
+
+status = "active"
+
+requirement = """
+When Paste is invoked in an editable text control through its menu or standard keyboard shortcut, AudioMancer shall insert clipboard plain text through the native validation and undo mechanism.
+"""
+
+verification = "Use HTML-bearing clipboard data, editable and read-only widgets, line validators and undo/redo; assert plain text only and no project save signals."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

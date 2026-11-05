@@ -1,0 +1,26 @@
+schema = 1
+
+id = "REQ-FUNC-439bbdcf"
+
+title = "Find literal text with per-control repeat and backward navigation"
+
+status = "active"
+
+requirement = """
+When Find or repeat navigation is requested in a normal text control, AudioMancer shall select the next or previous literal case-insensitive match with wraparound using that control's own accepted query.
+"""
+
+verification = "Exercise multiple editors, selection-prefilled Find, next/previous wrapping, Unicode offsets and empty text; inspect literal matching and query isolation."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py"]
+
+linked_tests = ["05_Software/AudioMancer/tests/test_text_interaction.py"]
+
+
+spec = "specs/text_interactions.spec.md"
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-05
+updated = 2026-11-05

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication
 
 from audiomancer.services import character_discovery_service
 from audiomancer.ui.pages.characters_page import CharactersPage
+from audiomancer.ui.text_interaction import TextInteractionController
 
 
 def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
@@ -270,14 +271,15 @@ def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -
     page = _build_page(qtbot)
     page._evidence_preview.setPlainText("Alice speaks.\nBob answers.\nAlice replies.")
 
-    assert page._evidence_preview.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu
+    controller = TextInteractionController(lambda: "en", page)
+    assert any(a.objectName() == "text.find" for a in controller.build_menu(page._evidence_preview).actions())
 
     cursor = page._evidence_preview.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
     page._evidence_preview.setTextCursor(cursor)
 
-    page._evidence_find_text_by_editor_id[id(page._evidence_preview)] = "Alice"
-    page._find_next_evidence_text(page._evidence_preview)
+    assert controller.find_text(page._evidence_preview, "Alice")
+    controller.find_next(page._evidence_preview)
 
     assert page._evidence_preview.textCursor().selectedText() == "Alice"
 

@@ -9,7 +9,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 
 ## Routing
 
-For application startup, shared dialogs, page registration or window shutdown, start at `app.main`, `MainWindow` and `tests/test_main_window_lifecycle.py`. AI Runtime owns the account controller hosted by the AI Settings dialog.
+For application startup, shared text menus/search, dialogs, page registration or window shutdown, start at `app.main`, `MainWindow` and `tests/test_main_window_lifecycle.py`. AI Runtime owns the account controller hosted by the AI Settings dialog.
 
 ## Purpose and boundaries
 
@@ -21,6 +21,7 @@ window frame in which all AudioMancer workflow components run.
 - Compose the toolbar, left navigation sidebar, pages, dialogs, project summaries, and lifecycle cleanup in `MainWindow`.
 - Offer each workflow page's operation status through one modeless dialog opened from a button under the sidebar, enabled only once that page's operation has a recorded run status.
 - Provide shared user-facing help, about/license, message, progress, and title helpers.
+- Install one application-wide TextInteractionController for normal line/multiline text controls, including future dialogs; preserve native masked-field behavior.
 - Reapply the active locale to app-owned persistent surfaces and rebuild the
   current project page when runtime language settings change.
 
@@ -34,6 +35,14 @@ scroll services, page/controller modules, and operation/audio lifecycle
 services. External dependencies are PySide6 and the host desktop event loop.
 
 ## Public interface
+
+`ui.text_interaction.install_text_interactions(application, language_provider)`
+installs or reuses one application-owned event filter. It handles QLineEdit,
+QPlainTextEdit and QTextEdit, mapping viewport events to their owner. The
+provider reads MainWindow's current settings when a menu/dialog opens.
+`TextInteractionController.build_menu`, `prompt_find`, `find_text` and
+`find_next` expose the shared UI operations without owning project persistence.
+
 
 Home's `project_options_change_requested` signal routes deliberate language or
 narration selections to Project Lifecycle's confirmed persistence handler.
@@ -53,6 +62,16 @@ to the owning controllers. Domain code uses `MainWindow` navigation and refresh
 hooks rather than recreating application or dialog infrastructure.
 
 ## Invariants
+
+Normal enabled text controls share localized state-aware menus and focused
+Ctrl+F/F3/Shift+F3 search. Read-only controls expose only copy/selection/search;
+edit actions recheck current state. Paste inserts plain text through native Qt
+validation/undo. Each control retains its own accepted runtime query; literal
+case-insensitive searches wrap once, and cancellation/misses preserve selection
+and text. Masked/no-echo fields keep native interaction and never seed Find.
+No-match notices explicitly render plain text. Shared Find prompts prevent
+recursive Find. Editing continues through each page's existing workflow signals.
+
 
 Account sign-in/model-test workers keep their own AI Runtime cancellation
 lifecycle. Project workflow workers use Operation Orchestration's shutdown and
@@ -89,10 +108,18 @@ work in the owning component as well.
 
 | Change requested | Start with | Focused verification |
 | --- | --- | --- |
+| Shared text commands and search | ui/text_interaction.py | test_text_interaction.py, test_app_entrypoint.py |
 | Startup and page composition | app.main, MainWindow | test_app_entrypoint.py, test_main_window_lifecycle.py |
 | Account job shutdown | MainWindow.closeEvent | test_chatgpt_ui.py, test_main_window_operation_shutdown.py |
 
 ## Key behaviors
+
+- REQ-UX-0ceb3822: one dynamic state-aware text menu across pages and dialogs.
+- REQ-FUNC-439bbdcf: per-control literal forward/backward wraparound search.
+- REQ-FUNC-05f3481f: search shortcuts belong to the focused text control.
+- REQ-FUNC-094a7552: plain clipboard insertion follows native validation/undo.
+- REQ-REL-00228582: cancelled/missing searches preserve selection and text.
+- REQ-SEC-ea6952c2: masked inputs preserve native protected behavior.
 
 - `REQ-UX-3d0aeaec`: MainWindow owns ChatGPTAuthUiController for the static AI Settings dialog and asks it to cancel/finish before deleting widgets. A worker that exceeds the close budget keeps the window alive.
 - `REQ-UX-3e905eaa`: The AI Settings dialog hosts its page directly. The page owns body scrolling so Cancel, Apply and OK remain outside the scroll area; other settings dialogs retain their existing page wrappers.
@@ -100,7 +127,7 @@ work in the owning component as well.
 ### Implementation behavior
 
 `app.main` loads settings, creates `QApplication`, applies the persisted theme,
-installs global scrolling, shows `MainWindow`, and always shuts down logging.
+installs global scrolling and shared text interaction, shows `MainWindow`, and always shuts down logging.
 `__main__.py` delegates module invocation to that entry point, while
 `__init__.py` exposes `main` and the release version.
 
@@ -144,6 +171,9 @@ retain ownership of their own service contracts and state transitions.
 
 
 ## Files
+
+- `05_Software/AudioMancer/src/audiomancer/ui/text_interaction.py`
+- `05_Software/AudioMancer/tests/test_text_interaction.py`
 
 - `05_Software/AudioMancer/pyproject.toml`
 - `05_Software/AudioMancer/src/audiomancer/__init__.py`
