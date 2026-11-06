@@ -20,6 +20,7 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
+    cleanup_publication_service,
     operation_runtime_service,
     project_workspace_service,
     settings_service,
@@ -152,6 +153,7 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
     cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
     text_calls: list[tuple[Path, str]] = []
     json_calls: list[tuple[Path, object]] = []
+    original_text_write = cleanup_publication_service.write_text_atomic
 
     def _capture_text_write(target_path: str | Path, text: str, *, encoding: str = "utf-8") -> None:
         """
@@ -163,7 +165,7 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         @exception  None
         """
         text_calls.append((Path(target_path), text))
-        Path(target_path).write_text(text, encoding=encoding)
+        original_text_write(target_path, text, encoding=encoding)
 
     def _capture_json_write(target_path: str | Path, payload: object) -> None:
         """
@@ -176,18 +178,25 @@ def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> 
         json_calls.append((Path(target_path), payload))
         operation_runtime_service.write_json_atomic(target_path, payload)
 
-    monkeypatch.setattr(text_cleanup_service, "write_text_atomic", _capture_text_write)
-    monkeypatch.setattr(text_cleanup_service, "write_json_atomic", _capture_json_write)
+    monkeypatch.setattr(cleanup_publication_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(cleanup_publication_service, "write_json_atomic", _capture_json_write)
     monkeypatch.setattr(project_workspace_service, "write_json_atomic", _capture_json_write)
 
     text_cleanup_state_service.save_cleaned_text_edit(project_root, "Edited text.\n")
 
-    assert text_calls[0] == (cleaned_path, "Edited text.\n")
+    assert len(text_calls) == 1
+    assert text_calls[0][0].name == cleaned_path.name
+    assert text_calls[0][0].parent.name.startswith(".cleanup-stage-")
+    assert text_calls[0][1] == "Edited text.\n"
+    assert cleaned_path.read_text(encoding="utf-8") == "Edited text.\n"
     assert any(
-        path == project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+        path.name == config.CLEANUP_DOCUMENT_FILE_NAME and path.parent.name.startswith(".cleanup-stage-")
         for path, _payload in json_calls
     )
-    assert any(path == project_root / config.PROJECT_MANIFEST_FILE_NAME for path, _payload in json_calls)
+    assert any(
+        path.name == config.PROJECT_MANIFEST_FILE_NAME and path.parent.name.startswith(".cleanup-stage-")
+        for path, _payload in json_calls
+    )
 
 
 def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:

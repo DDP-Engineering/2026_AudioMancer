@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Improved checks for reliable Cleanup saves and Book Analysis results.
+
+## [2.2.1] - 2026-11-06
+
 ### Fixed
 
 - Text Chunking retains headings, structural roles and page artifacts, reports the

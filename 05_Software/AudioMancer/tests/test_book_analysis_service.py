@@ -46,6 +46,8 @@ def _write_completed_chunks(project_root, texts: list[str]) -> None:
             "chunk_id": f"chunk-{index:04d}",
             "sequence_index": index,
             "text": text,
+            "source_paragraph_start": index,
+            "source_paragraph_end": index,
             "cleanup_boundary_confidence": "high",
             "cleanup_joined_across_page_break": False,
             "cleanup_warning_flags": [],
