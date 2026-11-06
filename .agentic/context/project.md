@@ -25,6 +25,11 @@ Cleanup processes canonical text in an isolated pure package. Completed reruns
 retain the published text and downstream work until recoverable replacement
 succeeds; interrupted replacement AI work uses a separate pending checkpoint.
 
+Chunking uses an isolated pure source-range core, cursor-based budget planning,
+verified resumable prefixes and separate AI/persistence/edit adapters. Replacements
+and selective manual edits publish recoverably; pending replacements retain the
+previously published result and downstream work until success.
+
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.

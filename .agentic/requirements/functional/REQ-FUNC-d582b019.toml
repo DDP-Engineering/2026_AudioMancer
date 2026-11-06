@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-d582b019"
+title = "Disclose request policy changes on resume"
+status = "active"
+requirement = "When resuming with a changed AI request policy, Chunking shall retain the verified source prefix and disclose that only the remaining paragraphs use the new request policy."
+verification = "Cancel with an empty or nonempty prefix, change model, context, reasoning or structured-output policy, and resume; assert a warning before provider work and the verified prefix unchanged."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chunking_ai_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_changed_model_resume_retains_prefix_and_reports_policy_change", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_request_policy_warning_covers_reasoning_and_empty_prefix"]
+created = 2026-11-05
+updated = 2026-11-05

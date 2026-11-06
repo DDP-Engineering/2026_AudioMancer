@@ -41,6 +41,8 @@ _DOCUMENT_FIELDS = {
     "mode",
     "manual_adjusted",
     "source_fingerprint",
+    "plan_fingerprint",
+    "request_fingerprint",
     "semantic_strategy",
     "additional_chunking_instructions",
     "token_usage",
@@ -53,6 +55,8 @@ _CHUNK_FIELDS = {
     "chunk_id",
     "sequence_index",
     "text",
+    "source_paragraph_start",
+    "source_paragraph_end",
     "cleanup_boundary_confidence",
     "cleanup_joined_across_page_break",
     "cleanup_warning_flags",
@@ -107,7 +111,7 @@ def test_document_api_round_trips_exact_contract_and_returns_defensive_chunks(tm
 
 
 def test_document_api_rejects_non_boolean_scene_boundary_flag(tmp_path) -> None:
-    """Cover S-0016 and REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012."""
+    """@brief Cover S-0016 and REQ-FUNC-d08915c2-cdea-49bf-a769-7e6405f38012."""
     service = _chunking_document_service()
     document = _valid_document([_chunk("chunk-0001", 1, "Opening paragraph.")])
     document["chunks"][0]["starts_after_scene_separator"] = "yes"
@@ -328,6 +332,11 @@ def test_ai_resume_uses_stored_strategy_and_instructions_with_current_profile(tm
             "usage_available": True,
         },
     )
+    from audiomancer.chunking import materialization
+
+    records = ai_chunking_service._build_paragraph_records(source_text, project_root)
+    document["plan_fingerprint"] = materialization.plan_fingerprint(records)
+    document["chunks"] = [materialization._build_chunk_from_range(records, 0, 0, 1)]
     document["context_window_fallback_count"] = 1
     _write_document(project_root, document)
     captured: dict[str, object] = {}
@@ -413,9 +422,7 @@ def test_manual_mutations_preserve_document_origin_and_set_manual_adjusted(tmp_p
     assert document["token_usage"]["total_tokens"] == 50
     assert document["manual_adjusted"] is True
     assert document["next_paragraph"] is None
-    assert [chunk["sequence_index"] for chunk in document["chunks"]] == list(
-        range(1, len(document["chunks"]) + 1)
-    )
+    assert [chunk["sequence_index"] for chunk in document["chunks"]] == list(range(1, len(document["chunks"]) + 1))
     assert all(set(chunk) == _CHUNK_FIELDS for chunk in document["chunks"])
     assert "last_workflow_impact" not in document
 
@@ -525,17 +532,19 @@ def test_text_chunking_state_projects_resumable_document_without_durable_progres
 
 
 def _chunking_document_service():
-    """Import the not-yet-implemented authoritative document module inside each test."""
+    """@brief Import the not-yet-implemented authoritative document module inside each test."""
     return import_module("audiomancer.services.chunking_document_service")
 
 
 def _chunk(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
-    """Build one exact canonical Chunking chunk record."""
+    """@brief Build one exact canonical Chunking chunk record."""
     return {
         "chunk_id": chunk_id,
         "sequence_index": sequence_index,
         "text": text,
-        "cleanup_boundary_confidence": "high",
+        "source_paragraph_start": None,
+        "source_paragraph_end": None,
+        "cleanup_boundary_confidence": "strong",
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "cleanup_role": "body",
@@ -544,7 +553,7 @@ def _chunk(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
 
 
 def _empty_usage() -> dict[str, object]:
-    """Build canonical empty token usage."""
+    """@brief Build canonical empty token usage."""
     return {
         "input_tokens": 0,
         "output_tokens": 0,
@@ -565,12 +574,14 @@ def _valid_document(
     token_usage: dict[str, object] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, object]:
-    """Build one valid exact Chunking document fixture."""
+    """@brief Build one valid exact Chunking document fixture."""
     return {
         "status": status,
         "mode": mode,
         "manual_adjusted": False,
         "source_fingerprint": f"sha256:{sha256(source_text.encode('utf-8')).hexdigest()}",
+        "plan_fingerprint": None,
+        "request_fingerprint": None,
         "semantic_strategy": semantic_strategy,
         "additional_chunking_instructions": additional_instructions,
         "token_usage": deepcopy(token_usage) if token_usage is not None else _empty_usage(),

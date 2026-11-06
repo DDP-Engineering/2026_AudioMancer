@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-DATA-20f1afcf"
+title = "Represent grouped confidence conservatively"
+status = "active"
+requirement = "When grouping paragraphs, Chunking shall retain their combined warnings and weakest known boundary confidence, using unknown if any confidence is unknown."
+verification = "Group strong and low confidence records, then an unknown record; assert low then None and the union of warnings."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/materialization.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_group_confidence_is_the_weakest_and_unknown_is_honest"]
+created = 2026-11-05
+updated = 2026-11-05

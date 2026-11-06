@@ -403,6 +403,8 @@ def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) 
         "chunk_id",
         "sequence_index",
         "text",
+        "source_paragraph_start",
+        "source_paragraph_end",
         "cleanup_boundary_confidence",
         "cleanup_joined_across_page_break",
         "cleanup_warning_flags",
@@ -441,7 +443,7 @@ def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None
 
 
 def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> None:
-    """Cover S-0017 and REQ-FUNC-2048d415-09d9-44bb-94ec-ba5c822ccff5."""
+    """@brief Cover S-0017 and REQ-FUNC-2048d415-09d9-44bb-94ec-ba5c822ccff5."""
     project_root, manifest = project_workspace_service.create_project("SceneBoundaryEdit", tmp_path)
     _write_chunks(
         project_root,
@@ -456,9 +458,7 @@ def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> Non
         "Edited second chunk",
     )
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
-    assert next(item for item in chunks if item["chunk_id"] == "chunk-0002")[
-        "starts_after_scene_separator"
-    ] is True
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0002")["starts_after_scene_separator"] is True
 
     manifest = text_chunking_state_service.insert_chunk_after_selected(
         project_root,
@@ -466,15 +466,11 @@ def test_manual_chunk_mutations_preserve_leading_scene_boundary(tmp_path) -> Non
         "chunk-0001",
     )
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
-    assert next(item for item in chunks if item["chunk_id"] == "chunk-0004")[
-        "starts_after_scene_separator"
-    ] is False
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0004")["starts_after_scene_separator"] is False
 
     text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0002")
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))["chunks"]
-    assert next(item for item in chunks if item["chunk_id"] == "chunk-0003")[
-        "starts_after_scene_separator"
-    ] is True
+    assert next(item for item in chunks if item["chunk_id"] == "chunk-0003")["starts_after_scene_separator"] is True
 
 
 @pytest.mark.parametrize("status", ("running", "cancelled", "failed"))

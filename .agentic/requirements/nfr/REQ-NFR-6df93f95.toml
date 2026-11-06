@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-NFR-6df93f95"
+title = "Isolate Chunking algorithms"
+status = "active"
+requirement = "The Chunking core shall compute validation, structural materialization and window planning without importing project persistence, providers or UI services."
+verification = "Inspection: inspect imports in chunking package and run pure-core tests without project setup."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/"]
+linked_tests = []
+created = 2026-11-05
+updated = 2026-11-05

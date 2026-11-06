@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-16bd24d0"
+title = "Skip AI for an oversized paragraph"
+status = "active"
+requirement = "If one paragraph exceeds the available text budget, AI Chunking shall retain it whole through deterministic fallback with an operator warning."
+verification = "Use an over-budget first paragraph followed by short text; assert no model request contains the oversized text, intact output and persisted warning."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_oversized_paragraph_bypasses_provider_and_remaining_text_continues"]
+created = 2026-11-05
+updated = 2026-11-05

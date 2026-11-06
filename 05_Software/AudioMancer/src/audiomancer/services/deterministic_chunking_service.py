@@ -21,11 +21,12 @@ from pathlib import Path
 from time import monotonic
 
 from audiomancer import config
+from audiomancer.chunking import materialization
 from audiomancer.services import (
     chunking_document_service,
-    cleanup_metadata_service,
+    chunking_input_service,
+    chunking_publication_service,
     cleanup_text_analysis_service,
-    project_workspace_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -68,6 +69,8 @@ def chunk_text(
     manifest: dict[str, object],
     progress_callback=None,
     cancel_requested=None,
+    *,
+    restart: bool = False,
 ) -> ChunkingReportPayload:
     """
     @brief      Run deterministic chunking for one active project.
@@ -75,6 +78,7 @@ def chunk_text(
     @param[in]  manifest Active project manifest payload.
     @param[in]  progress_callback Optional zero-copy progress callback.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  restart Explicitly discard an unfinished checkpoint and start from source.
     @return     Chunking report payload for the persisted artifacts.
     @exception  FileNotFoundError Raised when the cleaned input is missing.
     @exception  ValueError Raised when no chunkable paragraphs remain.
@@ -94,7 +98,7 @@ def chunk_text(
     if not any(_is_narratable_record(record) for record in paragraph_records):
         raise ValueError("Cleaned text does not contain any narratable paragraphs.")
 
-    existing_document = chunking_document_service.load_chunking_document(resolved_project_root)
+    existing_document = None if restart else chunking_document_service.load_checkpoint(resolved_project_root)
     start_index = 0
     chunks: list[ChunkPayload] = []
     if existing_document is not None and existing_document["status"] in chunking_document_service.RESUMABLE_STATUSES:
@@ -109,14 +113,17 @@ def chunk_text(
         next_paragraph = int(existing_document["next_paragraph"])
         start_index = next_paragraph - 1
         chunks = list(existing_document["chunks"])
-        expected_chunk_count = sum(
-            _is_narratable_record(record)
-            for record in paragraph_records[:start_index]
-        )
+        expected_chunk_count = sum(_is_narratable_record(record) for record in paragraph_records[:start_index])
         if len(chunks) != expected_chunk_count:
             raise chunking_document_service.IncompatibleChunkingDocumentError(
                 "Chunking data is incompatible. Use Reset Chunking before continuing."
             )
+
+    plan_identity = materialization.plan_fingerprint(paragraph_records)
+    if existing_document is not None and existing_document["status"] in chunking_document_service.RESUMABLE_STATUSES:
+        if existing_document["plan_fingerprint"] != plan_identity:
+            raise ValueError("Cleanup paragraph plan changed. Restart Chunking before continuing.")
+        materialization.validate_coverage(chunks, paragraph_records, start_index)
 
     document = chunking_document_service.build_document(
         status="running",
@@ -124,8 +131,9 @@ def chunk_text(
         source_text=input_text,
         chunks=chunks,
         next_paragraph=start_index + 1,
+        plan_fingerprint=plan_identity,
     )
-    chunking_document_service.write_chunking_document(resolved_project_root, document)
+    checkpoint_path = chunking_document_service.write_checkpoint(resolved_project_root, document)
     progress_total = len(paragraph_records)
     chapter_count, last_chapter_label = _chapter_count_state_from_chunks(chunks)
     last_checkpoint_index = start_index
@@ -162,7 +170,7 @@ def chunk_text(
                 current_time,
                 last_checkpoint_time,
             ):
-                chunking_document_service.write_chunking_document(resolved_project_root, document)
+                chunking_document_service.write_checkpoint(resolved_project_root, document)
                 last_checkpoint_index = progress_current
                 last_checkpoint_time = current_time
             if _should_emit_progress(
@@ -180,24 +188,31 @@ def chunk_text(
                 last_progress_time = current_time
     except OperationCancelledError:
         document["status"] = "cancelled"
-        chunking_document_service.write_chunking_document(resolved_project_root, document)
+        chunking_document_service.write_checkpoint(resolved_project_root, document)
         raise
     except Exception:
         document["status"] = "failed"
-        chunking_document_service.write_chunking_document(resolved_project_root, document)
+        chunking_document_service.write_checkpoint(resolved_project_root, document)
         raise
 
     document["status"] = "completed"
     document["next_paragraph"] = None
     document["warnings"] = _build_chunking_warnings(chapter_count)
-    chunking_document_service.write_chunking_document(resolved_project_root, document)
-    operation_state = chunking_document_service.derive_operation_state(document)
-    project_workspace_service.sync_manifest_operation_summary(
-        resolved_project_root,
-        "chunking",
-        operation_state,
-        current_stage="translation_ready",
-    )
+    try:
+        materialization.validate_coverage(chunks, paragraph_records)
+        chunking_publication_service.publish_chunks(
+            resolved_project_root, document, check_cancelled=lambda: raise_if_cancelled(cancel_requested)
+        )
+    except Exception as error:
+        document["status"] = "cancelled" if isinstance(error, OperationCancelledError) else "failed"
+        document["next_paragraph"] = len(paragraph_records) + 1
+        try:
+            chunking_document_service.write_checkpoint(
+                resolved_project_root, document, pending=checkpoint_path.name == config.CHUNKING_PENDING_FILE_NAME
+            )
+        except (OSError, ValueError):
+            _CHUNKING_LOGGER.exception("Could not persist terminal Chunking checkpoint after publication failure")
+        raise
     _emit_progress(
         progress_callback,
         progress_current=progress_total,
@@ -215,7 +230,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @return     Persisted chunking operation-state payload or `None`.
     @exception  None
     """
-    document = chunking_document_service.load_chunking_document(project_root)
+    document = chunking_document_service.load_checkpoint(project_root)
     return None if document is None else chunking_document_service.derive_operation_state(document)
 
 
@@ -246,58 +261,20 @@ def _starts_after_scene_separator(
     paragraph_index: int,
 ) -> bool:
     """Return whether one narratable paragraph follows an omitted scene separator."""
-    return paragraph_index > 0 and not _is_narratable_record(
-        paragraph_records[paragraph_index - 1]
-    )
+    return paragraph_index > 0 and not _is_narratable_record(paragraph_records[paragraph_index - 1])
 
 
-def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
-    """
-    @brief      Build the paragraph records.
-    @param[in]  cleaned_text Text value for `cleaned_text`.
-    @return     Derived helper result.
-    """
-    if project_root is not None:
-        paragraph_records = cleanup_metadata_service.load_completed_paragraph_records(
-            project_root,
-            cleaned_text,
-        )
-    else:
-        paragraph_records = cleanup_metadata_service.build_paragraph_records_from_text(cleaned_text)
-    records: list[dict[str, object]] = []
-    for record in paragraph_records:
-        records.append(
-            {
-                **dict(record),
-                "line_start": int(record.get("source_start_line", 1)),
-                "line_end": int(record.get("source_end_line", record.get("source_start_line", 1))),
-            }
-        )
-    return records
+_build_paragraph_records = chunking_input_service.load_paragraph_records
 
 
-def _build_chunk_payload(
-    sequence_index: int,
-    paragraph_record: dict[str, object],
-    *,
-    starts_after_scene_separator: bool = False,
-) -> ChunkPayload:
-    """
-    @brief      Build the chunk payload.
-    @param[in]  sequence_index Value for `sequence_index`.
-    @param[in]  paragraph_record Value for `paragraph_record`.
-    @return     Derived helper result.
-    """
-    return {
-        "chunk_id": f"chunk-{sequence_index:04d}",
-        "sequence_index": sequence_index,
-        "text": str(paragraph_record["text"]),
-        "cleanup_boundary_confidence": paragraph_record.get("boundary_confidence"),
-        "cleanup_joined_across_page_break": bool(paragraph_record.get("joined_across_page_break", False)),
-        "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
-        "cleanup_role": str(paragraph_record.get("role") or "body"),
-        "starts_after_scene_separator": starts_after_scene_separator,
-    }
+def _build_chunk_payload(sequence_index, paragraph_record, *, starts_after_scene_separator=False):
+    """@brief Build one deterministic source chunk with shared structural metadata."""
+    chunk = materialization._build_chunk_from_range([paragraph_record], 0, 0, sequence_index)
+    number = paragraph_record.get("paragraph_number")
+    chunk["source_paragraph_start"] = number
+    chunk["source_paragraph_end"] = number
+    chunk["starts_after_scene_separator"] = starts_after_scene_separator
+    return chunk
 
 
 def _should_write_checkpoint(
@@ -336,24 +313,10 @@ def _should_emit_progress(
     @return     True when progress should be emitted.
     @exception  None
     """
-    return (
-        progress_current < progress_total
-        and current_time - last_progress_time >= _PROGRESS_EMIT_INTERVAL_SECONDS
-    )
+    return progress_current < progress_total and current_time - last_progress_time >= _PROGRESS_EMIT_INTERVAL_SECONDS
 
 
-def _build_chunking_warnings(chapter_count: int) -> list[str]:
-    """
-    @brief      Build the chunking warnings.
-    @param[in]  chapter_count Value for `chapter_count`.
-    @return     Derived helper result.
-    """
-    warnings: list[str] = []
-    if chapter_count == 0:
-        warnings.append(
-            "No explicit chapter or scene headings were detected; chunk metadata uses sequential ordering only."
-        )
-    return warnings
+_build_chunking_warnings = materialization.build_warnings
 
 
 def _chapter_count_state_from_chunks(chunks: list[ChunkPayload]) -> tuple[int, str | None]:

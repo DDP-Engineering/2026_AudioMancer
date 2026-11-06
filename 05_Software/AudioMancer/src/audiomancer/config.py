@@ -487,6 +487,9 @@ CLEANUP_SUPPORTED_SOURCE_LANGUAGES = ("en", "ro", "de", "fr", "ru", "pt", "es", 
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 
+# @brief Isolated resumable replacement while completed chunks remain published.
+CHUNKING_PENDING_FILE_NAME = "chunking_pending.json"
+
 # @brief File name used for the optional resumable Book Analysis document.
 BOOK_ANALYSIS_DOCUMENT_FILE_NAME = "book_analysis.json"
 

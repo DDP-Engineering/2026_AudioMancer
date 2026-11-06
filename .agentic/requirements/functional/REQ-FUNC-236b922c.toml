@@ -4,7 +4,7 @@ title = "Text Chunking services shall persist operation state exclusively"
 status = "active"
 
 requirement = """
-Text Chunking services shall persist operation state exclusively through the canonical chunks_text.json document API.
+When Chunking persists lifecycle state, it shall use the strict document API with chunks_text.json for initial runs and chunking_pending.json for incomplete replacements of a published result.
 """
 
 verification = "Automated contract coverage verifies canonical document round-trips and deterministic and AI Chunking persistence."
@@ -26,4 +26,4 @@ rationale = """
 A single document API keeps Chunking persistence, resume state, and projections consistent.
 """
 created = 2026-07-24
-updated = 2026-07-30
+updated = 2026-11-05

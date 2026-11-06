@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-NFR-149f8458"
+title = "Plan AI windows with a cursor"
+status = "active"
+requirement = "When processing AI windows, Chunking shall estimate each paragraph cost once and advance a cursor over the remaining source."
+verification = "Force one-paragraph windows across many paragraphs and count estimator invocations independent of suffix length."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/planning.py", "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_window_runtime_estimates_paragraphs_once"]
+created = 2026-11-05
+updated = 2026-11-05

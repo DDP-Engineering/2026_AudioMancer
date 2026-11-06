@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-6a9a707e"
+title = "Preserve structural roles in every grouping"
+status = "active"
+requirement = "When materializing source paragraph ranges, Chunking shall separate headings, page artifacts and role transitions while omitting scene separators."
+verification = "Request a mixed heading/body/artifact range and assert separate source-only chunks and the following scene boundary."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/materialization.py", "05_Software/AudioMancer/src/audiomancer/chunking/document.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_every_ai_range_respects_structural_roles", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_page_artifact_is_a_supported_retained_chunk"]
+created = 2026-11-05
+updated = 2026-11-05

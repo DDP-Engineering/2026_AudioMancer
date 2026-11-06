@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-978f58f7"
+title = "Clear stale provenance on manual text changes"
+status = "active"
+requirement = "When a chunk is edited or inserted, Chunking shall assign conservative manual metadata and clear automatic paragraph provenance while preserving existing stable identifiers."
+verification = "Edit and insert after a heading; assert body role for prose, null source bounds and unchanged sibling IDs/metadata."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/materialization.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_edit_service.py", "05_Software/AudioMancer/src/audiomancer/services/text_chunking_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_manual_edit_clears_only_changed_provenance", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_inserted_prose_does_not_inherit_a_heading_role"]
+created = 2026-11-05
+updated = 2026-11-05

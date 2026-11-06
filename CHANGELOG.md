@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Text Chunking retains headings, structural roles and page artifacts, reports the
+  weakest confidence in grouped text, and keeps oversized paragraphs whole without
+  sending them beyond the AI text budget.
+- Chunking reruns and manual saves preserve published results when cancelled or
+  saving fails. Interrupted replacements resume from verified source paragraphs;
+  changed AI request settings are disclosed before processing the remaining text.
+
 - Cleanup reruns and manual saves retain the previous result and downstream work
   when cancelled or when saving fails, and resume interrupted replacement work.
 - Cleanup preserves chapter and verse boundaries and hyphenation across pages,
@@ -34,6 +41,10 @@ All notable changes to this project will be documented in this file.
   text to preserve the safeguard against deleting an entire page.
 
 ### Changed
+
+- Separated Chunking algorithms, AI requests, project persistence and manual edits;
+  added source paragraph references and efficient window planning for long books.
+  Both user guides explain resume, regeneration and selective editing behavior.
 
 - Isolated Cleanup processing from project storage and the desktop UI; clarified
   the bounded AI role and validation limits in both user guides.

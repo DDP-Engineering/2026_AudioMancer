@@ -202,7 +202,7 @@ def test_chunking_prefers_cleanup_document_paragraph_records(tmp_path) -> None:
                 "output_start": 0,
                 "output_end": len(cleaned_text.rstrip("\n")),
                 "role": "body",
-                "confidence": "repaired",
+                "confidence": "low",
                 "reason_codes": ["page_transition_repaired"],
                 "source_page_start": 1,
                 "source_page_end": 2,
@@ -220,7 +220,7 @@ def test_chunking_prefers_cleanup_document_paragraph_records(tmp_path) -> None:
     assert report_payload["chunk_count"] == 1
     assert len(chunks) == 1
     assert chunks[0]["cleanup_joined_across_page_break"] is True
-    assert chunks[0]["cleanup_boundary_confidence"] == "repaired"
+    assert chunks[0]["cleanup_boundary_confidence"] == "low"
 
 
 def test_chunking_rejects_missing_cleanup_document(tmp_path) -> None:
@@ -309,18 +309,22 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
         "\n\n".join(f"Paragraph {index}." for index in range(1, 1001)) + "\n",
     )
     writes: list[tuple[str, int | None, int, tuple[str, ...]]] = []
+    real_write = chunking_document_service.write_chunking_document
 
     monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: 0.0)
     monkeypatch.setattr(
         chunking_document_service,
         "write_chunking_document",
-        lambda _root, document: writes.append(
-            (
-                str(document["status"]),
-                document["next_paragraph"],
-                len(document["chunks"]),
-                tuple(document["warnings"]),
+        lambda _root, document: (
+            writes.append(
+                (
+                    str(document["status"]),
+                    document["next_paragraph"],
+                    len(document["chunks"]),
+                    tuple(document["warnings"]),
+                )
             )
+            or real_write(_root, document)
         ),
     )
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
@@ -351,12 +355,14 @@ def test_chunking_checkpoint_pairs_are_resume_consistent(tmp_path, monkeypatch) 
     cleanup_path.write_text(json.dumps(cleanup_payload, indent=2) + "\n", encoding="utf-8")
     timestamps = iter((0.0, 0.0, 2.1, 2.1))
     writes: list[tuple[str, int | None, int]] = []
+    real_write = chunking_document_service.write_chunking_document
     monkeypatch.setattr(deterministic_chunking_service, "monotonic", lambda: next(timestamps))
     monkeypatch.setattr(
         chunking_document_service,
         "write_chunking_document",
-        lambda _root, document: writes.append(
-            (str(document["status"]), document["next_paragraph"], len(document["chunks"]))
+        lambda _root, document: (
+            writes.append((str(document["status"]), document["next_paragraph"], len(document["chunks"])))
+            or real_write(_root, document)
         ),
     )
 

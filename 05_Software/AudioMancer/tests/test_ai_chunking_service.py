@@ -669,14 +669,14 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         }
 
     window_build_starts: list[int] = []
-    original_window_builder = ai_chunking_service._build_windows_from_index  # noqa: SLF001
+    original_window_builder = ai_chunking_service.planning.next_window
 
-    def counting_window_builder(paragraph_records, start_index, budget_metadata):
-        """Record each remaining-window rebuild before delegating to the real builder."""
+    def counting_window_builder(costs, start_index, text_budget, paragraph_cap):
+        """@brief Record each next-window cursor selection, including resume."""
         window_build_starts.append(start_index)
-        return original_window_builder(paragraph_records, start_index, budget_metadata)
+        return original_window_builder(costs, start_index, text_budget, paragraph_cap)
 
-    monkeypatch.setattr(ai_chunking_service, "_build_windows_from_index", counting_window_builder)
+    monkeypatch.setattr(ai_chunking_service.planning, "next_window", counting_window_builder)
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
 
     with pytest.raises(operation_runtime_service.OperationCancelledError):
@@ -748,7 +748,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     completed_state = read_chunking_document(project_root)
     assert completed_state["status"] == "completed"
     assert completed_state["next_paragraph"] is None
-    assert window_build_starts == [0, 20, 20, 40]
+    assert window_build_starts == [0, 20, 20]
 
 
 def test_ai_running_state_reuses_prebuilt_chunks(tmp_path) -> None:

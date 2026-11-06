@@ -645,6 +645,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Inaintea unei rulari AI noi, AudioMancer deschide <strong>Instructiuni Segmentare AI</strong> ca sa adaugi reguli suplimentare in prompt. Lasa gol pentru promptul standard; apasarea Anuleaza acolo anuleaza rularea. Reluarea unei rulari intrerupte sare peste aceasta fereastra si refoloseste strategia stocata cu rularea, ignorand lista.</li>
                     <li>Daca modelul nu returneaza o impartire utilizabila pentru o fereastra, AudioMancer pastreaza granitele structurale ale ferestrei acolo unde poate si altfel salveaza fereastra ca un singur segment. Nota de progres numeste intervalul de paragrafe, iar rularea incheiata raporteaza totalul. Un <strong>Mod context segmentare</strong> mai larg in Setari AI poate da granite mai bune.</li>
                 </ul>
+                <p>
+                    Fiecare segment generat foloseste textul exact din sursa curatata. Titlurile si artefactele de pagina
+                    pastrate raman separate; proza, versurile, listele, notele si textul preformatat isi pastreaza limitele
+                    de rol. Separatorii de scena marcheaza segmentul urmator fara a deveni text rostit. Increderea unui
+                    grup reflecta paragraful cel mai incert. Un paragraf prea mare pentru bugetul de text AI este pastrat
+                    intreg, cu avertisment, fara cerere catre model; paragrafele urmatoare sunt procesate normal.
+                </p>
+                <p>
+                    Rerularea cere confirmare. Segmentele publicate si rezultatele ulterioare raman disponibile cat timp
+                    se pregateste inlocuirea. Anularea sau esecul le pastreaza si salveaza separat progresul inlocuirii;
+                    rezultatele dependente se reseteaza doar dupa publicarea reusita. Descoperirea personajelor si
+                    definitiile vocilor naratorului si personajelor isi pastreaza regulile existente de conservare.
+                    Schimbarea metodei in timpul unei rulari intrerupte cere confirmarea repornirii acelei rulari.
+                </p>
                 <h3>Editarea listei</h3>
                 <p>
                     Fiecare rand al listei arata idul segmentului si prima linie a textului sau. Selecteaza un segment
@@ -654,7 +668,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li><strong>Insereaza</strong> adauga un segment gol dupa cel selectat si creeaza chiar primul segment cand lista este goala. Intreaba intai, pentru ca un segment inserat adauga o inregistrare netradusa si reseteaza Asamblarea Audio.</li>
                     <li><strong>Sterge</strong> elimina segmentul selectat impreuna cu traducerea, Blocurile de Vorbire, Blocurile Audio si audio generat, apoi reseteaza Asamblarea Audio. Intreaba intai si este indisponibil cand a mai ramas un singur segment.</li>
                     <li><strong>Editeaza</strong> intreaba mereu intai: editarea unui segment poate reseta traducerea acelui segment, ii poate elimina Blocurile de Vorbire si Blocurile Audio si reseteaza Asamblarea Audio. Segmentele neafectate sunt pastrate.</li>
-                    <li><strong>Salveaza</strong> scrie modificarea fara alta intrebare.</li>
+                    <li><strong>Salveaza</strong> publica impreuna modificarea si impactul selectiv asupra etapelor urmatoare, fara alta intrebare. Un esec pastreaza fisierele anterioare. ID-urile segmentelor existente raman stabile; textul modificat sau inserat primeste metadate manuale noi, iar segmentele nemodificate isi pastreaza referintele sursa. Finalizeaza sau reia o rulare intrerupta inainte de editare.</li>
                 </ul>
                 <p>
                     Click dreapta in oricare panou de text pentru <strong>Cauta</strong> si <strong>Cauta
@@ -669,8 +683,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     porni altceva.
                 </div>
                 <p>
-                    Segmentarea poate fi intrerupta si continuata din punctul ei de control. Punctele de control scrise
-                    de versiuni mai vechi de AudioMancer reiau de la inceput.
+                    Segmentarea poate fi intrerupta si continuata din punctul ei de control. Reluarea verifica
+                    paragrafele sursa si prefixul salvat. Daca se schimba modelul AI, prompturile sau setarile de context,
+                    prefixul verificat este pastrat, iar un avertisment explica faptul ca doar textul ramas foloseste
+                    noile setari. Progresul numara paragrafele sursa procesate, inclusiv la reluare.
                 </p>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare Text">

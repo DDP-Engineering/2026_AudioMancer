@@ -50,6 +50,11 @@ QT_QPA_FONTDIR can point to the installed system font directory for readable
 offscreen captures. HowToTest.md keeps UI tests serial; service-tier parallelism
 is an opt-in route.
 
+Focused Chunking regressions use `tests/test_chunking_refinement.py`, the
+deterministic/AI Chunking service tests, descriptor/document contracts and
+text-chunking state/controller tests. These use synthetic provider responses;
+recovery tests inject filesystem failures without live model access.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

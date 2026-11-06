@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-0c8588a0"
+title = "Restore files after publication failure"
+status = "active"
+requirement = "If Chunking publication fails, Chunking shall restore the original owned project files or retain identifiable originals in a named recovery folder if restoration fails."
+verification = "Inject replacement and restore failures; compare original bytes or named recovery paths for generation and manual changes."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chunking_publication_service.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_edit_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_generation_publication_failure_restores_chunks_manifest_and_audio", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_failed_restoration_retains_identifiable_originals", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_manual_failure_leaves_published_chunk_bytes_untouched", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_manual_publication_failure_restores_originals", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_prepublication_cancellation_records_complete_terminal_prefix"]
+created = 2026-11-05
+updated = 2026-11-05

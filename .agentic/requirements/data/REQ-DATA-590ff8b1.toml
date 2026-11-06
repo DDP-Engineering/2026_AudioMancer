@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-DATA-590ff8b1"
+title = "Validate automatic source coverage"
+status = "active"
+requirement = "When generating or resuming automatic chunks, Chunking shall verify ordered exact source coverage using recorded paragraph ranges and the cleaned paragraph plan identity."
+verification = "Corrupt a resume range or change Cleanup role with identical text; assert rejection before a provider call or file write."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/chunking/materialization.py", "05_Software/AudioMancer/src/audiomancer/chunking/document.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_input_service.py", "05_Software/AudioMancer/src/audiomancer/services/deterministic_chunking_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_chunking_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_corrupted_checkpoint_text_is_rejected_before_mutation", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_cleanup_metadata_change_rejects_resume_without_touching_checkpoint"]
+created = 2026-11-05
+updated = 2026-11-05

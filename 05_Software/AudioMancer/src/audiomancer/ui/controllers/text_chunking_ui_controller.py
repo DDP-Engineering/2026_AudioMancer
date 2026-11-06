@@ -19,6 +19,7 @@
 
 # IMPORTS
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QMessageBox
@@ -29,7 +30,6 @@ from audiomancer.services import (
     chunking_document_service,
     deterministic_chunking_service,
     home_presenter_service,
-    operation_runtime_service,
     project_workspace_service,
     text_chunking_state_service,
     text_cleanup_state_service,
@@ -74,21 +74,28 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
         )
         return
 
-    chunking_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "chunking",
+    chunking_operation = _load_chunking_operation_state(window) or home_presenter_service.manifest_operation(
+        window._current_manifest, "chunking"
     )
-    if str(chunking_operation.get("status", "not_started")) == "completed":
-        if not confirm_chunking_rerun(window, current_language):
-            return
-        _reset_chunking_and_downstream(window)
+    restart = (
+        str(chunking_operation.get("status")) in chunking_document_service.RESUMABLE_STATUSES
+        and chunking_operation.get("mode") != "deterministic"
+    )
+    if (str(chunking_operation.get("status", "not_started")) == "completed" or restart) and not confirm_chunking_rerun(
+        window, current_language
+    ):
+        return
 
     start_operation(
         window,
         operation_kind="chunking",
         operation_name=ui_state_service.translate("text_chunking.chunk", current_language),
         initial_message=ui_state_service.translate("progress.chunking", current_language),
-        worker_callable=deterministic_chunking_service.chunk_text,
+        worker_callable=(
+            partial(deterministic_chunking_service.chunk_text, restart=True)
+            if restart
+            else deterministic_chunking_service.chunk_text
+        ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
         failure_handler=lambda error: handle_chunking_failure(window, error),
     )
@@ -126,9 +133,8 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         )
         return
 
-    chunking_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "chunking",
+    chunking_operation = _load_chunking_operation_state(window) or home_presenter_service.manifest_operation(
+        window._current_manifest, "chunking"
     )
     chunking_status = str(chunking_operation.get("status", "not_started"))
     chunking_mode = str(chunking_operation.get("mode") or "")
@@ -171,12 +177,9 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         if additional_chunking_instructions is None:
             return
 
-    if (
-        chunking_status not in resumable_ai_statuses or chunking_mode != "ai_assisted"
-    ) and chunking_status == "completed":
-        if not confirm_ai_chunking_rerun(window, current_language):
-            return
-        _reset_chunking_and_downstream(window)
+    restart = chunking_status in resumable_ai_statuses and chunking_mode != "ai_assisted"
+    if (chunking_status == "completed" or restart) and not confirm_ai_chunking_rerun(window, current_language):
+        return
 
     start_operation(
         window,
@@ -193,6 +196,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
                 cancel_requested=cancel_requested,
                 additional_chunking_instructions=additional_chunking_instructions,
                 chunking_context_mode=selected_context_mode,
+                **({"restart": True} if restart else {}),
             )
         ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
@@ -220,7 +224,7 @@ def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text:
             chunk_id,
             chunk_text,
         )
-    except ValueError as error:
+    except (ValueError, OSError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -258,7 +262,7 @@ def handle_insert_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
             window._current_manifest,
             chunk_id,
         )
-    except ValueError as error:
+    except (ValueError, OSError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -294,7 +298,7 @@ def handle_delete_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
             window._current_manifest,
             chunk_id,
         )
-    except ValueError as error:
+    except (ValueError, OSError) as error:
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -379,15 +383,8 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     _ = result_payload
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    updated_manifest = dict(window._current_manifest)
-    updated_manifest["current_stage"] = "translation_ready"
+    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["chunking"] = project_workspace_service.project_manifest_operation_summary(
-        "chunking",
-        _load_chunking_operation_state(window),
-    )
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
@@ -432,6 +429,12 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow") -> None:
     @exception  None
     """
     if window._current_manifest is None or window._current_project_root is None:
+        return
+    published = chunking_document_service.load_chunking_document(window._current_project_root)
+    if published is not None and published["status"] == "completed":
+        window.show_project_state(
+            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
+        )
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
@@ -530,29 +533,6 @@ def confirm_chunk_delete(window: "MainWindow", language: str) -> bool:
     )
 
 
-def _reset_chunking_and_downstream(window: "MainWindow") -> None:
-    """
-    @brief      Execute the reset chunking and downstream helper.
-    @param[in]  window Value for `window`.
-    @return     None.
-    """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
-    operation_runtime_service.reset_operation_data(
-        window._current_project_root,
-        "chunking",
-        include_current=True,
-        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-    )
-    reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
-        window._current_manifest,
-        "chunking",
-        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
-    )
-    project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-
-
 def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | None:
     """
     @brief      Load the chunking operation state.
@@ -561,7 +541,7 @@ def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | 
     """
     if window._current_project_root is None:
         return None
-    document = chunking_document_service.load_chunking_document(window._current_project_root)
+    document = chunking_document_service.load_checkpoint(window._current_project_root)
     return None if document is None else chunking_document_service.derive_operation_state(document)
 
 
@@ -601,7 +581,7 @@ def _resume_ai_strategy(
     @return     Helper result.
     """
     _ = chunking_operation
-    document = chunking_document_service.load_chunking_document(window._current_project_root or "")
+    document = chunking_document_service.load_checkpoint(window._current_project_root or "")
     if document is not None:
         semantic_strategy = document["semantic_strategy"]
         if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:

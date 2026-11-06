@@ -94,13 +94,17 @@ usage. Selective invalidation identifies blocks by stable identity fields, not
 display sequence numbers. Artifact collection/deletion rejects paths outside
 the active project and requires exact affected identities where appropriate.
 
-Chunking reset owns `chunks_text.json` and matching
+Chunking reset owns `chunks_text.json`, `chunking_pending.json` and matching
 `log_ai_chunking_*.log` files. When reset begins at Chunking with
 `include_current=True`, the same allowlisted deletion proceeds through every
 configured downstream operation; Extraction and Cleanup artifacts are outside
 that scope. `REQ-FUNC-2ab78634` requires automatic and manual Cleanup
 publication to pair this exact artifact reset with the Project Lifecycle
 compact-summary reset before reporting success.
+
+Chunking generation and manual edits use their own staged publication service;
+regeneration defers reset until the replacement is validated and ready to publish.
+Published results survive cancellation and caught IO failures.
 
 Root-level operation artifact names are reserved independently of whether a
 file currently exists. Project Lifecycle compares them case-insensitively when

@@ -67,6 +67,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "chunking": (
         config.CHUNK_ARTIFACT_FILE_NAME,
+        config.CHUNKING_PENDING_FILE_NAME,
         # Reset-only obsolete sidecars; Chunking never reads them.
         "chunking_checkpoint.json",
         "chunking_report.json",

@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-782398af"
+title = "Preserve published work during regeneration"
+status = "active"
+requirement = "While a Chunking replacement is incomplete, Chunking shall retain the published chunks and downstream artifacts while checkpointing the replacement separately."
+verification = "Cancel a replacement after a committed prefix and assert published chunks/audio unchanged and a resumable pending document."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/chunking_document_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_chunking_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_publication_service.py", "05_Software/AudioMancer/src/audiomancer/config.py", "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_chunking_refinement.py::test_cancelled_replacement_keeps_published_chunks_and_downstream", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_confirmed_ui_rerun_defers_all_deletion_until_worker_success", "05_Software/AudioMancer/tests/test_chunking_refinement.py::test_pending_ai_resume_uses_checkpoint_instead_of_completed_manifest"]
+created = 2026-11-05
+updated = 2026-11-05

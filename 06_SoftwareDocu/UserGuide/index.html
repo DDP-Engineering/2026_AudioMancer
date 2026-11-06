@@ -631,6 +631,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Before a fresh AI run, AudioMancer opens <strong>AI Chunking Instructions</strong> so you can add extra rules to the prompt. Leave it empty for the standard prompt; pressing Cancel there cancels the run. Resuming an interrupted run skips this dialog and reuses the strategy stored with the run, ignoring the combo.</li>
                     <li>If the model returns no usable split for a window, AudioMancer keeps that window's structural boundaries where it can and otherwise saves the window as one chunk. The progress note names the paragraph range, and the finished run reports the total. A wider <strong>Chunking Context Mode</strong> in AI Settings may produce better boundaries.</li>
                 </ul>
+                <p>
+                    Every generated chunk uses the exact cleaned source text. Headings and retained page artifacts stay
+                    separate; prose, verse, lists, footnotes and preformatted text keep their role boundaries. Scene
+                    separators mark the following chunk without becoming spoken text. Grouped confidence reflects the
+                    least certain paragraph. A paragraph too large for the AI text budget is kept whole with a warning
+                    and is processed without a model request; later paragraphs continue normally.
+                </p>
+                <p>
+                    Rerunning asks for confirmation. The published chunks and downstream work remain available while
+                    their replacement is being prepared. Cancellation or failure retains them and saves replacement
+                    progress separately; dependent results reset only after successful publication. Character discovery,
+                    narrator and character voice definitions retain their existing preservation rules. Switching method
+                    during an interrupted run asks to restart that unfinished run.
+                </p>
                 <h3>Editing The List</h3>
                 <p>
                     Each row of the chunk list shows the chunk id and the first line of its text. Select a chunk to
@@ -640,7 +654,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li><strong>Insert</strong> adds a new empty chunk after the selected one, and creates the very first chunk when the list is empty. It asks first, because an inserted chunk adds an untranslated record and resets Audio Assembly.</li>
                     <li><strong>Delete</strong> removes the selected chunk with its translation, Speech Blocks, Audio Blocks and generated audio, then resets Audio Assembly. It asks first, and it is unavailable when only one chunk remains.</li>
                     <li><strong>Edit</strong> always asks first: editing a chunk can reset that chunk's translation, remove its Speech Blocks and Audio Blocks, and reset Audio Assembly. Unaffected chunks are preserved.</li>
-                    <li><strong>Save</strong> writes the edit without a further question.</li>
+                    <li><strong>Save</strong> publishes the edit and its selective downstream changes together, without a further question. A failed save retains the previous files. Existing chunk IDs remain stable; changed or inserted text receives fresh manual metadata, while unchanged chunks keep their source references. Finish or resume an interrupted run before editing.</li>
                 </ul>
                 <p>
                     Right-click either text pane for <strong>Find</strong> and <strong>Find Next</strong>. The search
@@ -653,8 +667,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     page refreshes &mdash; press <strong>Save</strong> before starting anything else.
                 </div>
                 <p>
-                    Chunking can be interrupted and continued from its saved checkpoint. Checkpoints written by older
-                    AudioMancer versions restart from the beginning.
+                    Chunking can be interrupted and continued from its saved checkpoint. Resume verifies the source
+                    paragraphs and the saved prefix. If the AI model, prompts or context settings change, the verified
+                    prefix is retained and a warning explains that only the remaining text uses the new settings.
+                    Progress counts processed source paragraphs, including on resume.
                 </p>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">

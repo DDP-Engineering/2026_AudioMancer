@@ -438,7 +438,7 @@ warning flags contain only the explicit warning reason codes
 `deterministic_fallback`, `unknown_line_boundary`, and
 `page_transition_repaired`; benign provenance such as `user_edited`,
 `llm_verified_override`, and `user_whitespace_realign` is not a warning. The
-strict Chunking field set is unchanged.
+strict Chunking fields also record source paragraph ranges and plan/request fingerprints.
 
 Every persisted chunk contains the required boolean field
 `starts_after_scene_separator`. The field describes the leading boundary, not
@@ -446,7 +446,9 @@ the chunk text:
 
 ```text
 {
-  "cleanup_role": "body | heading | list_item | verse | preformatted | footnote",
+  "cleanup_role": "body | heading | page_artifact | list_item | verse | preformatted | footnote | scene_separator",
+  "source_paragraph_start": "positive integer | null for manual text",
+  "source_paragraph_end": "positive integer | null for manual text",
   "starts_after_scene_separator": boolean
 }
 ```
@@ -466,9 +468,39 @@ inserted chunk defaults to `false`. When a chunk whose marker is `true` is
 deleted, the marker transfers to the next surviving chunk when one exists so
 that deletion does not silently erase the structural boundary.
 
-The Chunking services persist operation state through the canonical
-`chunks_text.json` document API. Reset Chunking clears the operation's owned
-derived artifacts without interpreting them as current state.
+The Chunking services persist lifecycle through the strict document API. Initial
+runs checkpoint in `chunks_text.json`; incomplete replacements of a completed
+result checkpoint in `chunking_pending.json`. Public downstream readers use only
+`chunks_text.json`. Reset Chunking owns both documents and matching AI logs.
+
+Automatic chunk ranges are inclusive 1-based source paragraph bounds. Generation
+and resume verify source-only text, ordered exact coverage (except omitted scene
+separators), structural boundaries and aggregate metadata. Root `plan_fingerprint`
+identifies text, roles and paragraph metadata under the current materialization
+policy. `request_fingerprint` hashes nonsecret AI request policy; its raw profile,
+prompts and budget remain runtime-only. A changed request policy retains the
+verified prefix and emits a warning before processing the remaining paragraphs.
+Headings and page artifacts stand alone; differing content roles cannot merge.
+Confidence is the weakest of strong/medium/low, or null when any is unknown.
+
+AI estimates paragraph costs once and selects the next window by cursor. An
+over-budget paragraph becomes one deterministic fallback without a provider
+request, remains whole and produces a warning; processing then continues.
+Progress counts processed source paragraphs, including resumed prefixes.
+
+Completed generation stages the document and refreshed manifest before moving
+owned originals into a relative-path backup and replacing outputs. Cancellation
+before publication leaves published results and downstream work intact. Caught
+publication failures restore originals; a failed restore retains a named recovery
+folder. Character/narrator/voice preservation follows the existing text-revision
+policy. Successful publication removes the replacement checkpoint.
+
+Manual mutations run selective downstream impact against an isolated owned-file
+snapshot before the same recoverable publication boundary. Audio payloads may be
+hardlinked into the snapshot because these services delete rather than edit them.
+Changed/inserted text loses automatic source ranges, confidence and warnings and
+uses conservative manual roles. Unchanged chunks retain metadata and stable IDs.
+A pending running/cancelled/failed replacement blocks manual mutation.
 
 Deterministic Chunking keeps the canonical document recoverable without
 rewriting it after every paragraph:

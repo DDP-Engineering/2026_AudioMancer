@@ -65,6 +65,29 @@ def write_chunking_document(
         next_paragraph=next_paragraph,
         context_window_fallback_count=context_window_fallback_count,
     )
+    if (
+        status in {"running", "cancelled", "failed"}
+        and source_text
+        and (Path(document_root) / config.CLEANUP_DOCUMENT_FILE_NAME).is_file()
+    ):
+        from audiomancer.chunking import materialization
+        from audiomancer.services.chunking_input_service import load_paragraph_records
+
+        records = load_paragraph_records(source_text, document_root)
+        document["plan_fingerprint"] = materialization.plan_fingerprint(records)
+        cursor = 0
+        for chunk in document["chunks"]:
+            while cursor < len(records) and not materialization._is_narratable_record(records[cursor]):
+                cursor += 1
+            start = cursor
+            combined = ""
+            while cursor < len(records) and combined != chunk["text"]:
+                combined = "\n\n".join(str(item["text"]) for item in records[start : cursor + 1]).strip()
+                cursor += 1
+            if combined == chunk["text"]:
+                chunk.update(
+                    materialization._build_chunk_from_range(records, start, cursor - 1, chunk["sequence_index"])
+                )
     output_path = Path(document_root) / config.CHUNK_ARTIFACT_FILE_NAME
     output_path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return output_path
@@ -110,6 +133,8 @@ def build_chunking_document(
         "mode": inferred_mode,
         "manual_adjusted": manual_adjusted,
         "source_fingerprint": f"sha256:{sha256(source_text.encode('utf-8')).hexdigest()}",
+        "plan_fingerprint": None,
+        "request_fingerprint": None,
         "semantic_strategy": inferred_strategy if inferred_mode == "ai_assisted" else None,
         "additional_chunking_instructions": additional_chunking_instructions,
         "token_usage": token_usage
@@ -147,7 +172,7 @@ def write_cleanup_input(
     status: str = "completed",
     paragraphs: list[dict[str, object]] | None = None,
 ) -> Path:
-    """Write the strict Cleanup subset consumed by Chunking tests."""
+    """@brief Write the strict Cleanup subset consumed by Chunking tests."""
     paragraph_records = paragraphs or _cleanup_paragraphs(source_text)
     payload = {
         "status": status,
@@ -218,6 +243,8 @@ def _normalize_chunk(item: dict[str, object], sequence_index: int) -> dict[str, 
         "chunk_id": str(item.get("chunk_id", f"chunk-{sequence_index:04d}")),
         "sequence_index": sequence_index,
         "text": str(item.get("text", "")),
+        "source_paragraph_start": item.get("source_paragraph_start"),
+        "source_paragraph_end": item.get("source_paragraph_end"),
         "cleanup_boundary_confidence": item.get("cleanup_boundary_confidence"),
         "cleanup_joined_across_page_break": bool(item.get("cleanup_joined_across_page_break", False)),
         "cleanup_warning_flags": list(item.get("cleanup_warning_flags", [])),
@@ -238,7 +265,7 @@ def _inferred_mode(chunks: list[dict[str, object]]) -> str:
 
 
 def _cleanup_paragraphs(source_text: str) -> list[dict[str, object]]:
-    """Build body-role Cleanup paragraph offsets from blank-line-separated text."""
+    """@brief Build body-role Cleanup paragraph offsets from blank-line-separated text."""
     records = []
     start = 0
     for index, paragraph in enumerate(

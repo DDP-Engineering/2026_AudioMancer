@@ -207,7 +207,9 @@ artifacts.
 ## Invariants
 
 Chunking completion evidence and text-chunk exports are projections of the one
-strict `chunks_text.json` document. An incompatible document is regenerable
+strict `chunks_text.json` document. Incomplete replacements in `chunking_pending.json`
+are private resume state and do not replace published completion evidence or export
+content. An incompatible document is regenerable
 derived state: project open automatically removes Chunking-owned artifacts and
 all downstream results, resets their manifest summaries at
 `text_chunking_ready`, and retries validation exactly once. Source, Extraction,
