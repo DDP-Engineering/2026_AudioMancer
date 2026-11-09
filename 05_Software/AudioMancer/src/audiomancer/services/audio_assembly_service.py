@@ -351,6 +351,7 @@ def start_or_continue_composition(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     """
     resolved_project_root = Path(project_root)
+    speech_blocks_service.validate_current_translated_speech_source(resolved_project_root, manifest)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
     approved_blocks = _load_approved_audio_blocks(
         resolved_project_root,

@@ -1254,39 +1254,13 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
         translation_document = ai_translation_service.load_translation_document(project_root)
     except (OSError, ValueError):
         translation_document = None
-    if translation_document is not None:
-        translated_by_id = {
-            str(item.get("chunk_id", "")).strip(): item
-            for item in translation_document.get("chunks", [])
-            if isinstance(item, dict) and str(item.get("chunk_id", "")).strip()
-        }
-        translated_chunks: list[dict[str, object]] = []
-        translation_is_complete = bool(original_chunks)
-        for original_chunk in original_chunks:
-            chunk_id = str(original_chunk.get("chunk_id", "")).strip()
-            translated_chunk = translated_by_id.get(chunk_id)
-            translated_text = (
-                ""
-                if translated_chunk is None
-                else str(translated_chunk.get("translated_text", ""))
-            )
-            if (
-                translated_chunk is None
-                or not bool(translated_chunk.get("approved", False))
-                or not translated_text.strip()
-            ):
-                translation_is_complete = False
-                break
-            translated_chunks.append(
-                {
-                    **dict(original_chunk),
-                    "text": translated_text,
-                }
-            )
-        if translation_is_complete and len(translated_chunks) == len(original_chunks):
-            source_kind = CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED
-            source_language = str(translation_document.get("target_language", "")).strip()
-            source_chunks = translated_chunks
+    translated_chunks = ai_translation_service.resolve_approved_translation(
+        original_chunks, translation_document, ai_translation_service.manifest_target_language(manifest)
+    )
+    if translated_chunks is not None:
+        source_kind = CHARACTER_DISCOVERY_INPUT_SOURCE_TRANSLATED
+        source_language = str(translation_document["target_language"])
+        source_chunks = translated_chunks
     discovery_chunks: list[dict[str, object]] = []
     current_chapter_label: str | None = None
     for source_chunk in source_chunks:

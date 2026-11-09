@@ -49,8 +49,8 @@ def handle_extract_text_requested(window: MainWindow) -> None:
     ):
         return
     translation_page = getattr(window, "_ai_translation_page", None)
-    if translation_page is not None:
-        translation_page.flush_pending_translation_edit()
+    if translation_page is not None and translation_page.flush_pending_translation_edit() is False:
+        return
     stop_playback = getattr(window, "stop_all_audio_playback", None)
     if callable(stop_playback):
         stop_playback()

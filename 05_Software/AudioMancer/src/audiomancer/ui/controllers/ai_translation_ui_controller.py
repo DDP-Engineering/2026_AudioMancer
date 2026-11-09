@@ -22,13 +22,11 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
-    character_discovery_service,
     chunking_document_service,
-    operation_runtime_service,
     project_workspace_service,
-    text_cleanup_state_service,
     ui_state_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import misc_ui_controller, workflow_controller_service
 
 if TYPE_CHECKING:
@@ -198,50 +196,16 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
         "project.confirm_translation_reset",
     ):
         return
-    ai_translation_service.reset_translation(window._current_project_root)
-    source_invalidated = character_discovery_service.invalidate_if_source_changed(
-        window._current_project_root
-    )
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    operations["translation"] = default_operations["translation"]
-    if source_invalidated:
-        for selected_kind in operation_runtime_service.downstream_operation_kinds(
-            "translation",
-            include_current=False,
-        ):
-            if (
-                selected_kind in default_operations
-                and selected_kind
-                not in operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
-            ):
-                operations[selected_kind] = default_operations[selected_kind]
-        updated_manifest["current_stage"] = "text_chunking_ready"
-    elif str(updated_manifest.get("current_stage", "")) == "translation_ready":
-        updated_manifest["current_stage"] = "text_chunking_ready"
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    try:
+        ai_translation_service.reset_translation(window._current_project_root)
+    except (OSError, ValueError) as error:
+        _show_translation_error(window, error)
+        return
+    _refresh_project(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.translation_reset", current_language),
     )
-
-
-def _translation_manifest_stage(summary: dict[str, object]) -> str:
-    """
-    @brief      Resolve the manifest stage implied by the current translation report.
-    @param[in]  report Latest translation report payload.
-    @return     Workflow stage that remains valid after the translation update.
-    @exception  None
-    """
-    if str(summary.get("status", "")) == ai_translation_service.TRANSLATION_STATUS_COMPLETED:
-        return "character_discovery_ready"
-    return "translation_ready"
 
 
 def handle_approve_all_requested(window: "MainWindow") -> None:
@@ -253,8 +217,12 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    report = ai_translation_service.approve_all(window._current_project_root)
-    _sync_manifest_after_translation(window, report)
+    try:
+        ai_translation_service.approve_all(window._current_project_root)
+    except (OSError, ValueError) as error:
+        _show_translation_error(window, error)
+        return
+    _refresh_project(window)
 
 
 def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> None:
@@ -267,8 +235,12 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    report = ai_translation_service.approve_chunk(window._current_project_root, chunk_id)
-    _sync_manifest_after_translation(window, report)
+    try:
+        ai_translation_service.approve_chunk(window._current_project_root, chunk_id)
+    except (OSError, ValueError) as error:
+        _show_translation_error(window, error)
+        return
+    _refresh_project(window)
     window._ai_translation_page.advance_to_next_chunk()
 
 
@@ -283,12 +255,13 @@ def handle_translated_text_changed(window: "MainWindow", chunk_id: str, translat
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    report = ai_translation_service.update_translated_text(
-        window._current_project_root,
-        chunk_id,
-        translated_text,
-    )
-    _sync_manifest_after_translation(window, report)
+    try:
+        ai_translation_service.update_translated_text(window._current_project_root, chunk_id, translated_text)
+    except (OSError, ValueError) as error:
+        window._ai_translation_page.retain_unsaved_edit(chunk_id, translated_text)
+        _show_translation_error(window, error)
+        return
+    _refresh_project(window)
 
 
 # LOCAL HELPERS
@@ -326,7 +299,7 @@ def _handle_translation_success(window: "MainWindow", result_payload: object) ->
     @exception  None
     """
     assert isinstance(result_payload, dict)
-    _sync_manifest_after_translation(window, result_payload)
+    _refresh_project(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
@@ -344,15 +317,9 @@ def _handle_translation_failure(window: "MainWindow", error: Exception) -> None:
     @return     None.
     @exception  None
     """
-    _sync_manifest_from_disk(window)
-    QMessageBox.warning(
-        window,
-        ui_state_service.translate(
-            "dialog.project_error_title",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-        str(error),
-    )
+    _show_translation_error(window, error)
+    if not isinstance(error, ProjectFileRecoveryError):
+        _refresh_project(window)
 
 
 def _handle_translation_cancelled(window: "MainWindow", message: str) -> None:
@@ -364,7 +331,7 @@ def _handle_translation_cancelled(window: "MainWindow", message: str) -> None:
     @exception  None
     """
     _ = message
-    _sync_manifest_from_disk(window)
+    _refresh_project(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
@@ -374,70 +341,24 @@ def _handle_translation_cancelled(window: "MainWindow", message: str) -> None:
     )
 
 
-def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, object]) -> None:
-    """
-    @brief      Persist the latest translation operation state into the manifest.
-    @param[in]  window Active main window instance.
-    @param[in]  report Latest translation report payload.
-    @return     None.
-    @exception  None
-    """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    source_invalidated = character_discovery_service.invalidate_if_source_changed(
-        window._current_project_root
-    )
-    if source_invalidated:
-        operation_runtime_service.reset_operation_data(
-            window._current_project_root,
-            "translation",
-            include_current=False,
-            preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
-        )
-        default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-        preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
-        for selected_kind in operation_runtime_service.downstream_operation_kinds(
-            "translation",
-            include_current=False,
-        ):
-            if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
-                operations[selected_kind] = default_operations[selected_kind]
-    operations["translation"] = {
-        "status": str(report.get("status", ai_translation_service.TRANSLATION_STATUS_NOT_STARTED)),
-        "progress_current": int(report.get("translated_count", 0) or 0),
-        "progress_total": int(report.get("total_count", 0) or 0),
-        "mode": "ai_assisted",
-        "warning_count": int(report.get("warning_count", 0) or 0),
-    }
-    updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = _translation_manifest_stage(report)
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-
-
-def _sync_manifest_from_disk(window: "MainWindow") -> None:
-    """
-    @brief      Reload persisted translation state from disk after failure or cancel.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    """
-    if window._current_project_root is None:
-        return
-    try:
-        summary = ai_translation_service.load_translation_summary(window._current_project_root)
-    except ai_translation_service.TranslationDocumentError:
+def _refresh_project(window: "MainWindow") -> None:
+    """@brief Refresh from the service-published manifest."""
+    if window._current_project_root is not None:
         window.show_project_state(
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
         )
-        return
-    _sync_manifest_after_translation(window, summary)
+
+
+def _show_translation_error(window: "MainWindow", error: Exception) -> None:
+    """@brief Report a failed translation operation or edit."""
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate(
+            "dialog.project_error_title", ui_state_service.current_language_from_settings(window._settings_payload)
+        ),
+        str(error),
+    )
 
 
 def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: str | None) -> dict[str, object] | None:
@@ -496,4 +417,6 @@ def _manifest_target_language(window: "MainWindow") -> str:
         if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
             return target_language
     return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+
+
 # END OF FILE

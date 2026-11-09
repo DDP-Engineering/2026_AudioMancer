@@ -26,6 +26,7 @@ from audiomancer.services import (
     narrator_definition_service,
     ui_state_service,
 )
+from audiomancer.translation.document import canonical_source_chunks
 
 # PUBLIC API
 
@@ -70,10 +71,14 @@ def build_ai_translation_state(
             language,
             profile_state["selected_profile_id"],
         )
-    source_chunks = chunking_document_service.load_chunks(project_root)
+    source_chunks = canonical_source_chunks(chunking_document_service.load_chunks(project_root))
     target_language = ai_translation_service.manifest_target_language(manifest)
     try:
         document = ai_translation_service.load_translation_document(project_root)
+        if document is not None and document["target_language"] != target_language:
+            raise ai_translation_service.TranslationDocumentError(
+                ui_state_service.translate("ai_translation.note_target_mismatch", language)
+            )
     except ai_translation_service.TranslationDocumentError as exc:
         return {
             "source_chunks": source_chunks,
@@ -88,7 +93,7 @@ def build_ai_translation_state(
             "total_count": len(source_chunks),
         }
     summary = ai_translation_service.build_translation_summary(source_chunks, document)
-    translated_chunks = [] if document is None else [dict(item) for item in document["chunks"]]
+    translated_chunks = [] if document is None else ai_translation_service.aligned_chunks(source_chunks, document)
     return {
         "source_chunks": source_chunks,
         "translated_chunks": translated_chunks,
@@ -140,6 +145,11 @@ def build_ai_translation_notes(
         )
     ]
     if document is not None:
+        if any(
+            row["translated_text"].strip() and row.get("source_fingerprint") is None
+            for row in ai_translation_service.aligned_chunks(source_chunks, document)
+        ):
+            notes.append(ui_state_service.translate("ai_translation.note_legacy_review", language))
         notes.extend(
             ai_state_note_service.build_token_usage_notes(
                 {"token_usage": document["token_usage"]},

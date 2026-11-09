@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-DATA-00dfaad5"
+title = "Bind approval to current source"
+status = "active"
+requirement = "When a source chunk changes, AI Translation shall make the translation with the old source fingerprint ineligible for approval and downstream use."
+verification = "Change canonical text while retaining ID and check that only its translation becomes pending."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/translation/document.py", "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_changed_source_disqualifies_only_its_translation"]
+created = 2026-11-09
+updated = 2026-11-09

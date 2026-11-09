@@ -750,7 +750,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li><strong>Porneste Traducerea</strong> are nevoie de un profil AI selectat si de cel putin un segment fara traducere. AudioMancer deschide intai <strong>Instructiuni Traducere AI</strong> ca sa adaugi reguli suplimentare; Anuleaza acolo anuleaza rularea. Reluarea unei rulari intrerupte sare peste fereastra si pastreaza regulile stocate cu ea.</li>
                     <li><strong>Retradu Segmentul Selectat</strong> devine disponibil dupa ce traducerea a pornit si are nevoie de un segment selectat si de un profil selectat. Cere mereu instructiuni, iar acestea se aplica doar acelei incercari. Daca incercarea esueaza sau este anulata, textul si aprobarile existente raman neatinse.</li>
-                    <li><strong>Reseteaza Traducerea</strong> este modul in care incepi o trecere noua. Odata ce fiecare segment este tradus, <strong>Porneste Traducerea</strong> se dezactiveaza, deci schimbarea profilului sau a regulilor pentru o trecere completa noua inseamna resetare intai. Intreaba inainte de a sterge traducerea si rezultatele din aval pentru personaje, voci, vorbire, audio si audiobook.</li>
+                    <li><strong>Reseteaza Traducerea</strong> permite o trecere noua sau eliminarea unui document de traducere invalid. Actiunea cere confirmare. Cand se schimba textul folosit la narare, AudioMancer reseteaza rezultatele dependente pentru personaje, vorbire si audio si pastreaza definitia naratorului.</li>
                     <li><strong>Aproba Selectia</strong> aproba segmentul curent si muta selectia la urmatorul, deci poti revizui o carte intreaga fara sa atingi lista. <strong>Aproba Tot</strong> aproba toate segmentele traduse deodata, fara sa intrebe.</li>
                 </ul>
                 <div class="note">
@@ -763,6 +763,27 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <p>
                     Traducerea poate fi intrerupta si continuata ulterior din acelasi proiect.
+                </p>
+                <p>
+                    Traducerea trimite doar segmentele care contin text. Fiecare cerere respecta bugetul estimat pentru
+                    intrare si raspuns, iar aplicatia verifica pastrarea paragrafelor. Daca raspunsul are alt numar de
+                    paragrafe, AudioMancer reincearca fragmentul o singura data. Daca diferenta ramane, aplicatia
+                    afiseaza numarul asteptat si cel primit. Daca o cerere esueaza, segmentele
+                    deja traduse raman disponibile. Daca schimbi setarile cererii inainte de reluare, dialogul de
+                    progres anunta schimbarea inainte de urmatoarea cerere.
+                </p>
+                <p>
+                    Aprobarea se aplica textului sursa curent. Editarea unui segment sursa pune traducerea lui in
+                    asteptare. Traducerile mai vechi fara referinta la sursa raman vizibile pentru revizuire si cer o
+                    aprobare noua. Descoperirea Personajelor si Blocurile de Vorbire folosesc traducerea dupa ce toate
+                    segmentele cu text sunt aprobate fata de sursa curenta. O editare care nu se poate salva ramane
+                    in editor pentru reincercare, iar o inlocuire esuata restaureaza fisierele anterioare cand este posibil.
+                </p>
+                <p>
+                    Daca Blocurile de Vorbire provin dintr-o traducere care nu mai este valabila pentru sursa curenta,
+                    reseteaza-le si genereaza-le din nou inainte de a resegmenta un singur segment, de a genera
+                    Blocuri Audio sau de a asambla un audiobook nou. Verifica mai intai aprobarile din Traducere AI
+                    daca vrei sa continui cu textul tradus.
                 </p>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="Pagina Traducere AI">

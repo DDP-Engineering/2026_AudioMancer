@@ -16,6 +16,7 @@
 # IMPORTS
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -26,11 +27,33 @@ from audiomancer.services import (
     project_workspace_service,
     speech_blocks_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.main_window import MainWindow
 from chunking_test_support import build_chunking_document
 
 # PUBLIC API
+
+
+def test_worker_reports_recovery_path_without_reloading_missing_manifest(monkeypatch, tmp_path) -> None:
+    """@brief Show the recovery error even when the project manifest cannot be read."""
+    recovery_path = tmp_path / ".translation-backup-test"
+    error = ProjectFileRecoveryError(f"Restore project files from {recovery_path}.")
+    window = SimpleNamespace(_current_project_root=tmp_path, _settings_payload={"language": "en"})
+    messages: list[str] = []
+
+    def load_unavailable_manifest(_project_root):
+        """@brief Emulate an unavailable manifest after a failed restore."""
+        raise FileNotFoundError("Manifest is in the recovery directory.")
+
+    monkeypatch.setattr(
+        ai_translation_ui_controller.project_workspace_service, "load_manifest", load_unavailable_manifest
+    )
+    monkeypatch.setattr(ai_translation_ui_controller.QMessageBox, "warning", lambda *args: messages.append(args[2]))
+
+    ai_translation_ui_controller._handle_translation_failure(window, error)
+
+    assert messages == [str(error)]
 
 
 @pytest.mark.parametrize(
@@ -123,46 +146,22 @@ def test_translation_start_worker_observes_latest_pending_page_edit(monkeypatch,
 
 
 def test_translation_controller_syncs_derived_manifest_summary(qtbot, tmp_path) -> None:
-    """
-    @brief      Verify REQ-UX-003 the controller owns compact manifest synchronization.
-    @param[in]  qtbot Pytest-Qt fixture used to manage and interact with Qt widgets.
-    @param[in]  tmp_path Pytest temporary-path fixture used for isolated project data.
-    @return     None.
-    """
+    """@brief Refresh compact manifest state published by the translation service."""
     project_root, _manifest = _create_project(tmp_path, "TranslationManifestSummary")
+    ai_translation_service.write_translation_document(project_root, _document("review_pending"))
     window = _build_window(qtbot, project_root)
 
-    ai_translation_ui_controller._sync_manifest_after_translation(
-        window,
-        {
-            "status": ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
-            "translated_count": 1,
-            "approved_count": 0,
-            "total_count": 1,
-            "warning_count": 0,
-        },
-    )
-    assert window._current_manifest is not None
-    assert window._current_manifest["current_stage"] == "translation_ready"
+    ai_translation_ui_controller.handle_translated_text_changed(window, "chunk-0001", "Edited translation")
     assert window._current_manifest["operations"]["translation"] == {
-        "status": ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
+        "status": "review_pending",
         "progress_current": 1,
         "progress_total": 1,
         "mode": "ai_assisted",
         "warning_count": 0,
     }
-
-    ai_translation_ui_controller._sync_manifest_after_translation(
-        window,
-        {
-            "status": ai_translation_service.TRANSLATION_STATUS_COMPLETED,
-            "translated_count": 1,
-            "approved_count": 1,
-            "total_count": 1,
-            "warning_count": 0,
-        },
-    )
+    ai_translation_ui_controller.handle_approve_all_requested(window)
     assert window._current_manifest["current_stage"] == "character_discovery_ready"
+    assert window._current_manifest["operations"]["translation"]["status"] == "completed"
 
 
 def test_retranslate_before_translation_start_is_inert(monkeypatch, qtbot, tmp_path) -> None:
@@ -210,6 +209,10 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     @return     None.
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamReset")
+    document = _document("review_pending")
+    document["chunks"][0]["translated_text"] = "Text to review"
+    ai_translation_service.write_translation_document(project_root, document)
+    ai_translation_service.approve_all(project_root)
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
         json.dumps(_characters_document("original")) + "\n",
         encoding="utf-8",
@@ -236,17 +239,9 @@ def test_translation_controller_keeps_broad_downstream_reset_on_approval_loss(qt
     window._current_manifest["operations"]["narrator_definition"]["status"] = "completed"
     window._current_manifest["operations"]["character_discovery"]["status"] = "completed"
     window._current_manifest["operations"]["speech_blocks"]["status"] = "completed"
+    project_workspace_service.save_manifest(window._current_manifest, project_root)
 
-    ai_translation_ui_controller._sync_manifest_after_translation(
-        window,
-        {
-            "status": ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
-            "translated_count": 1,
-            "approved_count": 0,
-            "total_count": 1,
-            "warning_count": 0,
-        },
-    )
+    ai_translation_ui_controller.handle_translated_text_changed(window, "chunk-0001", "New text")
 
     assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
@@ -265,7 +260,10 @@ def test_translation_controller_reset_removes_monofile_and_preserves_narrator(mo
     @return     None.
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationReset")
-    ai_translation_service.write_translation_document(project_root, _document("review_pending"))
+    document = _document("review_pending")
+    document["chunks"][0]["translated_text"] = "Text to review"
+    ai_translation_service.write_translation_document(project_root, document)
+    ai_translation_service.approve_all(project_root)
     narrator_definition_service.ensure_narrator_voice_document(project_root)
     (project_root / config.CHARACTERS_DOCUMENT_FILE_NAME).write_text(
         json.dumps(_characters_document("translated")) + "\n",

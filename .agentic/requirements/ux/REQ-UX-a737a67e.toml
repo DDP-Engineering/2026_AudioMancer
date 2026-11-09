@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-UX-a737a67e"
+title = "Allow recovery from an invalid translation document"
+status = "active"
+requirement = "When the translation document is invalid, the translation page shall enable its confirmed reset action while idle."
+verification = "Build invalid page state and verify Reset is enabled and Start is disabled."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py", "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_page.py::test_invalid_translation_allows_reset", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_reset_can_remove_unreadable_translation"]
+created = 2026-11-09
+updated = 2026-11-09

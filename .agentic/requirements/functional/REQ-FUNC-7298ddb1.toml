@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-7298ddb1"
+title = "Resolve approved translation consistently"
+status = "active"
+requirement = "When downstream workflows resolve their text, AudioMancer shall select a completed, fully approved translation bound to the current source or use the applicable original-text fallback."
+verification = "Exercise complete, interrupted, mismatched and stale sources through text selection and prove stale translated Speech Blocks cannot generate new speech or audio."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py", "05_Software/AudioMancer/src/audiomancer/translation/document.py", "05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_consumers_agree_on_approved_source", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_stale_translated_speech_cannot_generate_new_output", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translated_speech_generation_checks_exact_approved_snapshot", "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_prefers_approved_translation_for_voice_language"]
+created = 2026-11-09
+updated = 2026-11-09

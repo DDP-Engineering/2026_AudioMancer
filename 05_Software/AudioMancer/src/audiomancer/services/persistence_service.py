@@ -20,10 +20,21 @@ from contextlib import suppress
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 from typing import Any
 
+from audiomancer.services.logging_service import get_component_logger
+
+# CONSTANTS
+
+_LOGGER = get_component_logger("persistence")
+
 # PUBLIC API
+
+
+class ProjectFileRecoveryError(OSError):
+    """@brief Signal that a failed publication left originals in a named recovery backup."""
 
 
 def write_text_atomic(
@@ -124,6 +135,62 @@ def _unlink_temporary_file(temporary_path: Path) -> None:
     """
     with suppress(OSError):
         temporary_path.unlink(missing_ok=True)
+
+
+def validate_publication_path(root: Path, path: Path, operation: str) -> None:
+    """@brief Reject redirected or escaped publication destinations before changing files."""
+    if not path.is_relative_to(root) or path == root or path.resolve() != path or path.is_symlink():
+        raise ValueError(f"{operation} artifact is redirected or outside the project: {path}")
+
+
+def replace_project_files(
+    root: Path,
+    changes: dict[Path, Path | None],
+    manifest_path: Path,
+    original_manifest: bytes,
+    operation: str,
+) -> None:
+    """@brief Replace a prepared set, restoring originals on every caught publication failure."""
+    for relative in changes:
+        validate_publication_path(root, root / relative, operation)
+    if manifest_path.read_bytes() != original_manifest:
+        raise ValueError(f"Project changed during {operation} publication; retry the operation.")
+    backup = Path(tempfile.mkdtemp(prefix=f".{operation.lower()}-backup-", dir=root))
+    moved, published = [], []
+    recovered = False
+    try:
+        for relative in sorted(changes):
+            path = root / relative
+            if path.is_file():
+                saved = backup / relative
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                path.replace(saved)
+                moved.append((path, saved))
+        for relative, candidate in changes.items():
+            if candidate is not None:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                candidate.replace(destination)
+                published.append(destination)
+        recovered = True
+    except Exception:
+        try:
+            for path in reversed(published):
+                path.unlink(missing_ok=True)
+            for path, saved in reversed(moved):
+                saved.replace(path)
+            recovered = True
+        except OSError as error:
+            raise ProjectFileRecoveryError(
+                f"{operation} recovery could not finish; originals retained in {backup}"
+            ) from error
+        raise
+    finally:
+        if recovered:
+            try:
+                shutil.rmtree(backup)
+            except OSError:
+                _LOGGER.exception("Could not remove %s backup %s", operation, backup)
 
 
 # END OF FILE

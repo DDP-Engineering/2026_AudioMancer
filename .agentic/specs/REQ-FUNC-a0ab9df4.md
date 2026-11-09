@@ -15,9 +15,10 @@ as an unsuccessful one-off attempt, not as a failed or cancelled batch. It
 propagates the original exception after persisting token usage accrued by
 completed provider segments. It does not replace any chunk text or approval,
 including with partial translated segments, and derives the document status
-from the unchanged chunks: `completed` when all are translated and approved,
-`review_pending` when all are translated but not all approved, otherwise
-`in_progress`.
+from the unchanged review records. A completed verified result remains completed.
+An unsuccessful one-off request never promotes an interrupted batch to completed.
+Cancellation at the publication boundary records usage and preserves the original
+text and approval state.
 
 A successful selected-chunk attempt keeps the established contract: replace
 only the selected text, clear only its approval, persist the new budget and
@@ -26,8 +27,7 @@ persist `cancelled` or `failed` on interruption.
 
 ## Data / interface
 
-No public signature or document-schema change is introduced. On interrupted
-selected retranslation, `budget_metadata` and general
+On interrupted selected retranslation, `budget_metadata` and general
 `additional_translation_instructions` remain their pre-attempt values; only
 `token_usage` and the derived `status` may change.
 

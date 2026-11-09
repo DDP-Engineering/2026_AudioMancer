@@ -153,7 +153,6 @@ def generate_narrator_profiles(
     @exception  ValueError Raised on invalid input, missing source text, or invalid AI output.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     """
-    _ = manifest
     resolved_project_root = Path(project_root)
     requested_count = _normalized_profile_count(profile_count)
     normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
@@ -170,7 +169,9 @@ def generate_narrator_profiles(
             "narrator_profile_generation_user",
         ]
     )
-    source_units, source_token, _ = _resolve_source_units(resolved_project_root, normalized_voice_language)
+    source_units, source_token, _ = _resolve_source_units(
+        resolved_project_root, normalized_voice_language, ai_translation_service.manifest_target_language(manifest)
+    )
     input_fingerprint = _build_input_fingerprint(source_units, source_token, normalized_voice_language)
     system_prompt = prompt_template_service.render_prompt("narrator_profile_style_system", {})
     existing_state = load_operation_state(resolved_project_root) or {}
@@ -468,15 +469,19 @@ def _gender_allocation(profile_count: int) -> dict[str, object]:
 def _resolve_source_units(
     project_root: Path,
     voice_language: str,
+    target_language: str,
 ) -> tuple[list[SourceUnitPayload], str, Path]:
     """
     @brief      Resolve the best narrator-profile analysis text for the selected voice language.
     @param[in]  project_root Active project root folder.
     @param[in]  voice_language Selected audiobook voice language code.
+    @param[in]  target_language Project translation target language code.
     @return     Source units, source token, and backing artifact path.
     @exception  ValueError Raised when no readable book text exists.
     """
-    translated_units = _approved_translation_units(project_root, voice_language)
+    translated_units = (
+        _approved_translation_units(project_root, target_language) if target_language == voice_language else []
+    )
     if translated_units:
         return translated_units, SOURCE_TRANSLATED_CHUNKS, project_root / config.TRANSLATED_CHUNKS_FILE_NAME
 
@@ -497,30 +502,27 @@ def _resolve_source_units(
     raise ValueError("Run cleanup or chunking before generating narrator profiles.")
 
 
-def _approved_translation_units(project_root: Path, voice_language: str) -> list[SourceUnitPayload]:
+def _approved_translation_units(project_root: Path, target_language: str) -> list[SourceUnitPayload]:
     """
-    @brief      Return approved translated chunks when they match the selected voice language.
+    @brief      Return approved translated chunks matching the project target language.
     @param[in]  project_root Active project root folder.
-    @param[in]  voice_language Selected audiobook voice language code.
+    @param[in]  target_language Project translation target language code.
     @return     Ordered translated source units or an empty list.
     @exception  None
     """
-    document = ai_translation_service.load_translation_document(project_root)
-    if document is None:
+    try:
+        document = ai_translation_service.load_translation_document(project_root)
+    except ai_translation_service.TranslationDocumentError:
         return []
-    target_language = narrator_definition_service.narrator_language_code(document["target_language"])
-    if target_language != narrator_definition_service.narrator_language_code(voice_language):
-        return []
-    if not ai_translation_service.translation_is_completed(project_root):
-        return []
-    units: list[SourceUnitPayload] = []
-    for index, chunk in enumerate(ai_translation_service.load_translated_chunks(project_root), start=1):
-        if not bool(chunk.get("approved", False)):
-            return []
-        text = str(chunk.get("translated_text", "")).strip()
-        if text:
-            units.append(_source_unit(str(chunk.get("chunk_id", f"translated-{index:04d}")), index, text))
-    return units
+    source = ai_translation_service.resolve_approved_translation(
+        chunking_document_service.load_chunks(project_root),
+        document,
+        target_language,
+    )
+    return [
+        _source_unit(str(chunk["chunk_id"]), index, str(chunk["text"]).strip())
+        for index, chunk in enumerate(source or [], start=1)
+    ]
 
 
 def _canonical_chunk_units(project_root: Path) -> list[SourceUnitPayload]:

@@ -90,7 +90,9 @@ settings save that discards no output refreshes the page through
 
 ## 7. Workflow Integration
 
-Audio Assembly is the final runtime workflow after TTS Audio Blocks. It consumes approved generated audio and provides reviewable deliverables; upstream resets invalidate only affected assembly outputs.
+Audio Assembly is the final runtime workflow after TTS Audio Blocks. It consumes approved generated audio and provides reviewable deliverables; upstream resets invalidate only affected assembly outputs. Composition requires
+any translated Speech Blocks source to match the current approved translation.
+An existing assembled audiobook remains available for review.
 
 ## 8. Usage
 

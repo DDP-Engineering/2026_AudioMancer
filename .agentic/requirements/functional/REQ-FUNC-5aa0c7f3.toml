@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-5aa0c7f3"
+title = "Keep empty source chunks out of translation"
+status = "active"
+requirement = "When a canonical chunk contains no text, AI Translation shall omit it from requests and approval totals."
+verification = "Translate a mixed empty and nonempty source and verify one request and one reviewable segment."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py", "05_Software/AudioMancer/src/audiomancer/translation/document.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_blank_source_is_not_requested_or_counted"]
+created = 2026-11-09
+updated = 2026-11-09

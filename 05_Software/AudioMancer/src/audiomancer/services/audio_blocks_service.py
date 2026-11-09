@@ -1290,7 +1290,7 @@ def _resolve_generation_context(
     @return     Validated generation-context payload.
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     """
-    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root, generation_manifest=manifest)
     if not speech_blocks:
         raise ValueError("Generate Speech Blocks before starting Audio Blocks.")
     approved_speech_blocks = [block for block in speech_blocks if _speech_block_is_approved(block)]

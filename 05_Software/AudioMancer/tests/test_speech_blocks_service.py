@@ -35,7 +35,7 @@ from audiomancer.services import (
     speech_blocks_service,
     speech_blocks_text_split_service,
 )
-from chunking_test_support import build_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -198,6 +198,7 @@ def test_resolve_source_chunks_uses_translated_when_fully_approved(tmp_path) -> 
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslated")
     manifest["original_language"] = "en"
+    manifest["target_language"] = "ro"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "ro")
     _write_translation_artifacts(
@@ -226,6 +227,7 @@ def test_resolve_source_chunks_uses_translated_regardless_of_selected_voice_lang
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslatedOverridesVoice")
     manifest["original_language"] = "en"
+    manifest["target_language"] = "ro"
     project_workspace_service.save_manifest(manifest, project_root)
     # Operator selected the ORIGINAL voice language, yet the translation is complete and fully approved.
     character_voices_service.save_selected_voice_language(project_root, "en")
@@ -3875,7 +3877,7 @@ def _write_translation_artifacts(
                 },
                 "budget_metadata": {},
                 "additional_translation_instructions": "",
-                "chunks": strict_chunks,
+                "chunks": bind_translation_source(project_root, strict_chunks),
             },
             indent=2,
         )

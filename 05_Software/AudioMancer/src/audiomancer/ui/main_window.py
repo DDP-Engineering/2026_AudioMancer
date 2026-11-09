@@ -278,6 +278,14 @@ class MainWindow(QMainWindow):
         page = self._page_registry.get(page_id)
         if page is None:
             return
+        if (
+            self._current_page_id == "ai_translation" and page_id != "ai_translation"
+            and not self._ai_translation_page.flush_pending_translation_edit()
+        ):
+            was_blocked = self._sidebar.blockSignals(True)
+            self._sidebar.set_current_page("ai_translation")
+            self._sidebar.blockSignals(was_blocked)
+            return
         self._ensure_page_default_metadata(page_id)
         self._current_page_id = page_id
         self._stack.setCurrentWidget(self._page_containers[page_id])
@@ -1450,10 +1458,12 @@ class MainWindow(QMainWindow):
         ):
             event.ignore()
             return
+        if not self._ai_translation_page.flush_pending_translation_edit():
+            event.ignore()
+            return
         if not self._chatgpt_auth_controller.shutdown():
             event.ignore()
             return
-        self._ai_translation_page.flush_pending_translation_edit()
         self.stop_all_audio_playback()
         super().closeEvent(event)
 

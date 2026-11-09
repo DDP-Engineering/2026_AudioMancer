@@ -26,6 +26,7 @@ from audiomancer.services import chunking_document_service as documents
 from audiomancer.services import operation_runtime_service as runtime
 from audiomancer.services import project_workspace_service as workspace
 from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.persistence_service import replace_project_files, validate_publication_path
 
 # CONSTANTS
 
@@ -71,7 +72,7 @@ def publish_chunks(root: Path, document: dict, *, check_cancelled=None) -> None:
             changes[Path(filename)] = stage / filename
         if check_cancelled is not None:
             check_cancelled()
-        _publish(root, changes, before)
+        replace_project_files(root, changes, manifest_path, before, "Chunking")
 
 
 @trace_function(_LOGGER)
@@ -101,7 +102,7 @@ def publish_manual_change(root: Path, mutation):
         for filename in (config.CLEANED_TEXT_FILE_NAME, config.CLEANUP_DOCUMENT_FILE_NAME):
             path = root / filename
             if path.is_file():
-                _validate_path(root, path)
+                validate_publication_path(root, path, "Chunking")
                 shutil.copy2(path, stage / filename)
         result = mutation(stage)
         staged = _owned_paths(stage, kinds)
@@ -116,7 +117,7 @@ def publish_manual_change(root: Path, mutation):
             ):
                 continue
             changes[relative] = candidate if candidate.is_file() else None
-        _publish(root, changes, before)
+        replace_project_files(root, changes, manifest_path, before, "Chunking")
         return result
 
 
@@ -136,58 +137,10 @@ def _owned_paths(root: Path, kinds) -> set[Path]:
         else root / runtime.validate_project_relative_path(source["stored_relative_path"])
     )
     for path in paths:
-        _validate_path(root, path)
+        validate_publication_path(root, path, "Chunking")
         if path == source_path:
             raise ValueError("Registered source overlaps a Chunking-owned artifact.")
     return paths
-
-
-def _validate_path(root: Path, path: Path) -> None:
-    """@brief Reject redirected or escaped publication destinations before changing files."""
-    if not path.is_relative_to(root) or path == root or path.resolve() != path or path.is_symlink():
-        raise ValueError(f"Chunking artifact is redirected or outside the project: {path}")
-
-
-def _publish(root: Path, changes: dict[Path, Path | None], original_manifest: bytes) -> None:
-    """@brief Replace a prepared set, restoring originals on every caught publication failure."""
-    for relative in changes:
-        _validate_path(root, root / relative)
-    if (root / config.PROJECT_MANIFEST_FILE_NAME).read_bytes() != original_manifest:
-        raise ValueError("Project changed during Chunking publication; retry the operation.")
-    backup = Path(tempfile.mkdtemp(prefix=".chunking-backup-", dir=root))
-    moved, published = [], []
-    recovered = False
-    try:
-        for relative in sorted(changes):
-            path = root / relative
-            if path.is_file():
-                saved = backup / relative
-                saved.parent.mkdir(parents=True, exist_ok=True)
-                path.replace(saved)
-                moved.append((path, saved))
-        for relative, candidate in changes.items():
-            if candidate is not None:
-                destination = root / relative
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                candidate.replace(destination)
-                published.append(destination)
-        recovered = True
-    except Exception:
-        try:
-            for path in reversed(published):
-                path.unlink(missing_ok=True)
-            for path, saved in reversed(moved):
-                saved.replace(path)
-            recovered = True
-        except OSError as error:
-            raise OSError(f"Chunking recovery could not finish; originals retained in {backup}") from error
-        raise
-    finally:
-        if recovered:
-            try:
-                shutil.rmtree(backup)
-            except OSError:
-                _LOGGER.exception("Could not remove Chunking backup %s", backup)
 
 
 # END OF FILE

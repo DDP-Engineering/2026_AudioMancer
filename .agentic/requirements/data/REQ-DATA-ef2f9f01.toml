@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-DATA-ef2f9f01"
+title = "Preserve legacy translations for review"
+status = "active"
+requirement = "When a translation record has no source fingerprint, AI Translation shall retain its text for explicit review with approval withheld until the operator approves it against the current source."
+verification = "Load a legacy approved record and check that explicit reapproval binds it to current source."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/translation/document.py", "05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py", "05_Software/AudioMancer/src/audiomancer/translation/__init__.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_legacy_translation_requires_explicit_reapproval"]
+created = 2026-11-09
+updated = 2026-11-09

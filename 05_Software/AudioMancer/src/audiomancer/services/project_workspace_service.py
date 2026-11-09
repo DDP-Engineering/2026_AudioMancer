@@ -936,10 +936,17 @@ def _translation_completion_evidence(project_root: Path, warnings: list[str]) ->
     @exception  None
     """
     _ = warnings
-    document = _load_json_artifact(project_root, config.TRANSLATED_CHUNKS_FILE_NAME)
-    if not _translation_report_is_fully_approved(document):
+    from audiomancer.services import ai_translation_service
+
+    try:
+        document = ai_translation_service.load_translation_document(project_root)
+        source = chunking_document_service.load_chunks(project_root)
+        target = ai_translation_service.manifest_target_language(load_manifest(project_root))
+        chunks = ai_translation_service.resolve_approved_translation(source, document, target)
+    except (OSError, ValueError):
         return None
-    chunks = list(document["chunks"])
+    if chunks is None:
+        return None
     return {
         "operation": {
             "status": "completed",
@@ -1307,37 +1314,7 @@ def _status_is_completed(payload: object) -> bool:
     return isinstance(payload, dict) and str(payload.get("status", "")).strip() == "completed"
 
 
-def _translation_report_is_fully_approved(report: object) -> bool:
-    """
-    @brief      Return whether one translation report proves full approval.
-    @param[in]  report Candidate translation report payload.
-    @return     True when every translated chunk is approved.
-    @exception  None
-    """
-    if not isinstance(report, dict):
-        return False
-    expected_root_fields = {
-        "target_language",
-        "status",
-        "token_usage",
-        "budget_metadata",
-        "additional_translation_instructions",
-        "chunks",
-    }
-    if set(report) != expected_root_fields or str(report.get("status", "")) != "completed":
-        return False
-    chunks = report.get("chunks")
-    if not isinstance(chunks, list) or not chunks:
-        return False
-    expected_chunk_fields = {"chunk_id", "translated_text", "approved"}
-    return all(
-        isinstance(item, dict)
-        and set(item) == expected_chunk_fields
-        and bool(str(item.get("chunk_id", "")).strip())
-        and bool(str(item.get("translated_text", "")).strip())
-        and item.get("approved") is True
-        for item in chunks
-    )
+
 
 
 def _non_empty_payload_list(payload: object) -> bool:

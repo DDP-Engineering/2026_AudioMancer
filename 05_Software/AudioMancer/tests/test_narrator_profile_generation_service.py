@@ -27,7 +27,7 @@ from audiomancer.services import (
     source_ledger_service,
 )
 from audiomancer.services.operation_runtime_service import OperationCancelledError
-from chunking_test_support import build_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 # CONSTANTS
 
@@ -47,16 +47,26 @@ _MOCK_AI_PROFILE = {
 }
 
 
+@pytest.mark.parametrize(
+    "project_target, voice_language, uses_translation",
+    [("ro", "ro", True), ("en", "ro", False), ("ro", "en", False)],
+)
 def test_narrator_profile_generation_prefers_approved_translation_for_voice_language(
     tmp_path,
     monkeypatch,
     mock_prompt_environment,
+    project_target,
+    voice_language,
+    uses_translation,
 ) -> None:
     """
     @brief      Verify approved translated text is analyzed when it matches the voice language.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
+    @param[in]  project_target Configured translation language.
+    @param[in]  voice_language Requested narrator voice language.
+    @param[in]  uses_translation Whether both languages match the translation.
     @return     None.
     @exception  None
     """
@@ -74,17 +84,22 @@ def test_narrator_profile_generation_prefers_approved_translation_for_voice_lang
 
     report_payload = narrator_profile_generation_service.generate_narrator_profiles(
         project_root,
-        {},
+        {"target_language": project_target},
         _MOCK_AI_PROFILE,
         2,
-        "ro",
+        voice_language,
         220,
     )
 
     profiles = narrator_definition_service.load_profiles(project_root)
-    assert report_payload["source"] == narrator_profile_generation_service.SOURCE_TRANSLATED_CHUNKS
-    assert "Text tradus" in prompts[0]
-    assert "Original desert" not in prompts[0]
+    expected_source = (
+        narrator_profile_generation_service.SOURCE_TRANSLATED_CHUNKS
+        if uses_translation
+        else narrator_profile_generation_service.SOURCE_CANONICAL_CHUNKS
+    )
+    assert report_payload["source"] == expected_source
+    assert ("Text tradus" in prompts[0]) is uses_translation
+    assert ("Original desert" in prompts[0]) is not uses_translation
     assert len(profiles) == 2
     assert all("profile_origin" not in profile for profile in profiles)
     assert all(profile.get("sample") is None for profile in profiles)
@@ -935,6 +950,7 @@ def test_narrator_source_resolution_names_cleanup_json_for_cleanup_metadata(tmp_
     _units, source_token, source_path = narrator_profile_generation_service._resolve_source_units(
         project_root,
         "en",
+        "en",
     )
 
     assert source_token == narrator_profile_generation_service.SOURCE_CLEANED_METADATA
@@ -1109,13 +1125,13 @@ def _write_translation(project_root, text: str, target_language: str) -> None:
                 },
                 "budget_metadata": {},
                 "additional_translation_instructions": "",
-                "chunks": [
+                "chunks": bind_translation_source(project_root, [
                     {
                         "chunk_id": "chunk-0001",
                         "translated_text": text,
                         "approved": True,
                     }
-                ],
+                ]),
             },
             indent=2,
         )

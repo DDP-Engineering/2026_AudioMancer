@@ -21,7 +21,7 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, text_chunking_state_service
-from chunking_test_support import build_chunking_document, write_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document, write_chunking_document
 
 
 def test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking() -> None:
@@ -370,11 +370,10 @@ def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> 
     translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))[
         "chunks"
     ]
-    assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
+    assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0001", "chunk-0002"]
     assert translated_chunks[0]["translated_text"] == "Primul"
-    assert translated_chunks[1]["translated_text"] == ""
-    assert translated_chunks[1]["approved"] is False
-    assert translated_chunks[2]["translated_text"] == "Al doilea"
+    assert translated_chunks[1]["translated_text"] == "Al doilea"
+    assert all(chunk["approved"] for chunk in translated_chunks)
     assert updated_manifest["current_stage"] == "translation_ready"
 
 
@@ -622,13 +621,44 @@ def _write_translations(project_root, records: tuple[tuple[str, str, str], ...])
                 },
                 "budget_metadata": {},
                 "additional_translation_instructions": "",
-                "chunks": translated_chunks,
+                "chunks": bind_translation_source(project_root, translated_chunks),
             },
             indent=2,
         )
         + "\n",
         encoding="utf-8",
     )
+
+
+
+def test_chunk_edit_resets_speech_when_approved_translation_stops_being_eligible(tmp_path) -> None:
+    """@brief Switching back to original text retires speech for all chunks."""
+    project_root, manifest = project_workspace_service.create_project("TranslationSourceSwitch", tmp_path)
+    _write_chunks(project_root, ("First chunk", "Second chunk"))
+    _write_translations(
+        project_root,
+        (("chunk-0001", "First chunk", "First translation"), ("chunk-0002", "Second chunk", "Second translation")),
+    )
+    manifest["target_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    speech = project_root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    from audiomancer.services import speech_blocks_service
+
+    speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "translated", "language": "en", "fingerprint": "test"},
+            "ai_profile_id": "profile-1", "instructions": "", "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "usage_available": False},
+            "budget_metadata": {}, "checkpoint": None, "failure": None, "blocks": [],
+        },
+    )
+
+    text_chunking_state_service.save_chunk_text_edit(project_root, manifest, "chunk-0001", "Edited source")
+
+    assert not speech.exists()
 
 
 # END OF FILE

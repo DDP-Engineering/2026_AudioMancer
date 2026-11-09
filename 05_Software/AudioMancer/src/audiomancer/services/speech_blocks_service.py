@@ -559,16 +559,21 @@ def load_input_source_chunks(project_root: str | Path) -> list[dict[str, object]
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
-def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
+def load_speech_blocks(
+    project_root: str | Path, *, generation_manifest: dict[str, object] | None = None
+) -> list[SpeechBlockPayload]:
     """
     @brief      Load one optional persisted Speech Blocks output payload.
     @param[in]  project_root Active project root folder.
+    @param[in]  generation_manifest Optional manifest used to validate the translation before audio generation.
     @return     Ordered Speech Blocks payload list.
-    @exception  SpeechBlocksDocumentError Raised when the authoritative document exists but is unreadable or invalid.
+    @exception  ValueError Raised when the document is invalid or its translation is stale for generation.
     """
     document = load_speech_blocks_document(project_root)
     if document is None:
         return []
+    if generation_manifest is not None:
+        _validate_saved_translation_source(project_root, generation_manifest, document)
     blocks = document.get("blocks", [])
     if not isinstance(blocks, list):
         return []
@@ -602,9 +607,8 @@ def resolve_source_chunks(
         raise ValueError("Run text chunking before starting Speech Blocks.")
 
     translated_resolution = _resolve_translated_source_chunks(
-        resolved_project_root,
-        original_chunks,
-        translation_document,
+        resolved_project_root, original_chunks, translation_document,
+        target_language=ai_translation_service.manifest_target_language(manifest),
     )
     if translated_resolution is not None:
         return translated_resolution
@@ -625,6 +629,46 @@ def resolve_source_chunks(
             for chunk in original_chunks
         ],
     }
+
+
+def validate_current_translated_speech_source(project_root: str | Path, manifest: dict[str, object]) -> None:
+    """
+    @brief      Require a current approved translation before composing audio made from translated speech.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @return     None.
+    @exception  ValueError Raised when translated Speech Blocks no longer match the verified source.
+    """
+    document = load_speech_blocks_document(project_root)
+    if document is not None:
+        _validate_saved_translation_source(project_root, manifest, document)
+
+
+def _validate_saved_translation_source(
+    project_root: str | Path, manifest: dict[str, object], document: SpeechBlocksDocumentPayload
+) -> None:
+    """@brief Check the source snapshot only for persisted translated Speech Blocks."""
+    if document["source"]["kind"] == "translated":
+        source = resolve_source_chunks(project_root, manifest)
+        _require_matching_translation_source(document, source)
+
+
+def _require_matching_translation_source(
+    document: SpeechBlocksDocumentPayload, source: dict[str, object]
+) -> None:
+    """@brief Reject a translated source switch or stale translated snapshot."""
+    saved_source = document["source"]
+    source_kind = str(source["source_kind"])
+    if saved_source["kind"] != "translated" and source_kind != "translated":
+        return
+    source_language = str(source["selected_source_language"])
+    fingerprint = _build_source_fingerprint(source["source_chunks"], source_language, source_kind)
+    if (
+        saved_source["kind"] != source_kind
+        or saved_source["language"] != source_language
+        or saved_source["fingerprint"] != fingerprint
+    ):
+        raise ValueError("Speech Blocks use an outdated translation source. Reset and regenerate Speech Blocks.")
 
 
 def _cleanup_provenance_fields(chunk: dict[str, object]) -> dict[str, object]:
@@ -648,6 +692,8 @@ def _resolve_translated_source_chunks(
     project_root: Path,
     original_chunks: list[dict[str, object]],
     translation_document: object = _UNRESOLVED_TRANSLATION_DOCUMENT,
+    *,
+    target_language: str | None = None,
 ) -> dict[str, object] | None:
     """
     @brief      Resolve translated source chunks when the translation is complete and fully approved.
@@ -661,36 +707,22 @@ def _resolve_translated_source_chunks(
     try:
         if translation_document is _UNRESOLVED_TRANSLATION_DOCUMENT:
             translation_document = ai_translation_service.load_translation_document(project_root)
-        if translation_document is None:
-            return None
-        if not isinstance(translation_document, dict):
-            return None
-        translation_summary = ai_translation_service.build_translation_summary(original_chunks, translation_document)
-        if str(translation_summary["status"]) != ai_translation_service.TRANSLATION_STATUS_COMPLETED:
-            return None
-        translated_records = [dict(item) for item in translation_document["chunks"]]
+        translated = ai_translation_service.resolve_approved_translation(
+            original_chunks, translation_document, target_language
+        )
     except (OSError, ValueError):
         return None
-    translated_by_id = {
-        str(chunk.get("chunk_id", "")): dict(chunk)
-        for chunk in translated_records
-        if isinstance(chunk, dict) and str(chunk.get("chunk_id", "")).strip()
-    }
-    source_chunks: list[dict[str, object]] = []
-    for original_chunk in original_chunks:
-        chunk_id = str(original_chunk.get("chunk_id", "")).strip()
-        translated_chunk = translated_by_id.get(chunk_id)
-        translated_text = "" if translated_chunk is None else str(translated_chunk.get("translated_text", ""))
-        if not translated_text.strip():
-            return None
-        source_chunks.append(
-            {
-                "chunk_id": chunk_id,
-                "sequence_index": int(original_chunk.get("sequence_index", 0)),
-                "text": translated_text,
-                **_cleanup_provenance_fields(original_chunk),
-            }
-        )
+    if translated is None:
+        return None
+    source_chunks = [
+        {
+            "chunk_id": str(chunk["chunk_id"]),
+            "sequence_index": int(chunk["sequence_index"]),
+            "text": str(chunk["text"]),
+            **_cleanup_provenance_fields(chunk),
+        }
+        for chunk in translated
+    ]
     return {
         "selected_source_language": str(translation_document["target_language"]).strip(),
         "source_kind": "translated",
@@ -1550,6 +1582,8 @@ def regenerate_chunk_speech_blocks(
     if bool(scene_ambience_settings["enabled"]):
         prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
     existing_document = load_speech_blocks_document(resolved_project_root)
+    if existing_document is not None:
+        _require_matching_translation_source(existing_document, source_resolution)
     existing_report = (
         _project_speech_blocks_report(existing_document, len(source_chunks))
         if existing_document is not None

@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-c07fd83c"
+title = "Reject invalid translation replies"
+status = "active"
+requirement = "If an AI reply violates the exact text-only JSON contract or loses a paragraph boundary inside a fragment, AI Translation shall reject the incomplete chunk before publishing it."
+verification = "Return an extra field or collapse two source paragraphs and check that no partial chunk was written."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_invalid_reply_cannot_publish_chunk"]
+created = 2026-11-09
+updated = 2026-11-09

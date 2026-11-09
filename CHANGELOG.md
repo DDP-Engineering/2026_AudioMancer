@@ -14,6 +14,17 @@ All notable changes to this project will be documented in this file.
 
 - Improved checks for reliable Cleanup saves and Book Analysis results.
 
+### Fixed
+
+- AI Translation verifies approved text against the current source before downstream
+  work uses it. Older translations remain available for explicit review and approval.
+- Translation edits, approvals and resets recover project files if publication fails.
+  Invalid translation documents can be reset, and failed edits stay available to retry.
+- Translation skips empty chunks, checks assembled request sizes and reply paragraph
+  boundaries, and warns when resuming with changed request settings.
+- AI Translation retries a fragment once when the model changes the paragraph count
+  and reports both counts if the mismatch persists.
+
 ## [2.2.1] - 2026-11-06
 
 ### Fixed

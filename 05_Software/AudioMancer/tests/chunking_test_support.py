@@ -294,4 +294,19 @@ def _cleanup_paragraphs(source_text: str) -> list[dict[str, object]]:
     return records
 
 
+
+def bind_translation_source(project_root, translated_chunks):
+    """@brief Build verified translation fixture rows from the current canonical text."""
+    chunks = read_chunking_document(project_root)["chunks"]
+    fingerprints = {
+        chunk["chunk_id"]: "sha256:" + sha256(chunk["text"].encode("utf-8")).hexdigest()
+        for chunk in chunks
+    }
+    return [
+        {**chunk, "source_fingerprint": fingerprints[chunk["chunk_id"]]}
+        if chunk["chunk_id"] in fingerprints else dict(chunk)
+        for chunk in translated_chunks
+    ]
+
+
 # END OF FILE

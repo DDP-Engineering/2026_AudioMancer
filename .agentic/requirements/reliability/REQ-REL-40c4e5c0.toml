@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-40c4e5c0"
+title = "Retry one translation fragment with mismatched paragraphs"
+status = "active"
+requirement = "When a valid translation reply changes the fragment paragraph count, AudioMancer shall retry that fragment once with the exact required count and include both attempts in usage."
+verification = "Return a translation that splits the title from the narration, then a corrected reply. Assert two calls with the same source, the count instruction, correct saved text and accumulated usage."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_retries_fragment_that_splits_the_title_from_narration"]
+created = 2026-11-09
+updated = 2026-11-09

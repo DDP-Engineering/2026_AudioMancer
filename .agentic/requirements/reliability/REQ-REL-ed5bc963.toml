@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-ed5bc963"
+title = "Recover translation publication"
+status = "active"
+requirement = "If final translation publication, review mutation or reset fails during file replacement, AI Translation shall restore the previous translation, manifest and owned dependent files or identify the retained backup if restoration fails."
+verification = "Inject final replacement failure after originals move and compare translation, manifest and dependent files byte-for-byte. Verify the worker presents the retained backup path even when the manifest cannot be reloaded."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/persistence_service.py", "05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/services/translation_publication_service.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_publication_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_publication_restores_originals", "05_Software/AudioMancer/tests/test_ai_translation_ui_controller.py::test_worker_reports_recovery_path_without_reloading_missing_manifest"]
+created = 2026-11-09
+updated = 2026-11-09

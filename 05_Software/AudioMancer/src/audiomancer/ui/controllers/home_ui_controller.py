@@ -53,6 +53,8 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if getattr(window, "_active_operation_kind", None) is not None:
         return
+    if window._ai_translation_page.flush_pending_translation_edit() is False:
+        return
     if not _confirm_cleanup_draft_discard(window, current_language):
         return
     selected_parent = QFileDialog.getExistingDirectory(
@@ -127,6 +129,8 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     @exception  None
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._ai_translation_page.flush_pending_translation_edit() is False:
+        return
     if not _confirm_cleanup_draft_discard(window, current_language):
         return
     selected_folder = QFileDialog.getExistingDirectory(
@@ -269,7 +273,9 @@ def handle_project_options_change_requested(
     language = ui_state_service.current_language_from_settings(window._settings_payload)
     try:
         # Settle the existing manual-save timer before its document can be reset.
-        window._ai_translation_page.flush_pending_translation_edit()
+        if window._ai_translation_page.flush_pending_translation_edit() is False:
+            _restore_project_option_selection(window)
+            return
         plan = project_options_service.plan_project_options_change(
             window._current_project_root, target_language, voice_assignment_mode
         )
@@ -660,7 +666,8 @@ def activate_project(
     @exception  None
     """
     window.stop_all_audio_playback()
-    window._ai_translation_page.flush_pending_translation_edit()
+    if window._ai_translation_page.flush_pending_translation_edit() is False:
+        return
     try:
         speech_blocks_service.load_speech_blocks_document(project_root)
         audio_blocks_service.reconcile_audio_playability(project_root)

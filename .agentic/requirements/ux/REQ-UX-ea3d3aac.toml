@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-UX-ea3d3aac"
+title = "Retain unsaved translation edits after publication errors"
+status = "active"
+requirement = "If saving a manual translation edit fails, the page shall keep the draft available for retry and prevent dependent actions until it is saved."
+verification = "Inject publication error and check the draft remains pending and approval is not dispatched."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/ai_translation_page.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/main_window.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_page.py::test_failed_autosave_blocks_approval_and_keeps_draft"]
+created = 2026-11-09
+updated = 2026-11-09

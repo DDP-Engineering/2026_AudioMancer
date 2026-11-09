@@ -30,7 +30,7 @@ from audiomancer.services import (
     project_workspace_service,
     tts_budget_service,
 )
-from chunking_test_support import build_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 
 def test_character_discovery_prompts_request_demographic_confidence() -> None:
@@ -1655,7 +1655,9 @@ def test_load_input_chunks_uses_fully_approved_translation(tmp_path) -> None:
     @return     None.
     @exception  AssertionError Raised when translated input is selected.
     """
-    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoverySourcePreferred")
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoverySourcePreferred")
+    manifest["target_language"] = "fr"
+    project_workspace_service.save_manifest(manifest, project_root)
     artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (artifact_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
@@ -1665,13 +1667,13 @@ def test_load_input_chunks_uses_fully_approved_translation(tmp_path) -> None:
                 "token_usage": _empty_token_usage(),
                 "budget_metadata": {},
                 "additional_translation_instructions": "",
-                "chunks": [
+                "chunks": bind_translation_source(project_root, [
                 {
                     "chunk_id": "chunk-0001",
                     "translated_text": "\u00abBonjour\u00bb, dit Alice.",
                     "approved": True,
                 }
-                ],
+                ]),
             },
             indent=2,
             ensure_ascii=False,

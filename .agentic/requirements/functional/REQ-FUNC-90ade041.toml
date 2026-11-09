@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-90ade041"
+title = "Keep mismatched translation fragments out of checkpoints"
+status = "active"
+requirement = "When the correction reply still changes the paragraph count, AudioMancer shall fail the translation with expected and received counts while preserving previous complete checkpoints."
+verification = "Return mismatched text twice and assert bounded attempts, no durable chunk text and terminal failed status. Verify malformed JSON shape fails immediately."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_invalid_reply_cannot_publish_chunk"]
+created = 2026-11-09
+updated = 2026-11-09

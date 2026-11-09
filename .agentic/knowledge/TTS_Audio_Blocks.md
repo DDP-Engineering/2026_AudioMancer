@@ -214,6 +214,8 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 ## 7. Workflow Integration
 
 TTS Audio Blocks follows approved Speech Blocks and Voice Profiles, and supplies validated ordered WAVs to Audio Assembly. Changing TTS settings or invalidating source blocks can reset only incompatible generated artifacts.
+Start and single-block regeneration require any translated Speech Blocks source
+to match the current approved translation. Existing audio can still be reviewed.
 
 ## 8. Usage
 

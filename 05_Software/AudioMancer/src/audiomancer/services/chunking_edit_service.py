@@ -25,12 +25,14 @@ from audiomancer.services import (
     character_discovery_service,
     chunking_document_service,
     chunking_publication_service,
+    operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
     workflow_impact_service,
 )
 from audiomancer.services.logging_service import get_component_logger
+from audiomancer.services.translation_publication_service import source_dependent_operations
 
 # CONSTANTS
 
@@ -188,6 +190,7 @@ def _apply_manual_chunk_change(
     document = chunking_document_service.load_chunking_document(project_root)
     if document is not None and document["status"] in chunking_document_service.RESUMABLE_STATUSES:
         raise ValueError(_RESUMABLE_CHUNKING_MUTATION_MESSAGE)
+    used_translation = ai_translation_service.translation_is_completed(project_root)
     _write_chunk_artifact(project_root, chunks)
     target_language = ai_translation_service.manifest_target_language(manifest)
     ai_translation_service.sync_translation_after_chunk_change(
@@ -195,6 +198,14 @@ def _apply_manual_chunk_change(
         target_language,
         affected_chunk_ids,
     )
+    if used_translation != ai_translation_service.translation_is_completed(project_root):
+        for kind in source_dependent_operations():
+            for path in operation_runtime_service.operation_reset_artifact_paths(project_root, kind):
+                path.unlink()
+        updated_manifest = _build_manifest_after_selective_chunk_change(project_root, manifest)
+        project_workspace_service.save_manifest(updated_manifest, project_root)
+        return updated_manifest
+
     character_source_invalidated = character_discovery_service.invalidate_if_source_changed(project_root)
     if not character_source_invalidated:
         character_discovery_service.drop_character_evidence_for_chunks(

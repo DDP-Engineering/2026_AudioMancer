@@ -114,7 +114,7 @@ class AiTranslationPage(QWidget):
         self._start_button.clicked.connect(self._emit_start_translation)
         actions_layout.addWidget(self._start_button)
         self._reset_button = QPushButton("Reset Translation")
-        self._reset_button.clicked.connect(self.reset_translation_requested.emit)
+        self._reset_button.clicked.connect(self._emit_reset_translation)
         actions_layout.addWidget(self._reset_button)
         self._approve_all_button = QPushButton("Approve All")
         self._approve_all_button.clicked.connect(self._emit_approve_all)
@@ -257,7 +257,8 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
-        self.flush_pending_translation_edit()
+        if not self.flush_pending_translation_edit():
+            return
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
         self._stage_status = stage_status
@@ -379,7 +380,15 @@ class AiTranslationPage(QWidget):
             self._project_active
             and has_source_chunks
             and not self._busy
-            and has_untranslated_chunks
+            and (
+                has_untranslated_chunks
+                or self._stage_status
+                in {
+                    ai_translation_service.TRANSLATION_STATUS_RUNNING,
+                    ai_translation_service.TRANSLATION_STATUS_CANCELLED,
+                    ai_translation_service.TRANSLATION_STATUS_FAILED,
+                }
+            )
             and self._stage_status
             not in {
                 ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING,
@@ -389,7 +398,13 @@ class AiTranslationPage(QWidget):
             and selected_profile_id is not None
         )
         self._reset_button.setEnabled(
-            self._project_active and not self._busy and (has_started_translation or has_translated_chunks)
+            self._project_active
+            and not self._busy
+            and (
+                has_started_translation
+                or has_translated_chunks
+                or self._stage_status == ai_translation_service.TRANSLATION_STATUS_INVALID
+            )
         )
         self._approve_all_button.setEnabled(
             self._project_active
@@ -412,7 +427,12 @@ class AiTranslationPage(QWidget):
             and has_selected_translation
             and not bool(selected_chunk.get("approved", False))
         )
-        self._translated_text_edit.setReadOnly(not self._project_active or self._busy or selected_chunk is None)
+        self._translated_text_edit.setReadOnly(
+            not self._project_active
+            or self._busy
+            or selected_chunk is None
+            or self._stage_status == ai_translation_service.TRANSLATION_STATUS_INVALID
+        )
         self._chunk_list.setEnabled(self._project_active)
 
     def _apply_chunk_text_splitter_minimums(self) -> None:
@@ -456,7 +476,14 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
-        self.flush_pending_translation_edit()
+        if not self.flush_pending_translation_edit():
+            for index, chunk in enumerate(self._display_chunks):
+                if chunk["chunk_id"] == self._current_chunk_id:
+                    was_blocked = self._chunk_list.blockSignals(True)
+                    self._chunk_list.setCurrentRow(index)
+                    self._chunk_list.blockSignals(was_blocked)
+                    break
+            return
         if row < 0 or row >= len(self._display_chunks):
             self._current_chunk_id = None
             if self._source_text_edit.toPlainText():
@@ -489,7 +516,8 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
-        self.flush_pending_translation_edit()
+        if not self.flush_pending_translation_edit():
+            return
         profile_id = self.current_profile_id()
         if profile_id is not None:
             self.start_translation_requested.emit(profile_id)
@@ -502,7 +530,8 @@ class AiTranslationPage(QWidget):
         """
         if not self._retranslate_button.isEnabled():
             return
-        self.flush_pending_translation_edit()
+        if not self.flush_pending_translation_edit():
+            return
         profile_id = self.current_profile_id()
         chunk_id = self.selected_chunk_id()
         if profile_id is not None and chunk_id is not None:
@@ -514,7 +543,8 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         """
-        self.flush_pending_translation_edit()
+        if not self.flush_pending_translation_edit():
+            return
         chunk_id = self.selected_chunk_id()
         if chunk_id is not None:
             self.approve_selected_requested.emit(chunk_id)
@@ -547,23 +577,35 @@ class AiTranslationPage(QWidget):
                 current_item.setText(_format_chunk_list_item(selected_chunk, self._current_language))
         self._apply_control_state()
 
-    def flush_pending_translation_edit(self) -> None:
-        """Emit the latest pending manual edit exactly once."""
+    def flush_pending_translation_edit(self) -> bool:
+        """@brief Try to persist the pending edit before dependent actions."""
         if self._pending_edit is None:
-            return
+            return True
         self._edit_timer.stop()
         chunk_id, translated_text = self._pending_edit
         self._pending_edit = None
         self.translated_text_changed.emit(chunk_id, translated_text)
+        return self._pending_edit is None
+
+    def retain_unsaved_edit(self, chunk_id: str, translated_text: str) -> None:
+        """@brief Keep a failed draft pending for the next explicit action or edit."""
+        self._pending_edit = (chunk_id, translated_text)
+
+    def _emit_reset_translation(self) -> None:
+        """@brief Flush any draft before requesting the confirmed reset."""
+        if self.flush_pending_translation_edit():
+            self.reset_translation_requested.emit()
 
     def _emit_approve_all(self) -> None:
-        """Flush the current edit before requesting approve-all."""
-        self.flush_pending_translation_edit()
-        self.approve_all_requested.emit()
+        """@brief Request approval only after saving the current edit."""
+        if self.flush_pending_translation_edit():
+            self.approve_all_requested.emit()
 
     def closeEvent(self, event) -> None:  # noqa: N802
-        """Flush a pending manual edit before this page closes."""
-        self.flush_pending_translation_edit()
+        """@brief Keep the page open when a pending edit cannot be saved."""
+        if not self.flush_pending_translation_edit():
+            event.ignore()
+            return
         super().closeEvent(event)
 
     def _current_display_chunk(self) -> dict[str, object] | None:

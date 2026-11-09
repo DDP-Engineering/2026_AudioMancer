@@ -140,9 +140,7 @@ def test_same_content_refresh_preserves_editor_state_and_continued_typing(qtbot)
     page._translated_text_edit.insertPlainText("Y")
     page.flush_pending_translation_edit()
     expected_final = (
-        expected_after_first_edit[: insertion_position + 1]
-        + "Y"
-        + expected_after_first_edit[insertion_position + 1 :]
+        expected_after_first_edit[: insertion_position + 1] + "Y" + expected_after_first_edit[insertion_position + 1 :]
     )
     assert persisted[-1] == ("chunk-0001", expected_final)
     assert page._translated_text_edit.toPlainText() == expected_final
@@ -257,9 +255,7 @@ def test_retranslate_selected_requires_started_idle_translation_state(qtbot) -> 
     """Verify retranslation is inert before start, available when started, and disabled while busy or reset."""
     page = _build_page(qtbot)
     requests = []
-    page.retranslate_selected_requested.connect(
-        lambda profile_id, chunk_id: requests.append((profile_id, chunk_id))
-    )
+    page.retranslate_selected_requested.connect(lambda profile_id, chunk_id: requests.append((profile_id, chunk_id)))
     untranslated_chunks = [
         {"chunk_id": "chunk-0001", "translated_text": "", "approved": False},
         {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
@@ -349,18 +345,14 @@ def test_start_translation_flushes_pending_edit_before_signal_and_stops_timer(qt
     ]
     assert page._edit_timer.isActive() is False
     page.flush_pending_translation_edit()
-    assert [event for event in events if event[0] == "edit"] == [
-        ("edit", "chunk-0001", "Latest before worker")
-    ]
+    assert [event for event in events if event[0] == "edit"] == [("edit", "chunk-0001", "Latest before worker")]
 
     page._translated_text_edit.setPlainText("Defensive busy stop")
     assert page._edit_timer.isActive() is True
     page.set_busy(True)
     assert page._edit_timer.isActive() is False
     qtbot.wait(800)
-    assert [event for event in events if event[0] == "edit"] == [
-        ("edit", "chunk-0001", "Latest before worker")
-    ]
+    assert [event for event in events if event[0] == "edit"] == [("edit", "chunk-0001", "Latest before worker")]
 
 
 def test_translation_state_refresh_flushes_pending_edit(qtbot) -> None:
@@ -496,6 +488,63 @@ def _source_chunks() -> list[dict[str, object]]:
         {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
         {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
     ]
+
+
+def test_invalid_translation_allows_reset(qtbot) -> None:
+    """@brief An invalid translation has a usable reset action."""
+    page = _build_page(qtbot)
+    page.set_translation_state(
+        source_chunks=_source_chunks(),
+        translated_chunks=[],
+        notes=["Invalid"],
+        original_language="en",
+        target_language="ro",
+        selected_profile_id="profile-1",
+        stage_status=ai_translation_service.TRANSLATION_STATUS_INVALID,
+        translated_count=0,
+        approved_count=0,
+        total_count=2,
+    )
+    assert page._reset_button.isEnabled()
+    assert not page._start_button.isEnabled()
+
+
+def test_failed_autosave_blocks_approval_and_keeps_draft(qtbot, monkeypatch, tmp_path) -> None:
+    """@brief A failed edit stays pending and the page retries it before approval."""
+    from types import SimpleNamespace
+
+    from audiomancer.ui.controllers import ai_translation_ui_controller as controller
+
+    page = _build_page(qtbot)
+    window = SimpleNamespace(
+        _current_project_root=tmp_path, _current_manifest={}, _ai_translation_page=page, _settings_payload={}
+    )
+    attempts = []
+    approvals = []
+    failures = [True]
+
+    def save(_root, chunk_id, value):
+        """@brief Fail the first save and accept the next explicit retry."""
+        attempts.append((chunk_id, value))
+        if failures:
+            failures.pop()
+            raise OSError("Translation save denied")
+
+    monkeypatch.setattr(ai_translation_service, "update_translated_text", save)
+    monkeypatch.setattr(controller, "_refresh_project", lambda *_: None)
+    monkeypatch.setattr(controller, "_show_translation_error", lambda *_: None)
+    page.translated_text_changed.connect(
+        lambda chunk_id, text: controller.handle_translated_text_changed(window, chunk_id, text)
+    )
+    page.approve_selected_requested.connect(approvals.append)
+    page._translated_text_edit.setPlainText("Unsaved draft")
+
+    page._emit_approve_selected()
+    assert not approvals
+    assert page._translated_text_edit.toPlainText() == "Unsaved draft"
+    page._emit_approve_selected()
+    assert approvals == ["chunk-0001"]
+    assert attempts == [("chunk-0001", "Unsaved draft")] * 2
 
 
 # END OF FILE

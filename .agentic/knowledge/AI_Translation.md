@@ -85,25 +85,23 @@ the latest translation. Project Lifecycle owns this coordination.
 
 ### Implementation overview
 
-The service validates `translated_text.json`, aligns it to canonical chunk IDs,
-and progresses status from running through review/completed. The state service
-builds page state and notes, including enabled-profile fallback from a live page
-selection. The main window captures that session-local selection before each
-refresh. Controller methods route valid page actions through the shared runner
-and reject selected retranslation before translation exists. The page merges
-source/translated chunks by stable ID, leaves identical editor documents
-untouched, flushes edits before worker dispatch and review actions, and gates
-retranslation on a started idle state. The translation service retains stored
-instructions for resumable documents, accepts normalized caller instructions
-for new and non-resumable starts, and treats an interrupted selected
-retranslation as a failed one-off attempt rather than a failed batch.
-Budgeted source segments carry whether their leading text continues the prior
-paragraph; request text retains mixed internal paragraph boundaries, and the
-same relationship reconstructs completed translated responses without changing
-the provider prompt or JSON schema. Budgeting reserves output tokens through the
-shared helper and then lowers the resulting source-text budget to what those
-output tokens can return, so a profile with a wide context window and a modest
-output limit is segmented more finely instead of being cut off mid-reply.
+`ai_translation_service` coordinates jobs and review. `translation/document.py`
+validates the document and projects records against current source IDs and text.
+`translation/planning.py` assembles bounded paragraph-aware requests.
+`translation_ai_service` owns the budget, prompts, policy identity and exact
+reply validation. `translation_publication_service` compares old and candidate
+approved source, stages the document and manifest, and uses the same recoverable
+file replacement primitive as Chunking. The controller refreshes published state
+and reports errors. A failed autosave leaves the edit pending and dependent UI
+actions wait for a successful retry.
+
+Budgeting limits the assembled estimated source text by both the context input
+and reply capacity. Empty canonical chunks are omitted. Oversized paragraphs
+split at sentences or words and preserve leading paragraph relationships.
+An unbreakable span over budget fails clearly. Each request reply must contain
+exactly one nonempty `translated_text` string with the same paragraph count as
+its fragment. Completed fragments of an interrupted chunk do not publish as
+partial translated text.
 
 ### Dependencies
 
@@ -126,24 +124,36 @@ parallel contract.
 Canonical source chunks are loaded through `chunking_document_service`; an
 incompatible Chunking document is rejected.
 
-The document contains target language, status, usage/budget/instructions, and
-ordered `{chunk_id, translated_text, approved}` records. Chunk IDs must match
-canonical source; completed means every source chunk is nonempty and approved.
-Manual/retranslated text clears approval; malformed/incompatible documents
-raise a translation-document error rather than silently merging data.
-Generation checkpoints only complete chunks: an interrupted chunk's partial
-segments are not persisted. A failed selected retranslation keeps the prior
-text and approval state rather than replacing it with a partial result, stores
-any accrued usage, and derives completed/review-pending/in-progress status from
-the unchanged chunks. By contrast, an interrupted main batch stores its
-resumable failed or cancelled status. General start/resume instructions are
-durable; one-off selected-retranslation instructions never replace them.
+The document contains target language, status, usage, budget, instructions, an
+optional nonsecret request fingerprint, and ordered translated records. Each
+new translation binds its chunk ID to a SHA-256 fingerprint of the exact canonical
+source text. A changed fingerprint removes the affected translation from the
+current projection. A legacy record lacking a fingerprint retains its text for
+review with effective approval withheld. Explicit approval binds it to the
+current source. Editing or replacing translated text clears that row's approval.
 
-### Workflow integration
+Only a completed document with the current nonempty chunk coverage and verified
+approval qualifies as translated input. Character Discovery, Speech Blocks,
+narrator analysis and completion evidence use the same eligibility rule, with
+their applicable language constraint. Publication invalidates dependent files
+when this effective source changes, including projects without Character
+Discovery, and preserves narrator definition. A Chunking edit that changes the
+source kind retires the same dependent results inside its staged transaction.
+Narrator analysis requires both the project target and the voice language to
+match the approved translation. Existing translated Speech Blocks must match
+the currently approved text before generating new speech or audio outputs.
 
-The component consumes Text Chunking and provides approved target-language
-content to Character Discovery and Speech Blocks. Chunk changes synchronize or
-invalidate only affected translations; reset preserves configured narrator work.
+A valid reply with a different paragraph count triggers one correction request
+for the same fragment, with the exact expected count. The budget reserves the
+correction instruction and usage includes both calls. A repeated mismatch
+reports both counts and leaves the unfinished chunk unsaved.
+
+The batch checkpoints complete chunks and records a failed or cancelled terminal
+state after setup, request or final publication failure when storage permits.
+Resume retains instructions and verified completed work, and warns before
+requests made under a changed policy. A failed selected replacement keeps the
+prior text and approvals and accounts for accrued request usage. Failed
+publication restores originals or reports their named recovery location.
 
 ### Usage
 
@@ -151,6 +161,7 @@ Operators choose an AI profile and use Start/Resume, edit/retranslate, then
 approve individual or all chunks. The chunk list and the two chunk text panes
 share a vertical splitter the operator drags to favour scanning the list or
 reading one translation, bounded by a 150 pixel floor and a half-height ceiling.
+Invalid documents have an available confirmed Reset action.
 The live enabled profile and selected chunk
 survive ordinary state refreshes; same-content edit persistence does not reset
 the editor cursor, selection, undo history, or scroll positions. Start/Resume
@@ -198,6 +209,9 @@ integration test replaces controlled manual verification of a chosen model.
 From the adopted component map:
 
 - `05_Software/AudioMancer/prompts/text_translation_*.txt`
+- `05_Software/AudioMancer/src/audiomancer/translation/{document,planning}.py`
+- `05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/translation_publication_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/ai_translation_state_service.py`
 - `05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py`

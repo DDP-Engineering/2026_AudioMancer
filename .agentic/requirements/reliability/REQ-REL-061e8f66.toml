@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-061e8f66"
+title = "Close failed translation runs"
+status = "active"
+requirement = "If batch setup or finalization fails after translation starts, AI Translation shall retain completed chunk checkpoints with resumable failure or cancellation state when storage is writable."
+verification = "Deny log creation after running is saved and check failed status and retained earlier text."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_log_failure_records_terminal_status", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_failed_final_translation_publish_can_resume_without_provider_calls", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_cancel_at_retranslation_publication_keeps_approval_and_usage"]
+created = 2026-11-09
+updated = 2026-11-09

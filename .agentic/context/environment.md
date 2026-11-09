@@ -55,6 +55,10 @@ deterministic/AI Chunking service tests, descriptor/document contracts and
 text-chunking state/controller tests. These use synthetic provider responses;
 recovery tests inject filesystem failures without live model access.
 
+Focused AI Translation checks use the translation service/state/page/controller
+modules and selected Chunking, Character Discovery, Speech Blocks, narrator and
+project tests. AI replies and publication failures use controlled test doubles.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

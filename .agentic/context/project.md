@@ -30,6 +30,10 @@ verified resumable prefixes and separate AI/persistence/edit adapters. Replaceme
 and selective manual edits publish recoverably; pending replacements retain the
 previously published result and downstream work until success.
 
+AI Translation binds approvals to current source chunks and uses one eligibility
+rule across downstream text consumers. Review mutations, reset and finalization
+stage the translation and workflow effects together.
+
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.

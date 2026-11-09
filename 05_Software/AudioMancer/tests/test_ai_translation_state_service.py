@@ -19,7 +19,7 @@ import json
 
 from audiomancer import config
 from audiomancer.services import ai_translation_service, ai_translation_state_service, project_workspace_service
-from chunking_test_support import build_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 # PUBLIC API
 
@@ -143,9 +143,10 @@ def test_build_ai_translation_state_derives_counts_and_status(tmp_path) -> None:
     @return     None.
     """
     project_root, manifest = _create_project(tmp_path, "TranslationStateDerived")
-    document = _document(ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING)
+    document = _document(ai_translation_service.TRANSLATION_STATUS_COMPLETED)
     document["chunks"][0]["approved"] = True
     document["chunks"][1]["approved"] = True
+    document["chunks"] = bind_translation_source(project_root, document["chunks"])
     ai_translation_service.write_translation_document(project_root, document)
 
     state = ai_translation_state_service.build_ai_translation_state(
@@ -199,6 +200,7 @@ def test_translation_summary_requires_canonical_chunk_id_alignment(tmp_path) -> 
         "translated_text": "Unknown translation",
         "approved": True,
     }
+    document["chunks"] = bind_translation_source(project_root, document["chunks"])
     ai_translation_service.write_translation_document(project_root, document)
 
     summary = ai_translation_service.load_translation_summary(project_root)

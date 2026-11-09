@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-93999a8d"
+title = "Disclose translation request changes"
+status = "active"
+requirement = "When continuing a translation with a changed nonsecret request policy, AI Translation shall warn before processing pending chunks while retaining verified completed translations."
+verification = "Resume using a different reasoning configuration and verify the warning precedes the next provider call."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_resume_discloses_changed_request_policy"]
+created = 2026-11-09
+updated = 2026-11-09

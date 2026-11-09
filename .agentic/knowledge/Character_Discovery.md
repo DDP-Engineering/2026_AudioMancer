@@ -107,7 +107,9 @@ rejected_candidates, checkpoint, failure, characters
 
 `source` contains exactly `kind`, `language`, and `fingerprint`. `kind` is
 `translated` only when every canonical chunk has a non-empty approved
-translation; otherwise it is `original`. The fingerprint covers source kind,
+translation verified against the current chunk text and project target language;
+otherwise it is `original`. Eligibility comes from the shared Translation
+resolver. The fingerprint covers source kind,
 language, and ordered chunk ID, sequence index, and selected text.
 
 `character_profile_id_last_used` is the stable ID selected for the most recent

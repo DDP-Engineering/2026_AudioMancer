@@ -36,10 +36,13 @@ evenly sized blocks under the `deterministic_narrator_blocks` contract.
 
 ## 6. Data Contracts
 
-Source selection matches Character Discovery: when a translation exists, is
-complete, and every chunk is approved, Speech Blocks uses the translated
-(repair-normalized) text regardless of the selected Character Voices language;
-otherwise it uses the original Chunking document text through its shared reader.
+Source selection uses the AI Translation approved-source resolver shared with
+Character Discovery. A completed translation must cover the current nonempty
+canonical chunks with matching source fingerprints, approval, and project target
+language. Otherwise Speech Blocks resolves the original text. When an existing
+document uses translated text, a selected re-split, Audio Blocks generation,
+and Audio Assembly require its saved source fingerprint to match the current
+approved translation. Reset and regenerate Speech Blocks when it differs.
 
 - Each block has a stable `speech_block_id`, content/speaker kind and identifiers, text or ambience prompt, duration, warning flags, and approval state.
 - Speech Block identifiers are unique within the authoritative current document, not across deleted history. A deleted identifier may be allocated again; the controller therefore removes the deleted Audio Blocks row and generated WAV before manifest refresh or any later insertion can reuse it. Service-only deletion callers must provide the same downstream cleanup.

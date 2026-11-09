@@ -732,7 +732,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li><strong>Start Translation</strong> needs a selected AI profile and at least one chunk without a translation. AudioMancer opens <strong>AI Translation Instructions</strong> first so you can add extra rules; Cancel there cancels the run. Resuming an interrupted run skips the dialog and keeps the rules stored with it.</li>
                     <li><strong>Re-Translate Selected</strong> becomes available once translation has started, and needs a selected chunk and a selected profile. It always asks for instructions, and those apply only to that one attempt. If the attempt fails or is cancelled, the existing text and approvals are left untouched.</li>
-                    <li><strong>Reset Translation</strong> is how you start a fresh pass. Once every chunk is translated, <strong>Start Translation</strong> greys out, so changing the profile or the rules for a new full pass means resetting first. It asks before deleting the translation and the downstream character, voice, speech, audio and audiobook results.</li>
+                    <li><strong>Reset Translation</strong> starts a fresh pass or clears an invalid translation document. It asks for confirmation. When the effective text changes, AudioMancer clears the dependent character, speech and audio results and keeps the narrator definition.</li>
                     <li><strong>Approve Selected</strong> approves the current chunk and moves the selection to the next one, so you can review a whole book without touching the list. <strong>Approve All</strong> approves every translated chunk at once, without asking.</li>
                 </ul>
                 <div class="note">
@@ -744,6 +744,25 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <p>
                     Translation can be interrupted and continued later from the same project.
+                </p>
+                <p>
+                    Translation sends only nonempty chunks. It fits each request to the estimated input and reply
+                    budgets and checks that the returned text retains the paragraph breaks. If the reply has a different
+                    paragraph count, AudioMancer retries that fragment once and reports both counts if the retry fails.
+                    A failed request leaves earlier translated chunks available. If you change request settings before
+                    continuing, the progress dialog reports the change before sending the next request.
+                </p>
+                <p>
+                    Approval applies to the current source text. Editing a source chunk makes its translation pending.
+                    Older translations without a source reference remain visible for review and need fresh approval.
+                    Character Discovery and Speech Blocks use the translated text after all nonempty chunks are approved
+                    against the current source. A failed edit stays in the editor for retry, and a failed replacement
+                    restores the previous project files where possible.
+                </p>
+                <p>
+                    If Speech Blocks were generated from a translation that is no longer current, reset and regenerate
+                    them before splitting a single chunk again, generating Audio Blocks, or assembling a new audiobook.
+                    Review the translation approvals first if you want to continue with the translated text.
                 </p>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="AI Translation page">

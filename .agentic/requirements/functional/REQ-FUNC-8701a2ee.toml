@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-8701a2ee"
+title = "Invalidate dependent work when effective text changes"
+status = "active"
+requirement = "When publication changes the effective narration source, AI Translation shall invalidate source-dependent results independently of Character Discovery while preserving narrator definition."
+verification = "Approve a translation with Speech Blocks but no character document and observe speech/audio invalidation."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/ai_translation_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/chunking_edit_service.py", "05_Software/AudioMancer/src/audiomancer/services/translation_publication_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_approval_invalidates_speech_without_character_document", "05_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_chunk_edit_resets_speech_when_approved_translation_stops_being_eligible"]
+created = 2026-11-09
+updated = 2026-11-09

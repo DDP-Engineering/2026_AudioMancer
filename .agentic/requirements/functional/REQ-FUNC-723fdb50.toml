@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-723fdb50"
+title = "Bound assembled translation requests"
+status = "active"
+requirement = "When planning requests for a non-empty chunk, AI Translation shall preserve ordered source spans and enforce its estimate on each assembled source fragment including join separators."
+verification = "Use space-heavy text and an oversized unbroken span and assert every emitted request meets the estimated limit."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/ai_translation_service.py", "05_Software/AudioMancer/src/audiomancer/translation/planning.py", "05_Software/AudioMancer/src/audiomancer/services/translation_ai_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_translation_service.py::test_translation_planner_bounds_assembled_fragments"]
+created = 2026-11-09
+updated = 2026-11-09

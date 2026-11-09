@@ -20,8 +20,17 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service, operation_runtime_service, project_workspace_service
-from chunking_test_support import build_chunking_document
+from audiomancer.services import (
+    ai_translation_service,
+    audio_assembly_service,
+    audio_blocks_service,
+    operation_runtime_service,
+    project_workspace_service,
+    speech_blocks_service,
+    translation_ai_service,
+)
+from audiomancer.translation import planning
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 # PUBLIC API
 
@@ -50,16 +59,20 @@ def test_translation_document_is_the_only_authoritative_artifact(monkeypatch, tm
         "status",
         "token_usage",
         "budget_metadata",
+        "request_fingerprint",
         "additional_translation_instructions",
         "chunks",
     }
     assert document["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
     assert document["additional_translation_instructions"] == "Pastreaza registrul formal."
-    assert document["chunks"] == [
-        {"chunk_id": "chunk-0001", "translated_text": "Traducerea unu", "approved": False},
-        {"chunk_id": "chunk-0002", "translated_text": "Traducerea doi", "approved": False},
-    ]
-    assert all(set(item) == {"chunk_id", "translated_text", "approved"} for item in document["chunks"])
+    assert document["chunks"] == bind_translation_source(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Traducerea unu", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "Traducerea doi", "approved": False},
+        ],
+    )
+    assert document["request_fingerprint"].startswith("sha256:")
     assert not (project_root / "translation_report.json").exists()
     assert not (project_root / "translation_state.json").exists()
     assert summary["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
@@ -363,6 +376,7 @@ def test_retranslate_interruption_preserves_completed_review_state(
         {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
         {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
     ]
+    original_chunks = bind_translation_source(project_root, original_chunks)
     _write_translation_document(
         project_root,
         ai_translation_service.TRANSLATION_STATUS_COMPLETED,
@@ -471,11 +485,11 @@ def test_retranslate_segment_failure_persists_usage_without_partial_text(monkeyp
         original_chunks,
     )
     monkeypatch.setattr(
-        ai_translation_service,
+        translation_ai_service,
         "_split_translation_source_text",
         lambda *_args: [
-            ai_translation_service._TranslationTextSegment("segment one", False),
-            ai_translation_service._TranslationTextSegment("segment two", True),
+            planning._TranslationTextSegment("segment one", False),
+            planning._TranslationTextSegment("segment two", True),
         ],
     )
     responses = iter(
@@ -524,10 +538,13 @@ def test_successful_retranslation_clears_only_selected_approval_and_keeps_genera
     _write_translation_document(
         project_root,
         ai_translation_service.TRANSLATION_STATUS_COMPLETED,
-        [
-            {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
-            {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
-        ],
+        bind_translation_source(
+            project_root,
+            [
+                {"chunk_id": "chunk-0001", "translated_text": "Text aprobat", "approved": True},
+                {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+            ],
+        ),
         instructions="Reguli generale",
     )
     prompts = _install_translations(monkeypatch, ["Text retradus"])
@@ -544,16 +561,13 @@ def test_successful_retranslation_clears_only_selected_approval_and_keeps_genera
     document = ai_translation_service.load_translation_document(project_root)
     assert document is not None
     assert document["status"] == ai_translation_service.TRANSLATION_STATUS_REVIEW_PENDING
-    assert document["chunks"][0] == {
-        "chunk_id": "chunk-0001",
-        "translated_text": "Text retradus",
-        "approved": False,
-    }
-    assert document["chunks"][1] == {
-        "chunk_id": "chunk-0002",
-        "translated_text": "Alt text aprobat",
-        "approved": True,
-    }
+    assert document["chunks"] == bind_translation_source(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Text retradus", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "Alt text aprobat", "approved": True},
+        ],
+    )
     assert "Regula unica" in prompts[0]
     assert document["additional_translation_instructions"] == "Reguli generale"
 
@@ -670,9 +684,7 @@ def test_translation_budget_is_bounded_by_profile_reply_capacity() -> None:
     )
 
     assert metadata["text_budget_tokens"] <= output_reserve_tokens
-    assert metadata["text_budget_tokens"] < int(
-        context_window * config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION
-    )
+    assert metadata["text_budget_tokens"] < int(context_window * config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION)
 
 
 def test_translation_refuses_a_profile_whose_reply_capacity_is_too_low() -> None:
@@ -703,7 +715,7 @@ def test_budgeted_translation_preserves_paragraph_breaks_across_requests(
         project_root,
         [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "P1 P2 P3 P4\n\nQ1 Q2 Q3 Q4"}],
     )
-    monkeypatch.setattr(ai_translation_service, "_estimate_text_tokens", lambda text: len(text.split()))
+    monkeypatch.setattr(planning, "_estimate_text_tokens", lambda text: len(text.split()))
     monkeypatch.setattr(
         ai_translation_service,
         "_build_budget_metadata",
@@ -741,7 +753,7 @@ def test_budgeted_translation_rejoins_oversized_paragraph_continuations(
         project_root,
         [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A1 A2 A3 A4 A5 A6\n\nB1 B2"}],
     )
-    monkeypatch.setattr(ai_translation_service, "_estimate_text_tokens", lambda text: len(text.split()))
+    monkeypatch.setattr(planning, "_estimate_text_tokens", lambda text: len(text.split()))
     monkeypatch.setattr(
         ai_translation_service,
         "_build_budget_metadata",
@@ -846,11 +858,11 @@ def test_partial_segment_failure_preserves_usage_without_partial_chunk(monkeypat
     """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationSegmentFailure")
     monkeypatch.setattr(
-        ai_translation_service,
+        translation_ai_service,
         "_split_translation_source_text",
         lambda *_args: [
-            ai_translation_service._TranslationTextSegment("segment one", False),
-            ai_translation_service._TranslationTextSegment("segment two", True),
+            planning._TranslationTextSegment("segment one", False),
+            planning._TranslationTextSegment("segment two", True),
         ],
     )
     responses = iter(
@@ -1045,6 +1057,374 @@ def _budget(context_window: int) -> dict[str, int]:
         "text_budget_tokens": 2048,
         "safety_margin_tokens": 512,
     }
+
+
+def test_changed_source_disqualifies_only_its_translation(monkeypatch, tmp_path) -> None:
+    """@brief Stable IDs cannot preserve approval after the source text changes."""
+    root, manifest = _create_chunked_project(tmp_path, "ChangedTranslationSource")
+    _install_translations(monkeypatch, ["Prima traducere", "A doua traducere"])
+    ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    ai_translation_service.approve_all(root)
+    _replace_source_chunks(
+        root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Changed original one"},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
+        ],
+    )
+
+    assert ai_translation_service.load_translation_summary(root)["approved_count"] == 1
+    translated = ai_translation_service.load_translated_chunks(root)
+    assert translated[0]["translated_text"] == ""
+    assert translated[1]["translated_text"] == "A doua traducere"
+    with pytest.raises(ValueError, match="before approving"):
+        ai_translation_service.approve_chunk(root, "chunk-0001")
+
+
+def test_legacy_translation_requires_explicit_reapproval(tmp_path) -> None:
+    """@brief Legacy approved text remains visible but is bound only by explicit reapproval."""
+    root, _manifest = _create_chunked_project(tmp_path, "LegacyTranslation")
+    _write_translation_document(
+        root,
+        "completed",
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Prima traducere", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "A doua traducere", "approved": True},
+        ],
+    )
+    assert ai_translation_service.load_translation_summary(root)["approved_count"] == 0
+    assert ai_translation_service.load_translated_chunks(root)[0]["translated_text"] == "Prima traducere"
+    assert ai_translation_service.approve_all(root)["status"] == "completed"
+    assert ai_translation_service.load_translation_document(root)["chunks"][0]["source_fingerprint"]
+
+
+@pytest.mark.parametrize("operation", ["split_chunk", "audio_blocks", "audio_assembly"])
+def test_stale_translated_speech_cannot_generate_new_output(tmp_path, operation) -> None:
+    """@brief Keep persisted outputs intact while rejecting generation from unbound translations."""
+    project_root, manifest = _create_chunked_project(tmp_path, "UnboundSpeechSource")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    _write_translation_document(
+        project_root,
+        "completed",
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Traducerea unu", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "Traducerea doi", "approved": True},
+        ],
+    )
+    path = speech_blocks_service.write_speech_blocks_document(
+        project_root,
+        {
+            "status": "completed",
+            "source": {"kind": "translated", "language": "ro", "fingerprint": "previously-approved"},
+            "ai_profile_id": "profile-1", "instructions": "", "scene_ambience": {"enabled": False},
+            "response_contract": "direct_blocks",
+            "token_usage": _usage(0, 0),
+            "budget_metadata": {}, "checkpoint": None, "failure": None,
+            "blocks": [{"chunk_id": "chunk-0001", "text": "Traducerea unu", "approved": True}],
+        },
+    )
+    original_document = path.read_bytes()
+
+    with pytest.raises(ValueError, match="Speech Blocks use an outdated translation"):
+        if operation == "split_chunk":
+            speech_blocks_service.regenerate_chunk_speech_blocks(project_root, manifest, "chunk-0001", {})
+        elif operation == "audio_blocks":
+            audio_blocks_service.start_or_continue_generation(project_root, manifest, {})
+        else:
+            audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert path.read_bytes() == original_document
+
+
+def test_translated_speech_generation_checks_exact_approved_snapshot(tmp_path) -> None:
+    """@brief Allow a current translated snapshot and reject one whose approved text changed."""
+    project_root, manifest = _create_chunked_project(tmp_path, "CurrentSpeechSource")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    rows = bind_translation_source(
+        project_root,
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Traducerea unu", "approved": True},
+            {"chunk_id": "chunk-0002", "translated_text": "Traducerea doi", "approved": True},
+        ],
+    )
+    _write_translation_document(project_root, "completed", rows)
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, {})
+
+    assert speech_blocks_service.load_speech_blocks(project_root, generation_manifest=manifest)
+    speech_blocks_service.validate_current_translated_speech_source(project_root, manifest)
+
+    rows[0]["translated_text"] = "Traducere diferita"
+    _write_translation_document(project_root, "completed", rows)
+    assert speech_blocks_service.load_speech_blocks(project_root)
+    with pytest.raises(ValueError, match="Speech Blocks use an outdated translation"):
+        speech_blocks_service.load_speech_blocks(project_root, generation_manifest=manifest)
+
+
+def test_consumers_agree_on_approved_source(monkeypatch, tmp_path) -> None:
+    """@brief Character Discovery and Speech Blocks agree on published and interrupted translations."""
+    from audiomancer.services import character_discovery_service, speech_blocks_service
+
+    root, manifest = _create_chunked_project(tmp_path, "CommonTranslationSource")
+    _install_translations(monkeypatch, ["Prima traducere", "A doua traducere"])
+    ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    ai_translation_service.approve_all(root)
+    document = ai_translation_service.load_translation_document(root)
+    for status, kind in (("completed", "translated"), ("failed", "original")):
+        document["status"] = status
+        ai_translation_service.write_translation_document(root, document)
+        characters, character_source = character_discovery_service._resolve_discovery_input_chunks(root)
+        speech = speech_blocks_service.resolve_source_chunks(root, manifest)
+        assert character_source["kind"] == speech["source_kind"] == kind
+        assert [row["text"] for row in characters] == [row["text"] for row in speech["source_chunks"]]
+
+
+def test_approval_invalidates_speech_without_character_document(monkeypatch, tmp_path) -> None:
+    """@brief Approval changes the audio source even in a project without Character Discovery."""
+    root, manifest = _create_chunked_project(tmp_path, "TranslationWithoutCharacters")
+    _install_translations(monkeypatch, ["Prima traducere", "A doua traducere"])
+    ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    speech = root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    speech.write_bytes(b"original speech")
+    narrator = root / config.NARRATOR_VOICE_FILE_NAME
+    narrator.write_bytes(b"preserved narrator")
+
+    ai_translation_service.approve_all(root)
+
+    assert not speech.exists()
+    assert narrator.read_bytes() == b"preserved narrator"
+    assert project_workspace_service.load_manifest(root)["operations"]["translation"]["status"] == "completed"
+
+
+def test_translation_publication_restores_originals(monkeypatch, tmp_path) -> None:
+    """@brief A manifest replacement failure restores translation and dependent artifacts."""
+    from pathlib import Path
+
+    root, manifest = _create_chunked_project(tmp_path, "TranslationRollback")
+    _install_translations(monkeypatch, ["Prima traducere", "A doua traducere"])
+    ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    speech = root / config.SPEECH_BLOCKS_DOCUMENT_FILE_NAME
+    speech.write_bytes(b"original speech")
+    originals = {
+        path: path.read_bytes()
+        for path in (speech, root / config.TRANSLATED_CHUNKS_FILE_NAME, root / config.PROJECT_MANIFEST_FILE_NAME)
+    }
+    replace = Path.replace
+
+    def fail_manifest(path, target):
+        """@brief Deny staged manifest installation after backup and document replacement."""
+        if path.parent.name.startswith(".translation-stage-") and path.name == config.PROJECT_MANIFEST_FILE_NAME:
+            raise OSError("Injected translation publication failure")
+        return replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", fail_manifest)
+    with pytest.raises(OSError, match="Injected translation publication failure"):
+        ai_translation_service.approve_all(root)
+    assert all(path.read_bytes() == expected for path, expected in originals.items())
+
+
+def test_translation_planner_bounds_assembled_fragments() -> None:
+    """@brief Join separators count toward the bound and an unbreakable span fails clearly."""
+    from audiomancer.services.ai_budget_service import estimate_text_tokens
+
+    source = " ".join(["abcd"] * 550)
+    fragments = planning._split_translation_source_text(source, 512)
+    assert " ".join(fragment.text for fragment in fragments) == source
+    assert all(estimate_text_tokens(fragment.text) <= 512 for fragment in fragments)
+    with pytest.raises(ValueError, match="unbroken"):
+        planning._split_translation_source_text("x" * 2200, 512)
+
+
+def test_blank_source_is_not_requested_or_counted(monkeypatch, tmp_path) -> None:
+    """@brief Blank manual chunks do not generate model work or require approval."""
+    root, manifest = _create_chunked_project(tmp_path, "BlankTranslationSource")
+    _replace_source_chunks(
+        root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": " "},
+        ],
+    )
+    prompts = _install_translations(monkeypatch, ["Traducere unu", "Unexpected call"])
+    summary = ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    assert len(prompts) == 1
+    assert summary["total_count"] == 1
+    assert ai_translation_service.approve_all(root)["status"] == "completed"
+
+
+def test_translation_retries_fragment_that_splits_the_title_from_narration(monkeypatch, tmp_path) -> None:
+    """@brief Keep the title, byline and narration in their original paragraph after correction."""
+    root, manifest = _create_chunked_project(tmp_path, "TranslationParagraphRetry")
+    source_text = "TITLE By A. Author The narrator arrived.\n\nThe door opened."
+    _replace_source_chunks(root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": source_text}])
+    corrected_text = "TITLU De A. Autor Naratorul a sosit.\n\nUsa s-a deschis."
+    replies = iter(["TITLU\nDe A. Autor\n\nNaratorul a sosit.\n\nUsa s-a deschis.", corrected_text])
+    prompts = []
+
+    def reply(_profile, _system_prompt, user_prompt, **_options):
+        """@brief Return one misplaced paragraph break followed by the corrected fragment."""
+        prompts.append(user_prompt)
+        return {"payload": {"translated_text": next(replies)}, "usage": _usage(5, 7)}
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", reply)
+
+    ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+
+    assert len(prompts) == 2
+    assert all(source_text in prompt for prompt in prompts)
+    assert "exactly 2 paragraphs" in prompts[1]
+    document = ai_translation_service.load_translation_document(root)
+    assert document["chunks"][0]["translated_text"] == corrected_text
+    assert document["token_usage"] == _usage(10, 14)
+
+
+@pytest.mark.parametrize(
+    "reply, expected_attempts, error_message",
+    [
+        ({"translated_text": "Traducere", "notes": "extra"}, 1, "invalid text-only JSON"),
+        (
+            {"translated_text": "Ambele paragrafe într-un singur paragraf"},
+            2,
+            "expected 2, received 1",
+        ),
+    ],
+)
+def test_invalid_reply_cannot_publish_chunk(monkeypatch, tmp_path, reply, expected_attempts, error_message) -> None:
+    """@brief Invalid fields or lost internal paragraph boundaries cannot become durable text."""
+    root, manifest = _create_chunked_project(tmp_path, "TranslationReplyBoundary")
+    _replace_source_chunks(
+        root,
+        [
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Paragraph one.\n\nParagraph two."},
+        ],
+    )
+    prompts = []
+
+    def provider_reply(_profile, _system_prompt, user_prompt, **_options):
+        """@brief Simulate a persistent invalid provider response."""
+        prompts.append(user_prompt)
+        return {"payload": reply, "usage": _usage(5, 7)}
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", provider_reply)
+    with pytest.raises(ValueError, match=error_message):
+        ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    assert len(prompts) == expected_attempts
+    document = ai_translation_service.load_translation_document(root)
+    assert document["status"] == "failed"
+    assert not document["chunks"][0]["translated_text"]
+    assert document["token_usage"] == _usage(5 * expected_attempts, 7 * expected_attempts)
+
+
+def test_log_failure_records_terminal_status(monkeypatch, tmp_path) -> None:
+    """@brief A setup failure retains prior completed text and records a resumable failure."""
+    root, manifest = _create_chunked_project(tmp_path, "TranslationLogDenied")
+    _write_translation_document(
+        root,
+        "cancelled",
+        [
+            {"chunk_id": "chunk-0001", "translated_text": "Prima traducere", "approved": False},
+            {"chunk_id": "chunk-0002", "translated_text": "", "approved": False},
+        ],
+    )
+
+    def deny_log(_root):
+        """@brief Fail before the first provider request."""
+        raise OSError("Log creation denied")
+
+    monkeypatch.setattr(ai_translation_service, "_resolve_log_path", deny_log)
+    with pytest.raises(OSError, match="Log creation denied"):
+        ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    document = ai_translation_service.load_translation_document(root)
+    assert document["status"] == "failed"
+    assert document["chunks"][0]["translated_text"] == "Prima traducere"
+
+
+def test_resume_discloses_changed_request_policy(monkeypatch, tmp_path) -> None:
+    """@brief Resume warns before a changed reasoning policy sends its next request."""
+    root, manifest = _create_chunked_project(tmp_path, "TranslationPolicyChange")
+    calls = _install_translations(monkeypatch, ["Prima traducere"])
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        ai_translation_service.start_or_continue_translation(
+            root, manifest, _profile_payload(), "ro", cancel_requested=lambda: bool(calls)
+        )
+    messages = []
+
+    def fake_reply(*args, **kwargs):
+        """@brief Require the policy warning to precede the provider call."""
+        assert any("request settings changed" in message for message in messages)
+        return {"payload": {"translated_text": "A doua traducere"}}
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_reply)
+    ai_translation_service.start_or_continue_translation(
+        root,
+        manifest,
+        {**_profile_payload(), "reasoning_mode": "enabled"},
+        "ro",
+        progress_callback=lambda *args: messages.append(args[3]),
+    )
+    assert ai_translation_service.load_translation_document(root)["chunks"][0]["translated_text"] == "Prima traducere"
+
+
+def test_failed_final_translation_publish_can_resume_without_provider_calls(monkeypatch, tmp_path) -> None:
+    """@brief A final publication error preserves all completed chunks for a zero-call retry."""
+    from pathlib import Path
+
+    root, manifest = _create_chunked_project(tmp_path, "TranslationFinalizationRetry")
+    calls = _install_translations(monkeypatch, ["Prima traducere", "A doua traducere"])
+    replace = Path.replace
+    failed = False
+
+    def fail_once(path, target):
+        """@brief Fail only the first staged manifest installation."""
+        nonlocal failed
+        if (
+            not failed
+            and path.parent.name.startswith(".translation-stage-")
+            and path.name == config.PROJECT_MANIFEST_FILE_NAME
+        ):
+            failed = True
+            raise OSError("Final publication denied")
+        return replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", fail_once)
+    with pytest.raises(OSError, match="Final publication denied"):
+        ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    assert ai_translation_service.load_translation_summary(root)["status"] == "failed"
+    assert ai_translation_service.load_translation_summary(root)["translated_count"] == 2
+    summary = ai_translation_service.start_or_continue_translation(root, manifest, _profile_payload(), "ro")
+    assert summary["status"] == "review_pending"
+    assert len(calls) == 2
+
+
+def test_reset_can_remove_unreadable_translation(tmp_path) -> None:
+    """@brief A confirmed reset can clear a document that cannot decode as text."""
+    root, _manifest = _create_chunked_project(tmp_path, "UnreadableTranslation")
+    path = root / config.TRANSLATED_CHUNKS_FILE_NAME
+    path.write_bytes(b"\xff")
+    with pytest.raises(ai_translation_service.TranslationDocumentError):
+        ai_translation_service.load_translation_document(root)
+    ai_translation_service.reset_translation(root)
+    assert not path.exists()
+
+
+
+def test_cancel_at_retranslation_publication_keeps_approval_and_usage(monkeypatch, tmp_path) -> None:
+    """@brief Final cancellation preserves approved text and accounts for the completed AI request."""
+    root, manifest = _create_chunked_project(tmp_path, "RetranslationFinalCancellation")
+    original = bind_translation_source(root, [
+        {"chunk_id": "chunk-0001", "translated_text": "Approved one", "approved": True},
+        {"chunk_id": "chunk-0002", "translated_text": "Approved two", "approved": True},
+    ])
+    _write_translation_document(root, "completed", original)
+    calls = _install_translations(monkeypatch, ["Discarded replacement"])
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        ai_translation_service.retranslate_chunk(
+            root, manifest, _profile_payload(), "ro", "chunk-0001",
+            cancel_requested=lambda: bool(calls),
+        )
+    document = ai_translation_service.load_translation_document(root)
+    assert document["chunks"] == original
+    assert document["status"] == "completed"
+    assert document["token_usage"]["total_tokens"] == 15
 
 
 # END OF FILE
