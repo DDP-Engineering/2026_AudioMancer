@@ -62,6 +62,10 @@ project tests. AI replies and publication failures use controlled test doubles.
 Focused Character Discovery checks use the discovery service/state and Characters
 page/controller tests with simulated provider responses and offscreen Qt.
 
+Focused Character Voices checks use the character voice service, state, page
+and controller tests, with simulated generation and injected file replacement
+failures. Audio Blocks, export and project reset tests cover consumers.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

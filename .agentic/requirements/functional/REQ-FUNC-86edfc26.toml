@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-FUNC-86edfc26"
+
+title = "Saving an unchanged character voice draft preserves its sample"
+
+status = "active"
+
+requirement = """
+When the operator saves an unchanged Character Voices draft, the operation shall exit edit mode with the existing sample and dependent audio intact.
+"""
+
+verification = "Save the original valid fields with an existing sample and verify identical artifact bytes and no invalidation."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

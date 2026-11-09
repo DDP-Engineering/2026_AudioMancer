@@ -32,6 +32,7 @@ from audiomancer.services import (
     ui_state_service,
     voice_sample_import_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import (
     audio_blocks_ui_controller,
     misc_ui_controller,
@@ -186,7 +187,7 @@ def handle_import_sample_requested(window: "MainWindow", target_id: str) -> None
 
 def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     """
-    @brief      Confirm character-voices prompt edit mode and clear the old target sample before editing.
+    @brief      Open the selected target's prompt draft without changing project artifacts.
     @param[in]  window Main application window.
     @param[in]  target_id Selected character-voices target identifier.
     @return     None.
@@ -195,11 +196,6 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
-        return
-    if not _confirm_prompt_edit(window, current_language):
-        return
-    _stop_preview_playback(window)
     try:
         character_voices_service.begin_target_prompt_edit(window._current_project_root, target_id)
     except ValueError as error:
@@ -214,13 +210,8 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
             ui_state_service.translate(message_key, current_language),
         )
         return
-    window._character_voices_inspected_target_id = target_id
-    _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    if window._character_voices_page.current_target_id() != target_id:
+        handle_selection_change_requested(window, target_id)
     window._character_voices_page.begin_edit_mode()
 
 
@@ -246,34 +237,39 @@ def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str,
             ).format(**range_error),
         )
         return
+    root = window._current_project_root
+    target_id = str(target_payload.get("target_id", "")).strip()
+    prompt_text = str(target_payload.get("prompt_text", "")).strip()
+    preview_text = str(target_payload.get("preview_text", "")).strip()
     try:
-        updated_target = character_voices_service.save_target_prompt(
-            window._current_project_root,
-            str(target_payload.get("target_id", "")),
-            str(target_payload.get("prompt_text", "")),
-            str(target_payload.get("preview_text", "")),
+        target = character_voices_service.begin_target_prompt_edit(root, target_id)
+        changed = character_voices_service.target_prompt_changed(target, prompt_text, preview_text)
+        if changed and prompt_text and preview_text:
+            if character_voices_service.has_target_sample(root, target_id):
+                if not _confirm_prompt_save(window, current_language):
+                    return
+            elif not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
+                return
+            _stop_preview_playback(window)
+        character_voices_service.save_target_prompt(root, target_id, prompt_text, preview_text)
+    except (ValueError, OSError) as error:
+        message_key = {
+            "empty_prompt": "character_voices.error_missing_prompt",
+            "empty_preview_text": "character_voices.error_missing_preview_text",
+            "missing_target": "character_voices.error_target",
+            "readonly_target": "voice_sample_import.error_readonly_target",
+        }.get(str(error))
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(message_key, current_language) if message_key else str(error),
         )
-    except ValueError as error:
-        if str(error) == "empty_prompt":
-            QMessageBox.warning(
-                window,
-                ui_state_service.translate("dialog.project_error_title", current_language),
-                ui_state_service.translate("character_voices.error_missing_prompt", current_language),
-            )
-        elif str(error) == "empty_preview_text":
-            QMessageBox.warning(
-                window,
-                ui_state_service.translate("dialog.project_error_title", current_language),
-                ui_state_service.translate("character_voices.error_missing_preview_text", current_language),
-            )
         return
-    window._character_voices_inspected_target_id = str(updated_target.get("target_id", "")).strip()
-    window.show_project_state(window._current_project_root, window._current_manifest)
-    _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-        window,
-        (str(updated_target.get("target_id", "")).strip(),),
-    )
+    window._character_voices_inspected_target_id = target_id
+    window.show_project_state(root, window._current_manifest)
+    if changed:
+        _sync_manifest_stage(window)
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_prompt_saved", current_language),
@@ -414,6 +410,7 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
             current_language,
         ),
     }
+    saved_target_ids: list[str] = []
     operation_runner_controller.start_threaded_operation(
         window,
         "character_voices_generate_all_samples",
@@ -428,50 +425,38 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
                 voice_language,
                 progress_callback,
                 cancel_requested,
+                saved_target_ids,
             )
         ),
         set_busy=lambda is_busy: window._character_voices_page.set_busy(is_busy),
-        success_handler=lambda result_payload: _handle_generate_missing_samples_success(
-            window,
-            result_payload,
-            target_payloads,
-            current_language,
+        success_handler=lambda _result: _handle_generate_missing_samples_success(
+            window, saved_target_ids, current_language
         ),
-        failure_handler=lambda error: _handle_generate_sample_failure(window, error, current_language),
-        cancel_handler=lambda message: _handle_generate_sample_cancelled(window, message, current_language),
+        failure_handler=lambda error: _handle_generate_sample_failure(
+            window, error, current_language, saved_target_ids
+        ),
+        cancel_handler=lambda message: _handle_generate_sample_cancelled(
+            window, message, current_language, saved_target_ids
+        ),
         cancellable=True,
     )
 
 
 def _handle_generate_missing_samples_success(
     window: "MainWindow",
-    result_payload: object,
-    target_payloads: list[dict[str, object]],
+    saved_target_ids: list[str],
     current_language: str,
 ) -> None:
     """
     @brief      Refresh Character Voices UI state after successful batch character sample generation.
     @param[in]  window Main application window.
-    @param[in]  result_payload Worker result payload.
-    @param[in]  target_payloads Batch target payloads.
+    @param[in]  saved_target_ids IDs of samples successfully published by the worker.
     @param[in]  current_language Current UI language code.
     @return     None.
-    @exception  None
     """
-    _ = result_payload
-    window._settings_payload = settings_service.load_settings()
-    if target_payloads:
-        window._character_voices_inspected_target_id = str(target_payloads[-1].get("target_id", "")).strip() or None
-    if window._current_project_root is not None:
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-    _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-        window,
-        tuple(str(target_payload.get("target_id", "")).strip() for target_payload in target_payloads),
-    )
+    if saved_target_ids:
+        window._character_voices_inspected_target_id = saved_target_ids[-1]
+    _refresh_generated_samples(window, saved_target_ids)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_missing_samples_generated", current_language),
@@ -509,38 +494,68 @@ def _handle_generate_sample_success(
     )
 
 
-def _handle_generate_sample_failure(window: "MainWindow", error: Exception, current_language: str) -> None:
+def _handle_generate_sample_failure(
+    window: "MainWindow",
+    error: Exception,
+    current_language: str,
+    saved_target_ids: list[str] | None = None,
+) -> None:
     """
-    @brief      Refresh Character Voices UI state after failed sample generation.
+    @brief      Reconcile any completed samples and show the generation error.
     @param[in]  window Main application window.
     @param[in]  error Raised operation exception.
     @param[in]  current_language Current UI language code.
+    @param[in]  saved_target_ids IDs of samples successfully published by a batch.
     @return     None.
-    @exception  None
     """
-    window._settings_payload = settings_service.load_settings()
-    if window._current_project_root is not None:
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
+    message = str(error)
+    try:
+        if isinstance(error, ProjectFileRecoveryError):
+            if saved_target_ids:
+                audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                    window, tuple(saved_target_ids), refresh_project_state=False
+                )
+        else:
+            _refresh_generated_samples(window, saved_target_ids or [])
+    except (OSError, ValueError) as reconciliation_error:
+        message = f"{message}\n\n{reconciliation_error}"
     QMessageBox.warning(
         window,
         ui_state_service.translate("dialog.project_error_title", current_language),
-        str(error),
+        message,
     )
 
 
-def _handle_generate_sample_cancelled(window: "MainWindow", message: str, current_language: str) -> None:
+
+def _handle_generate_sample_cancelled(
+    window: "MainWindow",
+    message: str,
+    current_language: str,
+    saved_target_ids: list[str] | None = None,
+) -> None:
     """
-    @brief      Refresh Character Voices UI state after cancelled sample generation.
+    @brief      Reconcile any completed samples and show cancellation status.
     @param[in]  window Main application window.
     @param[in]  message Cancellation message.
     @param[in]  current_language Current UI language code.
+    @param[in]  saved_target_ids IDs of samples successfully published by a batch.
     @return     None.
-    @exception  None
     """
     _ = message
+    _refresh_generated_samples(window, saved_target_ids or [])
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.operation_cancelled", current_language),
+    )
+
+
+def _refresh_generated_samples(window: "MainWindow", saved_target_ids: list[str]) -> None:
+    """
+    @brief      Refresh persisted sample progress and invalidate audio for completed targets.
+    @param[in]  window Main application window.
+    @param[in]  saved_target_ids IDs whose sample publication succeeded.
+    @return     None.
+    """
     window._settings_payload = settings_service.load_settings()
     if window._current_project_root is not None:
         window.show_project_state(
@@ -548,10 +563,8 @@ def _handle_generate_sample_cancelled(window: "MainWindow", message: str, curren
             project_workspace_service.load_manifest(window._current_project_root),
         )
     _sync_manifest_stage(window)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.operation_cancelled", current_language),
-    )
+    if saved_target_ids:
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, tuple(saved_target_ids))
 
 
 def handle_preview_toggle_requested(window: "MainWindow") -> None:
@@ -663,6 +676,7 @@ def _generate_and_store_character_samples(
     voice_language: str,
     progress_callback,
     cancel_requested,
+    saved_target_ids: list[str],
 ) -> dict[str, object]:
     """
     @brief      Generate samples sequentially for all current character voice targets.
@@ -673,6 +687,7 @@ def _generate_and_store_character_samples(
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  progress_callback Optional threaded-runner progress callback.
     @param[in]  cancel_requested Optional cooperative cancellation callback.
+    @param[out] saved_target_ids IDs appended after successful sample publication.
     @return     Batch result summary.
     @exception  OperationCancelledError Raised when cancellation is requested between targets.
     """
@@ -680,7 +695,6 @@ def _generate_and_store_character_samples(
     if total_count == 0:
         return {"generated_count": 0}
     _emit_sample_progress(progress_callback, 0, progress_messages["batch_prepare"])
-    generated_count = 0
     for target_index, target_payload in enumerate(target_payloads, start=1):
         if cancel_requested is not None and cancel_requested():
             raise operation_runtime_service.OperationCancelledError("Character sample batch cancelled.")
@@ -733,7 +747,7 @@ def _generate_and_store_character_samples(
             _emit_current_target_progress,
             cancel_requested,
         )
-        generated_count += 1
+        saved_target_ids.append(str(target_payload["target_id"]))
         _emit_batch_sample_progress(
             progress_callback,
             target_index,
@@ -742,7 +756,7 @@ def _generate_and_store_character_samples(
             batch_message,
             progress_messages["download"],
         )
-    return {"generated_count": generated_count}
+    return {"generated_count": len(saved_target_ids)}
 
 
 def _emit_batch_sample_progress(
@@ -890,18 +904,18 @@ def _stop_preview_playback(window: "MainWindow") -> None:
     window._character_voices_page.set_preview_active(False)
 
 
-def _confirm_prompt_edit(window: "MainWindow", language: str) -> bool:
+def _confirm_prompt_save(window: "MainWindow", language: str) -> bool:
     """
-    @brief      Confirm the prompt edit.
+    @brief      Confirm saving a changed prompt with an existing sample.
     @param[in]  window Value for `window`.
     @param[in]  language Language code.
-    @return     None.
+    @return     Whether the operator confirmed the save.
     """
     return (
         QMessageBox.question(
             window,
-            ui_state_service.translate("dialog.character_voices_edit_title", language),
-            ui_state_service.translate("dialog.character_voices_edit_message", language),
+            ui_state_service.translate("dialog.character_voices_save_title", language),
+            ui_state_service.translate("dialog.character_voices_save_message", language),
         )
         == QMessageBox.StandardButton.Yes
     )

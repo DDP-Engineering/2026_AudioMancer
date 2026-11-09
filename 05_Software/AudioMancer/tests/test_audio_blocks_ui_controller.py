@@ -19,6 +19,7 @@
 import json
 
 from PySide6.QtWidgets import QMessageBox
+import pytest
 
 from audiomancer import config
 from audiomancer.services import (
@@ -653,11 +654,14 @@ def test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_wi
     assert pause_block["pause_duration_ms"] == 1250
 
 
+@pytest.mark.parametrize("refresh_project_state", [True, False])
 def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelated_audio(
-    qtbot, tmp_path, default_settings_payload
+    monkeypatch, qtbot, tmp_path, default_settings_payload, refresh_project_state
 ) -> None:
     """
     @brief      Verify voice-target invalidation clears only matching generated audio plus Audio Assembly.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  refresh_project_state Whether to reload the project after invalidation.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
@@ -676,7 +680,14 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
     assembly_report_path.write_text("{}\n", encoding="utf-8")
     window = _build_window(qtbot, project_root, default_settings_payload)
 
-    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, ("character_alice",))
+    refreshes = []
+    monkeypatch.setattr(window, "show_project_state", lambda *_args: refreshes.append(True))
+
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+        window, ("character_alice",), refresh_project_state=refresh_project_state
+    )
+
+    assert bool(refreshes) is refresh_project_state
 
     output_payload = audio_blocks_service.load_audio_blocks(project_root)
     updated_manifest = project_workspace_service.load_manifest(project_root)

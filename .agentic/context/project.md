@@ -45,6 +45,10 @@ prompts, semantic response validation and project-local artifacts.
 Narrator Voice keeps edits in a draft, publishes the WAV with its transcript,
 and retains usable AI profile suggestions.
 
+Character Voices keeps prompt edits in drafts and publishes sample pairs by
+stable target ID. Batch generation invalidates audio for successfully saved
+samples, including when the batch is interrupted.
+
 VoiceWeaver receives the Italian synthesis hint for Romanian voice design and
 cloning. Project languages, speech text, and reference transcripts retain their
 Romanian values.

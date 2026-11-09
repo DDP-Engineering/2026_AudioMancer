@@ -4,18 +4,15 @@ title = "The Character Voices controller shall expose an explicit edit/save flow
 status = "active"
 
 requirement = """
-The Character Voices controller shall expose an explicit edit/save flow that clears the sample, keeps editors unlocked while editing, and persists preview text.
+When an operator edits or cancels a Character Voices draft, the page shall preserve the persisted prompt, preview, sample and downstream audio.
 """
 
-verification = "Automated: three linked pytest selectors cover the explicit edit/save flow."
+verification = "Enter Edit with a sample, change both fields, cancel, and observe the original text and sample without invalidation."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py"]
 linked_tests = [
-  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode",
-  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked",
-  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
+  "05_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes",
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_edit_prompt_preserves_sample",
 ]
 
 priority = "high"

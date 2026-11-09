@@ -390,7 +390,8 @@ def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -
         @return     None.
         """
         observed_payloads.append(bytes(payload))
-        Path(target_path).write_bytes(payload)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(payload)
 
     monkeypatch.setattr(character_voices_service, "write_bytes_atomic", _capture_byte_write)
 
@@ -408,6 +409,62 @@ def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -
     )
 
     assert observed_payloads == [b"RIFF-character"]
+
+
+def test_character_sample_names_follow_ids(tmp_path) -> None:
+    """@brief Keep two sample pairs distinct when their names normalize identically."""
+    targets = character_voices_service.sync_voice_plan(
+        tmp_path,
+        [
+            {"character_id": "ana_one", "canonical_name": "Ana-Maria"},
+            {"character_id": "ana_two", "canonical_name": "Ana Maria"},
+        ],
+        None,
+    )
+    characters = [target for target in targets if target["target_kind"] == "character"]
+    for target in characters:
+        target_id = str(target["target_id"])
+        character_voices_service.store_target_sample(tmp_path, target, "en", target_id, {}, "", target_id.encode())
+
+    for target in characters:
+        target_id = str(target["target_id"])
+        audio, _ = character_voices_service.target_sample_paths(tmp_path, target_id)
+        assert target_id in audio.name
+        assert audio.read_bytes() == target_id.encode()
+        assert character_voices_service.load_target_sample_metadata(tmp_path, target_id)["preview_text"] == target_id
+
+
+@pytest.mark.parametrize("source", ["generated", "imported"])
+def test_character_sample_publication_restores_pair_on_document_failure(monkeypatch, tmp_path, source) -> None:
+    """@brief Restore the old WAV and transcript if publication fails after the new WAV is installed."""
+    targets = character_voices_service.sync_voice_plan(
+        tmp_path, [{"character_id": "alice", "canonical_name": "Alice"}], None
+    )
+    target = next(target for target in targets if target["target_kind"] == "character")
+    target_id = str(target["target_id"])
+    character_voices_service.store_target_sample(tmp_path, target, "en", "Old transcript.", {}, "", b"RIFF-old")
+    audio, document = character_voices_service.target_sample_paths(tmp_path, target_id)
+    original_document = document.read_bytes()
+    imported_wav = tmp_path / "imported.wav"
+    _write_import_test_wav(imported_wav)
+    original_replace = Path.replace
+
+    def fail_staged_document(path, destination):
+        """@brief Fail only the staged document publish, allowing the backup restore."""
+        if Path(destination) == document and "-stage-" in path.parent.name:
+            assert audio.read_bytes() != b"RIFF-old"
+            raise OSError("document replacement failed")
+        return original_replace(path, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_staged_document)
+    with pytest.raises(OSError, match="document replacement failed"):
+        if source == "imported":
+            character_voices_service.import_target_sample(tmp_path, target, "en", "New transcript.", imported_wav)
+        else:
+            character_voices_service.store_target_sample(tmp_path, target, "en", "New transcript.", {}, "", b"RIFF-new")
+
+    assert audio.read_bytes() == b"RIFF-old"
+    assert document.read_bytes() == original_document
 
 
 def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None:

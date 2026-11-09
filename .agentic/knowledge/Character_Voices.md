@@ -33,7 +33,7 @@ manifest synchronization, downstream audio invalidation, and status presentation
 `tts_runtime_ui_support.py` owns the common unauthenticated simplified-VoiceWeaver
 probe, model-load, `voice_design` generation, terminal validation, remote-aware
 cancellation, and `/audio` WAV-download flow.
-`CharacterVoicesPage` exposes target selection and import, edit/save, generation,
+`CharacterVoicesPage` exposes target selection and import, edit/save, draft cancellation, generation,
 batch generation, and preview signals.
 
 ## Key behaviors
@@ -42,16 +42,14 @@ batch generation, and preview signals.
   Voices until a non-empty persisted plan and required sample evidence exist.
 - `REQ-REL-f42cecc0` — filesystem failures during sample import remain inside the
   Qt slot, show a localized project-error warning, and trigger no success effects.
-- `REQ-FUNC-efab6267` — cancellation reloads durable partial batch progress into
-  the page and manifest before presenting cancellation status.
+- An interrupted batch reconciles saved samples and invalidates only their target IDs.
 - `REQ-UX-1e55ab3b` — valid edit mode keeps Save reachable and emits unchanged
   prompt and preview text through the established save path.
-- `REQ-UX-aa109e16` — a confirmed prompt edit that reaches a read-only or
+- `REQ-UX-aa109e16` — an edit request that reaches a read-only or
   missing target shows the localized specific or generic project warning and
   returns before manifest sync, invalidation, refresh, or edit-mode entry.
 - `REQ-REL-ee8f9ed0` — generated, imported, and narrator-copied sample WAV
-  bytes publish through the shared atomic persistence contract without changing
-  sample metadata ownership or cancellation behavior.
+  bytes are staged through the shared atomic persistence contract.
 - `REQ-DATA-52fee282` — selected-language writes validate an existing project
   manifest before initializing or mutating `characters_voice.json`; missing
   manifests retain the established fallback, while corrupt, unreadable, and
@@ -110,10 +108,20 @@ keeps the compatible target-initialization fallback. Validation, filesystem,
 and unexpected manifest failures cannot act as an implicit unlock; expected
 errors are logged at the write boundary and surfaced by state/controller UI.
 
-Batch generation persists each completed character sample immediately. A later
-cancellation does not roll back those samples; it refreshes the UI and manifest
-to expose the durable partial result. Successful voice changes continue to use
-the existing downstream Audio Blocks invalidation paths.
+Edit captures a prompt and preview draft in the page. Cancel restores those fields.
+Saving changes confirms any destructive impact, clears the old sample pair and
+invalidates generated audio for the edited target. An unchanged Save preserves
+the sample and downstream audio.
+
+New generated, imported and narrator-copied WAVs use the target ID under
+`character_voice_samples/`. The stored path and spoken transcript remain in
+`characters_voice.json`. Existing paths are read as stored. Sample publication
+uses `replace_project_files` to restore the previous pair if replacement fails.
+
+The batch worker records each target ID after publishing its sample. Success,
+cancellation and generation errors reconcile the durable progress and use those
+IDs for selective Audio Blocks invalidation. If rollback cannot finish, skip
+reloading the voice plan while still invalidating audio for the saved IDs.
 
 ## Validation
 

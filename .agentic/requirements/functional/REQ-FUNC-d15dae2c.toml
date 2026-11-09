@@ -1,0 +1,30 @@
+schema = 1
+
+id = "REQ-FUNC-d15dae2c"
+
+title = "Character sample filenames derive from target IDs"
+
+status = "active"
+
+requirement = """
+When publishing a character sample, Character Voices shall derive the WAV filename from the stable target ID.
+"""
+
+verification = "Store samples for distinct IDs whose display names normalize identically and verify distinct files and transcripts."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_names_follow_ids",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_import_target_sample_persists_character_sample_metadata",
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_same_narrator_sync_copies_selected_narrator_sample_to_each_character",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

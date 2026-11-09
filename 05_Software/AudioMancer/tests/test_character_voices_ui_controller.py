@@ -31,6 +31,7 @@ from audiomancer.services import (
     tts_budget_service,
     ui_state_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import character_voices_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -40,11 +41,11 @@ _MULTILINE_PREVIEW_TEXT = (
 )
 
 
-def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode(
+def test_character_voices_ui_controller_edit_prompt_preserves_sample(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
-    @brief      Verify editing a character prompt deletes the existing sample and enters edit mode.
+    @brief      Verify Edit and Cancel leave the persisted sample and downstream audio alone.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -67,6 +68,14 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
         b"RIFF-character",
     )
     window = _build_window(qtbot, project_root)
+    audio_path, document = character_voices_service.target_sample_paths(project_root, "character_alice")
+    original_document = document.read_bytes()
+    invalidated = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        lambda _window, ids: invalidated.extend(ids),
+    )
     monkeypatch.setattr(
         character_voices_ui_controller.QMessageBox,
         "question",
@@ -75,10 +84,15 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
 
     character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
 
-    assert character_voices_service.has_target_sample(project_root, "character_alice") is False
-    assert window._character_voices_page.is_edit_mode() is True
-    assert window._character_voices_page._prompt_edit.isReadOnly() is False
-    assert window._character_voices_page._preview_text_edit.isReadOnly() is False
+    assert character_voices_service.has_target_sample(project_root, "character_alice")
+    assert window._character_voices_page.is_edit_mode()
+    window._character_voices_page._prompt_edit.setPlainText("Draft prompt.")
+    window._character_voices_page._cancel_prompt_button.click()
+
+    assert audio_path.read_bytes() == b"RIFF-character"
+    assert document.read_bytes() == original_document
+    assert invalidated == []
+
 
 
 def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked(monkeypatch, qtbot, tmp_path) -> None:
@@ -447,35 +461,72 @@ def test_character_voices_import_oserror_stays_in_slot_without_success_side_effe
     assert success_calls == []
 
 
-def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkeypatch, qtbot, tmp_path) -> None:
+@pytest.mark.parametrize("outcome", ["changed", "unchanged", "declined", "failed"])
+def test_character_voices_ui_controller_save_prompt_persists_preview_text(
+    monkeypatch, qtbot, tmp_path, outcome
+) -> None:
     """
-    @brief      Verify Save Voice Prompt persists the edited preview text together with the voice prompt.
+    @brief      Verify draft Save applies only confirmed, successfully published changes.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
+    @param[in]  outcome Simulated Save outcome.
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerSave")
+    target_id = "character_alice"
+    target = character_voices_service.voice_target_by_id(project_root, target_id)
+    assert target is not None
+    character_voices_service.store_target_sample(
+        project_root, target, "en", "Original transcript.", {}, "", b"RIFF-old"
+    )
+    audio, document = character_voices_service.target_sample_paths(project_root, target_id)
     window = _build_window(qtbot, project_root)
+    original_document = document.read_bytes()
+    confirmations = []
+    warnings = []
+    invalidations = []
+
+    def _confirm_save(*_args):
+        """@brief Record the confirmation and return the simulated decision."""
+        confirmations.append(True)
+        return QMessageBox.StandardButton.No if outcome == "declined" else QMessageBox.StandardButton.Yes
+
+    def _fail_publish(*_args):
+        """@brief Fail the draft publication before it can change artifacts."""
+        raise OSError("Unable to save prompt.")
+
+    monkeypatch.setattr(QMessageBox, "question", _confirm_save)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *_args: warnings.append(True))
+    monkeypatch.setattr(character_voices_ui_controller.misc_ui_controller, "show_message", lambda *_args: None)
     monkeypatch.setattr(
-        character_voices_ui_controller.misc_ui_controller,
-        "show_message",
-        lambda *args, **kwargs: None,
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        lambda _window, ids: invalidations.extend(ids),
     )
+    if outcome == "failed":
+        monkeypatch.setattr(character_voices_service, "replace_project_files", _fail_publish)
 
-    character_voices_ui_controller.handle_save_prompt_requested(
-        window,
-        {
-            "target_id": "character_alice",
-            "prompt_text": "Updated prompt.",
-            "preview_text": _MULTILINE_PREVIEW_TEXT,
-        },
-    )
+    character_voices_ui_controller.handle_edit_prompt_requested(window, target_id)
+    page = window._character_voices_page
+    if outcome != "unchanged":
+        page._prompt_edit.setPlainText("Updated prompt.")
+        page._preview_text_edit.setPlainText(_MULTILINE_PREVIEW_TEXT)
+    page._save_prompt_button.click()
 
-    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
-    assert target_payload is not None
-    assert target_payload["preview_text"] == _MULTILINE_PREVIEW_TEXT
+    assert page.is_edit_mode() == (outcome in {"declined", "failed"})
+    assert confirmations == ([] if outcome == "unchanged" else [True])
+    assert warnings == ([True] if outcome == "failed" else [])
+    if outcome == "changed":
+        updated = character_voices_service.voice_target_by_id(project_root, target_id)
+        assert updated["preview_text"] == _MULTILINE_PREVIEW_TEXT
+        assert str(updated["prompt_text"]).startswith("Updated prompt.")
+        assert updated["sample_metadata"] is None
+        assert not audio.exists()
+        assert invalidations == [target_id]
+    else:
+        assert audio.read_bytes() == b"RIFF-old"
+        assert document.read_bytes() == original_document
+        assert invalidations == []
 
 
 def test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample(
@@ -598,14 +649,18 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     assert call_order[:2] == ["stop", "delete"]
 
 
-def test_character_voices_ui_controller_batch_regenerates_all_current_character_samples(
-    monkeypatch, qtbot, tmp_path
+@pytest.mark.parametrize(
+    "outcome", ["success", "cancelled", "failed", "failed_first", "recovery_failed", "recovery_invalidation_failed"]
+)
+def test_character_voices_ui_controller_batch_invalidates_only_saved_targets(
+    monkeypatch, qtbot, tmp_path, outcome
 ) -> None:
     """
-    @brief      Verify batch generation regenerates every current character target.
+    @brief      Verify batch completion invalidates exactly the successfully published samples.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  outcome Simulated batch outcome.
     @return     None.
     @exception  None
     """
@@ -633,6 +688,8 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         "Character sample ready.",
         b"RIFF-bob",
     )
+    bob_audio, voice_document = character_voices_service.target_sample_paths(project_root, "character_bob")
+    voice_backup = tmp_path / "voice_plan_backup.json"
     window = _build_window(qtbot, project_root)
     window._current_page_id = "character_voices"
     window._settings_payload["tts_runtime_probe_succeeded"] = True
@@ -657,6 +714,22 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
     )
     generated_target_ids: list[str] = []
     operation_kinds: list[str] = []
+    invalidations: list[tuple[tuple[str, ...], bool]] = []
+    warnings: list[str] = []
+    recovery_failed = outcome in {"recovery_failed", "recovery_invalidation_failed"}
+
+    def _capture_invalidation(_window, ids, *, refresh_project_state=True):
+        """@brief Record the affected IDs and optionally simulate a locked Audio Blocks document."""
+        invalidations.append((ids, refresh_project_state))
+        if outcome == "recovery_invalidation_failed":
+            raise OSError("Audio metadata is locked.")
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        _capture_invalidation,
+    )
+    monkeypatch.setattr(QMessageBox, "warning", lambda _window, _title, message: warnings.append(message))
     monkeypatch.setattr(
         character_voices_ui_controller.QMessageBox,
         "question",
@@ -684,7 +757,7 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         _cancel_requested,
     ) -> None:
         """
-        @brief      Capture the generated target id without contacting VoiceWeaver.
+        @brief      Store a test sample or fail without contacting VoiceWeaver.
         @param[in]  _project_root Unused project root.
         @param[in]  _settings_payload Unused settings payload.
         @param[in]  _progress_messages Unused progress messages.
@@ -695,7 +768,15 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         @param[in]  _cancel_requested Unused cancellation callback.
         @return     None.
         """
-        generated_target_ids.append(str(target_payload.get("target_id", "")))
+        if recovery_failed and generated_target_ids:
+            voice_document.replace(voice_backup)
+            raise ProjectFileRecoveryError(f"Originals retained in {voice_backup}")
+        if outcome == "failed_first" or (outcome == "failed" and generated_target_ids):
+            raise RuntimeError("Voice generation failed.")
+        character_voices_service.store_target_sample(
+            _project_root, target_payload, _voice_language, _preview_text, {}, "", b"RIFF-generated"
+        )
+        generated_target_ids.append(str(target_payload["target_id"]))
 
     monkeypatch.setattr(
         character_voices_ui_controller,
@@ -736,14 +817,20 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
         _ = cancel_handler
         _ = cancellable
         operation_kinds.append(operation_kind)
-        success_handler(
-            worker_callable(
+        try:
+            result = worker_callable(
                 window._current_project_root,
                 dict(window._current_manifest),
                 progress_callback=lambda *_args, **_kwargs: None,
-                cancel_requested=lambda: False,
+                cancel_requested=lambda: outcome == "cancelled" and bool(generated_target_ids),
             )
-        )
+        except operation_runtime_service.OperationCancelledError as error:
+            cancel_handler(str(error))
+        except (RuntimeError, ProjectFileRecoveryError) as error:
+            failure_handler(error)
+        else:
+            success_handler(result)
+
 
     monkeypatch.setattr(
         character_voices_ui_controller.operation_runner_controller,
@@ -754,7 +841,24 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
     character_voices_ui_controller.handle_generate_missing_samples_requested(window)
 
     assert operation_kinds == ["character_voices_generate_all_samples"]
-    assert generated_target_ids == ["character_alice", "character_bob"]
+    expected = {
+        "success": ("character_alice", "character_bob"),
+        "cancelled": ("character_alice",),
+        "failed": ("character_alice",),
+        "failed_first": (),
+        "recovery_failed": ("character_alice",),
+        "recovery_invalidation_failed": ("character_alice",),
+    }[outcome]
+    assert tuple(generated_target_ids) == expected
+    assert invalidations == ([(expected, not recovery_failed)] if expected else [])
+    if recovery_failed:
+        assert voice_backup.is_file()
+        assert not voice_document.exists()
+        assert len(warnings) == 1
+        assert f"Originals retained in {voice_backup}" in warnings[0]
+        if outcome == "recovery_invalidation_failed":
+            assert "Audio metadata is locked." in warnings[0]
+    assert bob_audio.read_bytes() == (b"RIFF-generated" if outcome == "success" else b"RIFF-bob")
 
 
 def test_character_voices_ui_controller_batch_targets_only_generatable_characters() -> None:

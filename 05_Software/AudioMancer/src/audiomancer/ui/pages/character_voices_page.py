@@ -123,6 +123,8 @@ class CharacterVoicesPage(QWidget):
         self._edit_prompt_button.clicked.connect(self._emit_edit_prompt)
         self._save_prompt_button = QPushButton("Save", self)
         self._save_prompt_button.clicked.connect(self._emit_save_prompt)
+        self._cancel_prompt_button = QPushButton("Cancel", self)
+        self._cancel_prompt_button.clicked.connect(self._discard_prompt_draft)
         self._generate_sample_button = QPushButton("Generate Sample", self)
         self._generate_sample_button.clicked.connect(self._emit_generate_sample)
         self._preview_toggle_button = QPushButton("Preview", self)
@@ -132,6 +134,7 @@ class CharacterVoicesPage(QWidget):
         actions_row.addWidget(self._import_sample_button)
         actions_row.addWidget(self._generate_sample_button)
         actions_row.addWidget(self._preview_toggle_button)
+        actions_row.addWidget(self._cancel_prompt_button)
         actions_row.addStretch(1)
         preview_layout.addLayout(actions_row)
         editor_layout.addWidget(self._preview_group, 1)
@@ -265,6 +268,17 @@ class CharacterVoicesPage(QWidget):
         self._original_payload = self.current_editor_payload()
         self._apply_control_state()
 
+    def _discard_prompt_draft(self) -> None:
+        """@brief Restore the editor values captured when Edit was pressed."""
+        if self._original_payload is None:
+            return
+        original = self._original_payload
+        self._edit_mode = False
+        self._dirty = False
+        self._original_payload = None
+        self._load_editor(str(original["prompt_text"]), str(original["preview_text"]))
+        self._apply_control_state()
+
     def current_target_id(self) -> str | None:
         """
             @brief      Read the currently selected character-voices target identifier.
@@ -333,6 +347,7 @@ class CharacterVoicesPage(QWidget):
         self._import_sample_button.setText(ui_state_service.translate("character_voices.import_sample", language))
         self._edit_prompt_button.setText(ui_state_service.translate("character_voices.edit_prompt", language))
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
+        self._cancel_prompt_button.setText(ui_state_service.translate("project.cancel", language))
         self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
         self._refresh_target_list(self._current_target_id)
@@ -368,6 +383,8 @@ class CharacterVoicesPage(QWidget):
         self._save_prompt_button.setEnabled(
             self._project_active and not self._busy and not self._preview_active and self._edit_mode
         )
+        self._cancel_prompt_button.setVisible(self._edit_mode)
+        self._cancel_prompt_button.setEnabled(not self._busy)
         self._generate_sample_button.setEnabled(
             self._project_active
             and not self._busy

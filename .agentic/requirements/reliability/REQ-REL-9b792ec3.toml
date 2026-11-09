@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-REL-9b792ec3"
+
+title = "Character sample publication preserves the WAV and transcript pair"
+
+status = "active"
+
+requirement = """
+When a character sample publication fails, Character Voices shall preserve the prior WAV and transcript pair by rolling back the publication.
+"""
+
+verification = "Fail document replacement after WAV replacement and compare prior WAV and document bytes."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_character_voices_service.py::test_character_sample_publication_restores_pair_on_document_failure",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

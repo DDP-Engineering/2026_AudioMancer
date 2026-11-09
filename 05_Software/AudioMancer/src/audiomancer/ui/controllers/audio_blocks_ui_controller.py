@@ -420,6 +420,7 @@ def invalidate_audio_blocks_for_voice_targets(
     voice_target_ids: list[str] | tuple[str, ...] | set[str],
     *,
     collect_preserved_paths: bool = True,
+    refresh_project_state: bool = True,
     progress_callback=None,
 ) -> None:
     """
@@ -427,6 +428,7 @@ def invalidate_audio_blocks_for_voice_targets(
     @param[in]  window Active main window instance.
     @param[in]  voice_target_ids Voice target identifiers whose generated audio is stale.
     @param[in]  collect_preserved_paths True to check and report unaffected generated files.
+    @param[in]  refresh_project_state True to reload the project after invalidation.
     @param[in]  progress_callback Optional callback accepting percent and translation key.
     @return     None.
     @exception  None
@@ -462,11 +464,12 @@ def invalidate_audio_blocks_for_voice_targets(
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
     _emit_voice_invalidation_progress(progress_callback, 85, "progress.narator_voice_change_manifest")
     _sync_manifest_after_selective_audio_invalidation(window)
-    _emit_voice_invalidation_progress(progress_callback, 95, "progress.narator_voice_change_refresh")
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    if refresh_project_state:
+        _emit_voice_invalidation_progress(progress_callback, 95, "progress.narator_voice_change_refresh")
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
 
 
 def _emit_voice_invalidation_progress(progress_callback, percent: int, message_key: str) -> None:

@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-FUNC-b8d5f669"
+
+title = "Saving a changed character voice draft clears its sample"
+
+status = "active"
+
+requirement = """
+When the operator saves a changed Character Voices draft, the operation shall persist the draft and invalidate the edited target sample and dependent audio.
+"""
+
+verification = "Save a changed preview and verify the persisted text and that only the edited target is invalidated."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_character_voices_ui_controller.py::test_character_voices_ui_controller_save_prompt_persists_preview_text",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

@@ -14,7 +14,13 @@ All notable changes to this project will be documented in this file.
 
 - Improved checks for reliable Cleanup saves and Book Analysis results.
 
+- Character Voices edits the prompt and preview in a draft. Cancel keeps the
+  current sample, and Save applies only confirmed changes.
+
 ### Fixed
+
+- Character voice samples use stable IDs and save each WAV with its transcript.
+  An interrupted generation batch resets dependent audio only for saved samples.
 
 - AI Translation verifies approved text against the current source before downstream
   work uses it. Older translations remain available for explicit review and approval.

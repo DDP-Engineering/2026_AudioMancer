@@ -20,6 +20,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import re
+from tempfile import TemporaryDirectory
 
 from audiomancer import config
 from audiomancer.services import (
@@ -30,7 +31,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
-from audiomancer.services.persistence_service import write_bytes_atomic, write_json_atomic
+from audiomancer.services.persistence_service import replace_project_files, write_bytes_atomic, write_json_atomic
 
 # CONSTANTS
 
@@ -347,48 +348,62 @@ def save_target_prompt(
     normalized_preview_text = None if preview_text is None else str(preview_text).strip()
     if preview_text is not None and not normalized_preview_text:
         raise ValueError("empty_preview_text")
-    voice_targets = load_voice_plan(project_root)
-    updated_target = None
-    normalized_targets: list[dict[str, object]] = []
-    for target_payload in voice_targets:
-        if str(target_payload.get("target_id", "")).strip() != str(target_id).strip():
-            normalized_targets.append(target_payload)
-            continue
-        if not bool(target_payload.get("editable", False)):
-            raise ValueError("readonly_target")
-        updated_target = _normalize_voice_target(
-            {
-                **dict(target_payload),
-                "prompt_text": normalized_prompt,
-                "default_prompt_text": target_payload.get("default_prompt_text"),
-                "preview_text": (
-                    target_payload.get("preview_text") if preview_text is None else normalized_preview_text
-                ),
-            }
-        )
-        normalized_targets.append(updated_target)
-    if updated_target is None:
+    root = Path(project_root).resolve()
+    ensure_character_voices_files(root)
+    original_document = _targets_path(root).read_bytes()
+    targets = load_voice_plan(root)
+    target = voice_target_by_id(root, target_id, targets)
+    if target is None:
         raise ValueError("missing_target")
-    save_voice_targets(project_root, normalized_targets)
-    delete_target_sample(project_root, target_id)
-    _CHARACTER_VOICES_LOGGER.info("Saved character voice target prompt target_id=%s", str(target_id).strip())
+    if not target["editable"]:
+        raise ValueError("readonly_target")
+    if not target_prompt_changed(target, normalized_prompt, normalized_preview_text):
+        return target
+    updated_target = {
+        **target,
+        "prompt_text": normalized_prompt,
+        "preview_text": target["preview_text"] if normalized_preview_text is None else normalized_preview_text,
+        "sample_audio_path": None,
+        "sample_metadata": None,
+    }
+    _publish_voice_targets(
+        root,
+        [updated_target if item is target else item for item in targets],
+        original_document,
+        _retired_sample(root, target_id, targets),
+    )
+    _CHARACTER_VOICES_LOGGER.info("Saved character voice target prompt target_id=%s", target_id)
     return updated_target
+
+
+def target_prompt_changed(target: dict[str, object], prompt_text: str, preview_text: str | None) -> bool:
+    """
+    @brief      Compare a draft's editable fields with the current target.
+    @param[in]  target Persisted voice target.
+    @param[in]  prompt_text Candidate voice prompt.
+    @param[in]  preview_text Candidate preview, or None to keep the current text.
+    @return     Whether the draft changes either persisted field.
+    """
+    return prompt_text.strip() != target["prompt_text"] or (
+        preview_text is not None and preview_text.strip() != target["preview_text"]
+    )
 
 
 def begin_target_prompt_edit(project_root: str | Path, target_id: str) -> dict[str, object]:
     """
-    @brief      Prepare one editable target for prompt editing by clearing any stored sample.
+    @brief      Read one editable target without changing its sample.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     Target payload prepared for edit mode.
     @exception  ValueError Raised when the target is missing or not editable.
     """
+    if not _targets_path(project_root).is_file():
+        raise ValueError("missing_target")
     target_payload = voice_target_by_id(project_root, target_id)
     if target_payload is None:
         raise ValueError("missing_target")
     if not bool(target_payload.get("editable", False)):
         raise ValueError("readonly_target")
-    delete_target_sample(project_root, target_id)
     return target_payload
 
 
@@ -524,10 +539,7 @@ def target_sample_paths(
     if isinstance(target_payload, dict) and str(target_payload.get("sample_audio_path", "") or "").strip():
         audio_path = Path(project_root) / str(target_payload.get("sample_audio_path", "")).strip()
     else:
-        audio_name_source = (
-            target_payload.get("display_name", normalized_target_id) if isinstance(target_payload, dict) else target_id
-        )
-        audio_path = Path(project_root) / f"audio_{_normalized_audio_name(audio_name_source)}.wav"
+        audio_path = _sample_path(Path(project_root), normalized_target_id)
     return (
         audio_path,
         _targets_path(project_root),
@@ -574,20 +586,21 @@ def has_target_sample(
 def delete_target_sample(
     project_root: str | Path,
     target_id: str,
-    voice_targets: list[dict[str, object]] | None = None,
 ) -> None:
     """
     @brief      Delete the persisted sample artifacts for one character-voices target.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
-    @param[in]  voice_targets Optional already-loaded target payload list.
     @return     None.
     @exception  None
     """
-    audio_path, _metadata_path = target_sample_paths(project_root, target_id, voice_targets)
-    if audio_path.exists():
-        audio_path.unlink()
-    _update_target_sample_metadata(project_root, target_id, None, None)
+    root = Path(project_root).resolve()
+    ensure_character_voices_files(root)
+    original_document = _targets_path(root).read_bytes()
+    targets = load_voice_plan(root)
+    updated = _target_sample_metadata_updated_targets(targets, target_id, None, None)
+    if updated != targets:
+        _publish_voice_targets(root, updated, original_document, _retired_sample(root, target_id, targets))
 
 
 def store_target_sample(
@@ -613,8 +626,6 @@ def store_target_sample(
     """
     ensure_character_voices_files(project_root)
     target_id = str(target_payload.get("target_id", "")).strip()
-    voice_targets = load_voice_plan(project_root)
-    audio_path, _metadata_path = target_sample_paths(project_root, target_id, voice_targets)
     metadata_payload = {
         "target_id": target_id,
         "target_kind": str(target_payload.get("target_kind", "")).strip(),
@@ -628,13 +639,7 @@ def store_target_sample(
         "preview_text": str(preview_text).strip(),
         "runtime_result_summary": str(runtime_result_summary).strip(),
     }
-    write_bytes_atomic(audio_path, audio_bytes)
-    _update_target_sample_metadata(
-        project_root,
-        target_id,
-        relative_path=str(audio_path.relative_to(Path(project_root))),
-        metadata_payload=metadata_payload,
-    )
+    _replace_target_sample(Path(project_root).resolve(), target_id, metadata_payload, audio_bytes)
     _CHARACTER_VOICES_LOGGER.info("Persisted generated character voice sample target_id=%s", target_id)
     return metadata_payload
 
@@ -665,8 +670,6 @@ def import_target_sample(
     source_path = Path(source_audio_path)
     validation_report = voice_sample_import_service.validate_imported_wav_sample(source_path)
     target_id = str(target_payload.get("target_id", "")).strip()
-    voice_targets = load_voice_plan(project_root)
-    audio_path, _metadata_path = target_sample_paths(project_root, target_id, voice_targets)
     metadata_payload = {
         "target_id": target_id,
         "target_kind": str(target_payload.get("target_kind", "")).strip(),
@@ -682,13 +685,7 @@ def import_target_sample(
         "audio_validation": dict(validation_report),
         "runtime_result_summary": "Imported WAV sample.",
     }
-    write_bytes_atomic(audio_path, source_path.read_bytes())
-    _update_target_sample_metadata(
-        project_root,
-        target_id,
-        relative_path=str(audio_path.relative_to(Path(project_root))),
-        metadata_payload=metadata_payload,
-    )
+    _replace_target_sample(Path(project_root).resolve(), target_id, metadata_payload, source_path.read_bytes())
     _CHARACTER_VOICES_LOGGER.info("Imported character voice sample target_id=%s", target_id)
     return metadata_payload
 
@@ -707,10 +704,9 @@ def sync_same_narrator_samples(
     @exception  None
     """
     ensure_character_voices_files(project_root)
-    voice_targets = load_voice_plan(project_root)
-    if not voice_targets:
-        save_voice_targets(project_root, character_targets)
-        voice_targets = load_voice_plan(project_root)
+    root = Path(project_root).resolve()
+    original_document = _targets_path(root).read_bytes()
+    voice_targets = load_voice_plan(root) or [_normalize_voice_target(target) for target in character_targets]
     narrator_audio_path = narrator_definition_service.selected_narrator_sample_path(project_root)
     narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
     if narrator_audio_path is None or not narrator_audio_path.is_file() or narrator_metadata is None:
@@ -722,7 +718,7 @@ def sync_same_narrator_samples(
                 isinstance(sample_metadata, dict)
                 and sample_metadata.get("sample_source") == SAMPLE_SOURCE_COPIED_NARRATOR
             ):
-                delete_target_sample(project_root, target_id, voice_targets)
+                delete_target_sample(root, target_id)
                 voice_targets = load_voice_plan(project_root)
                 removed_samples += 1
         if removed_samples:
@@ -744,11 +740,11 @@ def sync_same_narrator_samples(
     narrator_source_model_id = str(narrator_metadata.get("source_model_id", "")).strip() or None
     narrator_runtime_summary = str(narrator_metadata.get("runtime_result_summary", "")).strip()
     copied_samples = 0
+    sample_changes: dict[Path, bytes | None] = {}
     updated_targets = list(voice_targets)
     for target_payload in character_targets:
         target_id = str(target_payload.get("target_id", "")).strip()
         audio_path, _metadata_path = target_sample_paths(project_root, target_id, updated_targets)
-        audio_path.parent.mkdir(parents=True, exist_ok=True)
         metadata_payload = {
             "target_id": target_id,
             "target_kind": TARGET_KIND_CHARACTER,
@@ -770,16 +766,18 @@ def sync_same_narrator_samples(
             updated_targets,
         ):
             continue
-        write_bytes_atomic(audio_path, narrator_audio_bytes)
+        sample_changes.update(_retired_sample(root, target_id, updated_targets))
+        audio_path = _sample_path(root, target_id)
+        sample_changes[audio_path] = narrator_audio_bytes
         updated_targets = _target_sample_metadata_updated_targets(
             updated_targets,
             target_id,
-            str(audio_path.relative_to(Path(project_root))),
+            audio_path.relative_to(root).as_posix(),
             metadata_payload,
         )
         copied_samples += 1
-    if updated_targets != voice_targets:
-        save_voice_targets(project_root, updated_targets)
+    if sample_changes:
+        _publish_voice_targets(root, updated_targets, original_document, sample_changes)
     _CHARACTER_VOICES_LOGGER.info(
         "Synchronized copied narrator character samples: count=%s language=%s",
         copied_samples,
@@ -1098,30 +1096,87 @@ def _is_unmodified_default_preview_text(preview_text: str, localized_preview_tex
     return preview_text != localized_preview_text and preview_text in DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.values()
 
 
-def _update_target_sample_metadata(
-    project_root: str | Path,
-    target_id: str,
-    relative_path: str | None,
-    metadata_payload: dict[str, object] | None,
+def _sample_path(root: Path, target_id: str) -> Path:
+    """
+    @brief      Resolve an ID-based WAV path in the character sample directory.
+    @param[in]  root Active project root folder.
+    @param[in]  target_id Stable voice target identifier.
+    @return     Sample path with unsafe IDs encoded losslessly.
+    """
+    file_id = target_id if re.fullmatch(r"[a-z0-9_]+", target_id) else f"~{target_id.encode().hex()}"
+    return root / "character_voice_samples" / f"{file_id}.wav"
+
+
+def _retired_sample(root: Path, target_id: str, targets: list[dict[str, object]]) -> dict[Path, None]:
+    """
+    @brief      Plan deletion of a target's sample only when it owns the file exclusively.
+    @param[in]  root Active project root folder.
+    @param[in]  target_id Target whose sample changes.
+    @param[in]  targets Current persisted targets.
+    @return     A deletion entry, or an empty mapping for missing or shared paths.
+    """
+    target = voice_target_by_id(root, target_id, targets)
+    if target is None or not target["sample_audio_path"]:
+        return {}
+    audio_path = root / str(target["sample_audio_path"])
+    if not audio_path.is_file() or any(
+        other is not target and other["sample_audio_path"] and root / str(other["sample_audio_path"]) == audio_path
+        for other in targets
+    ):
+        return {}
+    return {audio_path: None}
+
+
+def _replace_target_sample(root: Path, target_id: str, metadata: dict[str, object], audio_bytes: bytes) -> None:
+    """
+    @brief      Publish one character sample and its transcript as a recoverable pair.
+    @param[in]  root Active project root folder.
+    @param[in]  target_id Target voice identifier.
+    @param[in]  metadata Complete sample metadata including the spoken transcript.
+    @param[in]  audio_bytes Complete WAV payload.
+    @exception  ValueError Raised when the target no longer exists.
+    """
+    original_document = _targets_path(root).read_bytes()
+    targets = load_voice_plan(root)
+    if voice_target_by_id(root, target_id, targets) is None:
+        raise ValueError("missing_target")
+    audio_path = _sample_path(root, target_id)
+    updated = _target_sample_metadata_updated_targets(
+        targets, target_id, audio_path.relative_to(root).as_posix(), metadata
+    )
+    sample_changes: dict[Path, bytes | None] = {**_retired_sample(root, target_id, targets), audio_path: audio_bytes}
+    _publish_voice_targets(root, updated, original_document, sample_changes)
+
+
+def _publish_voice_targets(
+    root: Path,
+    targets: list[dict[str, object]],
+    original_document: bytes,
+    sample_changes: dict[Path, bytes | None],
 ) -> None:
     """
-    @brief      Store or clear one character-voices sample metadata entry in `characters_voice.json`.
-    @param[in]  project_root Active project root folder.
-    @param[in]  target_id Target voice identifier.
-    @param[in]  relative_path Project-relative sample WAV path or `None`.
-    @param[in]  metadata_payload Sample metadata payload or `None` to clear it.
-    @return     None.
+    @brief      Stage and publish the target document and its changed WAV files.
+    @param[in]  root Active project root folder.
+    @param[in]  targets Replacement target document.
+    @param[in]  original_document Original document bytes for concurrent-change detection.
+    @param[in]  sample_changes WAV paths mapped to replacement bytes or None for deletion.
     """
-    normalized_target_id = str(target_id or "").strip()
-    voice_targets = load_voice_plan(project_root)
-    updated_targets = _target_sample_metadata_updated_targets(
-        voice_targets,
-        normalized_target_id,
-        relative_path,
-        metadata_payload,
-    )
-    if updated_targets != voice_targets:
-        save_voice_targets(project_root, updated_targets)
+    document = _targets_path(root)
+    with TemporaryDirectory(prefix=".character-voices-stage-", dir=root) as temp_dir:
+        stage = Path(temp_dir)
+        changes: dict[Path, Path | None] = {}
+        for path, audio_bytes in sample_changes.items():
+            relative = path.relative_to(root)
+            if audio_bytes is None:
+                changes[relative] = None
+            else:
+                candidate = stage / relative
+                write_bytes_atomic(candidate, audio_bytes)
+                changes[relative] = candidate
+        staged_document = stage / document.name
+        _write_json(staged_document, targets)
+        changes[document.relative_to(root)] = staged_document
+        replace_project_files(root, changes, document, original_document, "character-voices")
 
 
 def _target_sample_metadata_updated_targets(
@@ -1200,17 +1255,6 @@ def _targets_path(project_root: str | Path) -> Path:
     @return     Helper result.
     """
     return Path(project_root) / config.CHARACTER_VOICES_TARGETS_FILE_NAME
-
-
-def _normalized_audio_name(value: object) -> str:
-    """
-    @brief      Normalize one voice target value for a root-level audio file name.
-    @param[in]  value Candidate target identifier or name.
-    @return     Filesystem-safe lowercase token.
-    """
-    normalized = "".join(character.lower() if character.isalnum() else "_" for character in str(value).strip())
-    normalized = "_".join(part for part in normalized.split("_") if part)
-    return normalized or "voice"
 
 
 def _build_generation_request(

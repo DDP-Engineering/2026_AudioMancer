@@ -960,13 +960,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <h3>Controale</h3>
                 <ul>
-                    <li><strong>Editeaza</strong> deblocheaza promptul si textul de previzualizare pentru personajul selectat. Avertizeaza ca a continua sterge mostra curenta a acelui personaj si, cand exista audio generat, ca audio care foloseste aceasta voce si Asamblarea Audio vor fi resetate. Blocurile de Vorbire si randurile de Blocuri Audio sunt pastrate.</li>
-                    <li><strong>Salveaza</strong> confirma modificarea. Promptul trebuie sa fie nevid, iar textul de previzualizare trebuie sa aiba intre <strong>25 si 44 de cuvinte</strong>; Salveaza refuza orice se afla in afara acestui interval si iti spune numarul tau curent de cuvinte.</li>
+                    <li><strong>Editeaza</strong> deschide o ciorna pentru promptul si textul de previzualizare ale personajului selectat. <strong>Anuleaza</strong> renunta la ciorna.</li>
+                    <li><strong>Salveaza</strong> cere un prompt nevid si un text de previzualizare de <strong>25 pana la 44 de cuvinte</strong>. Daca exista o mostra sau audio generat de resetat, salvarea modificarilor cere confirmare. Ea sterge mostra personajului selectat si reseteaza audio-ul generat cu acea voce. Salvarea fara modificari pastreaza mostra si audio-ul.</li>
                     <li><strong>Importa Mostra</strong> deschide un selector WAV, apoi cere textul exact rostit in fisier, apoi confirma impactul asupra audio.</li>
                     <li><strong>Genereaza Mostra</strong> confirma, apoi contacteaza runtimeul TTS pentru acel singur personaj.</li>
                     <li><strong>Previzualizare</strong> reda mostra stocata si devine <strong>Opreste Previzualizarea</strong> in timpul redarii.</li>
-                    <li><strong>Genereaza Mostre Personaje</strong>, in partea de sus a paginii, regenereaza mostrele <em>tuturor</em> tintelor de tip personaj curente, dupa ce iti spune cate vor fi inlocuite. Ignora tinta naratorului.</li>
+                    <li><strong>Genereaza Mostre Personaje</strong>, in partea de sus a paginii, regenereaza mostrele <em>tuturor</em> tintelor de tip personaj curente, dupa ce iti spune cate vor fi inlocuite. Ignora tinta naratorului. Daca lotul este anulat sau se opreste cu o eroare, mostrele deja salvate raman disponibile si se reseteaza doar audio-ul care depinde de ele.</li>
                 </ul>
+                <p>Mostrele noi folosesc ID-ul stabil al vocii personajului in numele fisierului WAV. Aplicatia salveaza fisierul impreuna cu textul rostit in inregistrare.</p>
                 <div class="note">
                     Aceasta pagina nu are buton de aprobare. Este terminata cand personajele care conteaza pentru tine
                     arata <em>Mostra prezenta</em>; este in regula sa continui cu doar o parte dintre ele acoperite.

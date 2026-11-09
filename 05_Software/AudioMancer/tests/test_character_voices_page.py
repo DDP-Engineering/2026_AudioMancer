@@ -110,6 +110,15 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
     assert page._preview_text_edit.isReadOnly() is False
     assert page._save_prompt_button.isEnabled() is True
 
+    page._preview_text_edit.setPlainText("Changed preview.")
+    page._cancel_prompt_button.click()
+
+    assert page.is_edit_mode() is False
+    assert page.is_dirty() is False
+    assert page._target_list.isEnabled() is True
+    assert page._prompt_edit.toPlainText() == "Original prompt."
+    assert page._preview_text_edit.toPlainText() == "Line one.\nLine two."
+
 
 def test_character_voices_page_unchanged_valid_edit_can_save_current_payload(qtbot) -> None:
     """

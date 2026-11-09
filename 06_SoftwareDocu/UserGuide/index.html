@@ -932,13 +932,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <h3>Controls</h3>
                 <ul>
-                    <li><strong>Edit</strong> unlocks the prompt and preview text for the selected character. It warns that continuing deletes that character's current sample, and, when generated audio exists, that audio using this voice and Audio Assembly will be reset. Speech Blocks and Audio Block rows themselves are preserved.</li>
-                    <li><strong>Save</strong> commits the edit. The prompt must be non-empty, and the preview text must be between <strong>25 and 44 words</strong>; Save refuses anything outside that and tells you your current word count.</li>
+                    <li><strong>Edit</strong> opens a draft of the selected character's prompt and preview text. <strong>Cancel</strong> discards the draft.</li>
+                    <li><strong>Save</strong> requires a non-empty prompt and a preview of <strong>25 to 44 words</strong>. Saving changes asks for confirmation if there is a sample or generated audio to reset. It removes the selected character's sample and resets generated audio that uses that voice. Saving without changes keeps the sample and audio.</li>
                     <li><strong>Import Sample</strong> opens a WAV picker, then asks for the exact text spoken in the file, then confirms the audio impact.</li>
                     <li><strong>Generate Sample</strong> confirms, then contacts the TTS runtime for that one character.</li>
                     <li><strong>Preview</strong> plays the stored sample and turns into <strong>Stop Preview</strong> while it plays.</li>
-                    <li><strong>Generate Character Samples</strong>, at the top of the page, regenerates the samples of <em>all</em> current character targets after telling you how many will be replaced. It ignores the narrator target.</li>
+                    <li><strong>Generate Character Samples</strong>, at the top of the page, regenerates the samples of <em>all</em> current character targets after telling you how many will be replaced. It ignores the narrator target. If the batch is cancelled or fails, the samples already saved remain available and only their dependent audio is reset.</li>
                 </ul>
+                <p>New samples use the character's stable voice ID for the WAV filename. The app saves the WAV together with the text spoken in that recording.</p>
                 <div class="note">
                     This page has no approval button. It is finished when the characters you care about show
                     <em>Sample present</em>; it is fine to continue with only some of them covered.
