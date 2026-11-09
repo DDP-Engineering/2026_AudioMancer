@@ -30,7 +30,7 @@ from audiomancer.services import (
     speech_blocks_state_service,
     tts_budget_service,
 )
-from chunking_test_support import build_chunking_document
+from chunking_test_support import bind_translation_source, build_chunking_document
 
 
 def test_build_speech_blocks_profile_state_prefers_default_enabled_profile() -> None:
@@ -211,6 +211,8 @@ def test_build_speech_blocks_state_resolves_source_chunks_once(
         tmp_path,
         f"SpeechBlocksStateResolveOnce{selected_voice_language}",
     )
+    manifest["target_language"] = "ro"
+    project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
@@ -225,10 +227,10 @@ def test_build_speech_blocks_state_resolves_source_chunks_once(
                 },
                 "budget_metadata": {},
                 "additional_translation_instructions": "",
-                "chunks": [
+                "chunks": bind_translation_source(project_root, [
                     {"chunk_id": "chunk-0001", "translated_text": "Unu", "approved": True},
                     {"chunk_id": "chunk-0002", "translated_text": "Doi", "approved": True},
-                ],
+                ]),
             },
             indent=2,
         )

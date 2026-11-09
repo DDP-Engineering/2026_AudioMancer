@@ -101,6 +101,7 @@ class SpeechBlocksPage(QWidget):
         self._speaker_catalog: list[dict[str, object]] = []
         self._content_kind_options: list[tuple[str, str]] = []
         self._voice_assignment_mode = "narrator_and_characters"
+        self._scene_ambience_enabled = False
         self._processed_chunk_count = 0
         self._total_chunk_count = 0
         self._can_reset = False
@@ -416,6 +417,7 @@ class SpeechBlocksPage(QWidget):
         can_approve_all: bool = False,
         can_resplit_selected: bool = False,
         selected_text_character_limit: int = 0,
+        scene_ambience_enabled: bool = False,
         **_extra_state,
     ) -> None:
         """
@@ -436,6 +438,7 @@ class SpeechBlocksPage(QWidget):
         @param[in]  can_reset Controller-resolved reset enablement flag.
         @param[in]  can_approve_all Controller-resolved approve-all enablement flag.
         @param[in]  can_resplit_selected Controller-resolved selected re-split enablement flag.
+        @param[in]  scene_ambience_enabled Whether generation includes optional AI ambience.
         @param[in]  selected_text_character_limit Approximate selected speech text limit in characters.
         @return     None.
         @exception  None
@@ -448,6 +451,7 @@ class SpeechBlocksPage(QWidget):
         self._speaker_catalog = list(speaker_catalog or [])
         self._content_kind_options = list(content_kind_options or [])
         self._voice_assignment_mode = str(voice_assignment_mode).strip() or "narrator_and_characters"
+        self._scene_ambience_enabled = scene_ambience_enabled
         self._stage_status = stage_status
         self._processed_chunk_count = max(0, int(processed_chunk_count))
         self._total_chunk_count = max(0, int(total_chunk_count))
@@ -860,8 +864,13 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         """
         selected_block = self._current_display_block()
+        requires_profile = speech_blocks_service.requires_ai_profile(
+            self._voice_assignment_mode, self._scene_ambience_enabled
+        )
+        can_run_generation = not requires_profile or self.current_profile_id() is not None
         generated_all_chunks = (
-            bool(self._speech_blocks)
+            self._stage_status not in {"running", "failed"}
+            and bool(self._speech_blocks)
             and self._total_chunk_count > 0
             and (self._processed_chunk_count >= self._total_chunk_count)
         )
@@ -870,7 +879,7 @@ class SpeechBlocksPage(QWidget):
             and not self._busy
             and not self._editing
             and bool(self._source_chunks)
-            and self.current_profile_id() is not None
+            and can_run_generation
             and not generated_all_chunks
         )
         can_edit_selected = self._project_active and not self._busy and selected_block is not None
@@ -890,7 +899,9 @@ class SpeechBlocksPage(QWidget):
             and not self._editing
         )
         can_insert_block = self._project_active and not self._busy and self._current_chunk_id is not None
-        self._profile_combo.setEnabled(self._project_active and not self._busy and not self._editing)
+        self._profile_combo.setEnabled(
+            requires_profile and self._project_active and not self._busy and not self._editing
+        )
         self._generate_button.setEnabled(can_generate)
         self._reset_generation_button.setEnabled(
             self._project_active and not self._busy and not self._editing and self._can_reset
@@ -904,7 +915,7 @@ class SpeechBlocksPage(QWidget):
             and not self._editing
             and self._can_resplit_selected
             and self._current_chunk_id is not None
-            and self.current_profile_id() is not None
+            and can_run_generation
         )
         self._chunk_list.setEnabled(self._project_active and not self._busy and not self._editing)
         self._insert_block_button.setEnabled(can_insert_block and not self._editing)
@@ -1005,9 +1016,7 @@ class SpeechBlocksPage(QWidget):
         @return     None.
         @exception  None
         """
-        profile_id = self.current_profile_id()
-        if profile_id is not None:
-            self.generate_requested.emit(profile_id)
+        self.generate_requested.emit(self.current_profile_id() or "")
 
     def _emit_generate_audio_selected(self) -> None:
         """

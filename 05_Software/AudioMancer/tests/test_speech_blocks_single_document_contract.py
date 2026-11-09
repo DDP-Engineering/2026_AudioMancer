@@ -160,8 +160,7 @@ def test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpo
         checkpoint={
             "next_chunk_index": 1,
             "active_chunk_id": "chunk-0002",
-            "next_segment_index": 2,
-            "completed_segment_count": 1,
+            "next_source_offset": 25,
             "run_token": "2026-07-24T10:00:00+00:00",
             "log_relative_path": "log_ai_speech_blocks_20260724T100000Z.log",
         },
@@ -179,7 +178,7 @@ def test_load_operation_state_projection_omits_source_chunks_and_exposes_checkpo
     assert state["resume_checkpoint"]["next_chunk_index"] == 1
 
 
-def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) -> None:
+def test_resume_reads_source_offset_from_document_checkpoint(tmp_path: Path) -> None:
     """
     @brief      Verify SPEC-SB-RESUME / REQ-FUNC-6f65b68e resume cursor comes from the document.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -193,8 +192,7 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
         checkpoint={
             "next_chunk_index": 3,
             "active_chunk_id": "chunk-0004",
-            "next_segment_index": 5,
-            "completed_segment_count": 4,
+            "next_source_offset": 55,
             "run_token": "2026-07-24T10:00:00+00:00",
             "log_relative_path": "log_ai_speech_blocks_20260724T100000Z.log",
         },
@@ -205,8 +203,7 @@ def test_resume_reads_segment_cursor_from_document_checkpoint(tmp_path: Path) ->
 
     assert resume_checkpoint["next_chunk_index"] == 3
     assert resume_checkpoint["active_chunk_id"] == "chunk-0004"
-    assert resume_checkpoint["next_segment_index"] == 5
-    assert resume_checkpoint["completed_segment_count"] == 4
+    assert resume_checkpoint["next_source_offset"] == 55
 
 
 def test_missing_document_is_treated_as_not_started(tmp_path: Path) -> None:

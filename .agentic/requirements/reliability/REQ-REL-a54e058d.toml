@@ -14,19 +14,17 @@ title = "Continue Speech Blocks generation past a refused source chunk"
 status = "active"
 
 requirement = """
-If the AI provider fails for one source chunk during Speech Blocks generation, whether on its block-splitting request or on its scene-ambience analysis, then generation shall discard that chunk's blocks, continue with the next source chunk through the last one, and leave the failed chunk with no persisted blocks.
+When the provider refuses a Speech Blocks splitting request, the batch shall leave the refused chunk uncovered and continue processing later chunks.
 """
 
-verification = "A service regression generates a multi-chunk document with a provider that raises a provider error for one middle chunk, then proves every other source chunk is covered, the failed chunk has no persisted blocks even when an earlier segment of it already checkpointed rows, a refusal raised by that chunk's scene-ambience analysis skips it the same way, and an operator cancellation raised from either seam still aborts the run instead of being skipped."
+verification = "Refuse a later segment and check that its earlier partial rows are removed and later chunks remain covered."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py"]
 
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_rejects_null_or_refused_content_without_repair",
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_generation_skips_a_refused_source_chunk_and_continues",
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_refused_chunk_discards_its_checkpointed_segment_blocks",
-  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run",
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_generation_aborts_when_the_provider_seam_cancels",
 ]
 
@@ -34,7 +32,7 @@ linked_tests = [
 spec = ""
 
 priority = "high"
-rationale = "A single provider refusal previously ended the whole run: a 142-chunk book stopped after 93 chunks and left 49 unattempted. Leaving the refused chunk wholly uncovered is what lets the existing first-uncovered-chunk resume regenerate it later."
+rationale = "An uncovered chunk remains available for later splitting."
 
 created = 2026-09-17
 updated = 2026-09-17

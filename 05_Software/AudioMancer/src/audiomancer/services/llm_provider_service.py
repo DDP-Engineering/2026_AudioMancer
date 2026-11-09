@@ -70,6 +70,10 @@ _SENSITIVE_LOG_FIELD_NAMES = frozenset(
 )
 
 
+class ProviderRefusalError(ValueError):
+    """@brief Report an explicit refusal separately from malformed response content."""
+
+
 class _UnsupportedResponseFormatError(RuntimeError):
     """
     @brief Private marker for providers that reject response_format.
@@ -700,7 +704,8 @@ def _extract_message_content(
     @param[in]  payload Parsed provider response payload.
     @return     Message content as one string.
     @exception  RuntimeError Raised when the response stopped at the output limit.
-    @exception  ValueError Raised on an invalid choice or message payload, or a refusal.
+    @exception  ValueError Raised on an invalid choice or message payload.
+    @exception  ProviderRefusalError Raised for an explicit refusal without content.
     """
     choices = payload.get("choices", [])
     if not isinstance(choices, list) or not choices:
@@ -729,7 +734,7 @@ def _extract_message_content(
     if not normalized_content.strip():
         refusal = message.get("refusal")
         if isinstance(refusal, str) and refusal.strip():
-            raise ValueError(f"AI provider refused the request: {refusal.strip()}")
+            raise ProviderRefusalError(f"AI provider refused the request: {refusal.strip()}")
     return normalized_content
 
 

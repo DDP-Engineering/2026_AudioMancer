@@ -94,6 +94,7 @@ def speech_block_warning_reason(warning_flag: str) -> str:
             "Source paragraph was repaired across a page break during cleanup, so its boundaries are uncertain."
         ),
         "source_gap": "Source text was not covered by the model response and was preserved for review.",
+        "scene_ambience_failed": "Optional scene ambience could not be generated for this chunk.",
         "unknown_speaker": "Model returned a speaker that is not in the allowed speaker catalog.",
         "unmatched_model_text": "Model text could not be aligned to the source and was not trusted.",
         "speech_blocks_ai_parse_failed": "Speech Blocks model response could not be parsed.",
@@ -356,6 +357,7 @@ def direct_aligned_ai_block(
         and requested_speaker_id.casefold() != NARRATOR_SPEAKER_ID
         and resolved_speaker_id == NARRATOR_SPEAKER_ID
         and not narrator_only
+        and ai_block["content_kind"] == CONTENT_KIND_DIALOGUE
     ):
         append_warning_flag(warning_flags, "unknown_speaker")
         append_warning_flag(warning_flags, "needs_review")
@@ -506,7 +508,7 @@ def normalize_ai_block(
             "text": text,
             "warning_flags": normalize_warning_flags(candidate_block.get("warning_flags")),
         }
-    if narrator_only:
+    if content_kind == CONTENT_KIND_NARRATION:
         warning_flags = normalize_warning_flags(candidate_block.get("warning_flags"))
         return {
             "speaker_kind": SPEAKER_KIND_NARRATOR,
@@ -601,22 +603,29 @@ def split_over_budget_ai_blocks(
             split_blocks.append(ai_block)
             continue
 
-        source_audio_text = normalize_block_text(source_text, content_kind)
-        source_text_matches_audio = block_text_key(source_audio_text) == block_text_key(audio_text)
-        audio_parts, used_hard_split = split_text_for_tts_budget(
-            source_text if source_text_matches_audio else audio_text,
-            content_kind,
-            safe_word_count,
-            hard_word_count,
-        )
+        if content_kind == CONTENT_KIND_DIALOGUE:
+            # The outer dialogue marks were already removed when building the spoken text.
+            audio_parts, used_hard_split = split_text_for_tts_budget(
+                audio_text, CONTENT_KIND_NARRATION, safe_word_count, hard_word_count
+            )
+            source_parts = _dialogue_source_slices(source_text, audio_text, audio_parts)
+        else:
+            source_audio_text = normalize_block_text(source_text, content_kind)
+            source_text_matches_audio = block_text_key(source_audio_text) == block_text_key(audio_text)
+            audio_parts, used_hard_split = split_text_for_tts_budget(
+                source_text if source_text_matches_audio else audio_text,
+                content_kind,
+                safe_word_count,
+                hard_word_count,
+            )
+            source_parts = (
+                audio_parts
+                if source_text_matches_audio
+                else _partition_source_provenance(source_text, [len(audio_part) for audio_part in audio_parts])
+            )
         if len(audio_parts) <= 1:
             split_blocks.append(ai_block)
             continue
-        source_parts = (
-            audio_parts
-            if source_text_matches_audio
-            else _partition_source_provenance(source_text, [len(audio_part) for audio_part in audio_parts])
-        )
 
         warning_entries.append(
             {
@@ -629,7 +638,7 @@ def split_over_budget_ai_blocks(
         for source_part, audio_part in zip(source_parts, audio_parts, strict=True):
             split_block = dict(ai_block)
             split_block["source_text"] = source_part
-            split_block["text"] = normalize_block_text(audio_part, content_kind)
+            split_block["text"] = audio_part.strip()
             if used_hard_split:
                 warning_flags = list(split_block.get("warning_flags", []))
                 append_warning_flag(warning_flags, "tts_hard_split")
@@ -805,6 +814,23 @@ def hard_split_text_by_characters(text: str, safe_word_count: int) -> list[str]:
     ]
 
 
+def _dialogue_source_slices(source_text: str, audio_text: str, audio_parts: list[str]) -> list[str]:
+    """
+    @brief      Attach outer source delimiters to the first and last spoken slices.
+    @param[in]  source_text Exact original dialogue fragment.
+    @param[in]  audio_text Dialogue text without outer delimiters.
+    @param[in]  audio_parts Ordered slices of the spoken dialogue.
+    @return     Source slices whose concatenation reproduces the original fragment.
+    """
+    spoken_start = source_text.find(audio_text)
+    if spoken_start < 0:
+        return _partition_source_provenance(source_text, [len(part) for part in audio_parts])
+    source_parts = list(audio_parts)
+    source_parts[0] = source_text[:spoken_start] + source_parts[0]
+    source_parts[-1] += source_text[spoken_start + len(audio_text):]
+    return source_parts
+
+
 def _partition_source_provenance(source_text: str, part_weights: list[int]) -> list[str]:
     """
     @brief      Partition source provenance into exact ordered slices for independently split audio.
@@ -904,6 +930,72 @@ def speaker_match_key(value: str) -> str:
     @exception  None
     """
     return " ".join(str(value).strip().replace("_", " ").replace("-", " ").casefold().split())
+
+
+def renumber_chunk_blocks(
+    chunk_id: str,
+    speech_blocks: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """
+    @brief      Recompute block order for one chunk while preserving current list order.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  speech_blocks Current Speech Blocks payload list for the chunk.
+    @return     Renumbered Speech Blocks payload list.
+    @exception  None
+    """
+    normalized_chunk_id = str(chunk_id).strip()
+    renumbered_blocks: list[dict[str, object]] = []
+    used_ids: set[str] = set()
+    for sequence_index, block in enumerate(speech_blocks, start=1):
+        renumbered_block = dict(block)
+        renumbered_block["sequence_index"] = sequence_index
+        renumbered_block["chunk_id"] = normalized_chunk_id
+        renumbered_block["speech_block_id"] = stable_speech_block_id(renumbered_block, normalized_chunk_id, used_ids)
+        renumbered_blocks.append(renumbered_block)
+    return renumbered_blocks
+
+
+
+def stable_speech_block_id(block: dict[str, object], chunk_id: str, used_ids: set[str]) -> str:
+    """
+    @brief      Preserve one existing Speech Block id or allocate a new stable id.
+    @param[in]  block Speech Block payload being renumbered.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  used_ids Speech Block ids already emitted in this renumbering pass.
+    @return     Stable Speech Block identifier.
+    @exception  None
+    """
+    existing_id = str(block.get("speech_block_id", "")).strip()
+    if existing_id and existing_id not in used_ids:
+        used_ids.add(existing_id)
+        return existing_id
+    generated_id = next_unused_speech_block_id(chunk_id, used_ids)
+    used_ids.add(generated_id)
+    return generated_id
+
+
+
+def next_unused_speech_block_id(chunk_id: str, used_ids: set[str]) -> str:
+    """
+    @brief      Allocate an id absent from the current Speech Blocks document.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  used_ids Speech Block ids present in the document or emitted in this pass.
+    @return     Unused Speech Block identifier.
+    @exception  None
+    """
+    chunk_numeric_prefix = f"{chunk_order_from_id(chunk_id):04d}"
+    next_index = 1
+    suffix_pattern = re.compile(rf"^{re.escape(chunk_numeric_prefix)}-(\d+)$")
+    for used_id in used_ids:
+        match = suffix_pattern.match(used_id)
+        if match is not None:
+            next_index = max(next_index, int(match.group(1)) + 1)
+    candidate_id = speech_block_id(chunk_id, next_index)
+    while candidate_id in used_ids:
+        next_index += 1
+        candidate_id = speech_block_id(chunk_id, next_index)
+    return candidate_id
+
 
 
 # END OF FILE

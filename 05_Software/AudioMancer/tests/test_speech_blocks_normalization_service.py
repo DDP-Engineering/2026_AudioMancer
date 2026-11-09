@@ -33,6 +33,36 @@ def test_normalize_block_text_strips_only_dialogue_delimiters() -> None:
     assert speech_blocks_normalization_service.normalize_block_text('"Hello."', "narration") == '"Hello."'
 
 
+def test_generated_narration_uses_narrator_even_with_valid_character_id() -> None:
+    """@brief Keep an AI narration row with the narrator while preserving character dialogue."""
+    catalog = {
+        "narrator": {"speaker_kind": "narrator", "speaker_id": "narrator", "display_name": "Narrator"},
+        "ana": {"speaker_kind": "character", "speaker_id": "ana", "display_name": "Ana"},
+    }
+    blocks, _ = speech_blocks_normalization_service.normalize_direct_block_chunk_blocks(
+        {"chunk_id": "chunk-0001", "text": 'Ana sat. "Hello."'},
+        [
+            {"text": "Ana sat. ", "speaker_id": "ana", "content_kind": "narration", "confidence": "high"},
+            {"text": '"Hello."', "speaker_id": "ana", "content_kind": "dialogue", "confidence": "high"},
+        ],
+        catalog, "en", False, None,
+    )
+    assert [block["speaker_id"] for block in blocks] == ["narrator", "ana"]
+    assert blocks[0]["warning_flags"] == []
+
+
+def test_split_dialogue_removes_outer_quotes_and_keeps_source_slices() -> None:
+    """@brief Split spoken dialogue while retaining its exact quoted source."""
+    source = ' "First person spoke. Another person replied." '
+    blocks, _ = speech_blocks_normalization_service.split_over_budget_ai_blocks(
+        "chunk-0001",
+        [{"text": source.strip()[1:-1], "source_text": source, "content_kind": "dialogue"}],
+        {"safe_word_count": 4, "hard_word_count": 8},
+    )
+    assert [block["text"] for block in blocks] == ["First person spoke.", "Another person replied."]
+    assert "".join(block["source_text"] for block in blocks) == source
+
+
 def test_content_kind_and_operation_entry_normalization() -> None:
     """
     @brief      Verify content-kind tokens and operation-row speaker fields normalize consistently.

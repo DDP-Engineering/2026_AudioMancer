@@ -818,6 +818,7 @@ _UI_STRINGS = {
         "speech_blocks.note_no_source": "Import a source file and complete Character Voices before generating Speech Blocks.",
         "speech_blocks.note_missing_source": "Run text chunking, resolve the Character Voices language, and approve translation if needed before generating Speech Blocks.",
         "speech_blocks.note_no_profile": "Enable at least one AI profile in AI Settings to run Speech Blocks generation.",
+        "speech_blocks.note_ready_local": "Speech Blocks are ready for local narration.",
         "speech_blocks.note_ready": "Speech Blocks generation is ready for the current Character Voices language and selected AI profile.",
         "speech_blocks.note_in_progress": "Speech Blocks generation is in progress at {progress_current}/{progress_total}.",
         "speech_blocks.note_resume": "A previous Speech Blocks run was not finalized. Press Generate Speech Blocks to continue from progress {progress_current}/{progress_total}.",
@@ -1135,7 +1136,8 @@ _UI_STRINGS = {
         "project.confirm_chunk_edit": "Editing this chunk can reset Translation for this chunk, remove Speech Blocks and Audio Blocks for this chunk, and reset Audio Assembly after the change is saved. Unaffected chunks are preserved. Continue?",
         "project.confirm_chunk_insert": "Inserting a chunk will add an untranslated record, update chunk sequence metadata, and reset Audio Assembly. Existing chunk ids and unaffected downstream data are preserved. Continue?",
         "project.confirm_chunk_delete": "Deleting this chunk will remove its Translation, Speech Blocks, Audio Blocks, and generated audio, then reset Audio Assembly. Unaffected chunks are preserved. Continue?",
-        "project.confirm_speech_blocks": "Speech Blocks generation can take time because it sends one AI request per chunk and consumes AI tokens. A successful run will reset Audio Blocks and Audio Assembly. Continue?",
+        "project.confirm_speech_blocks_local": "Split narration locally? A successful run will reset Audio Blocks and Audio Assembly.",
+        "project.confirm_speech_blocks": "Speech Blocks generation sends AI requests for text segments and consumes AI tokens. A successful run will reset Audio Blocks and Audio Assembly. Continue?",
         "project.confirm_speech_blocks_rerun": "Continuing will delete the current Speech Blocks data, clear Audio Blocks and Audio Assembly, and reset workflow progress after Character Voices before starting a new Speech Blocks run. Continue?",
         "project.confirm_speech_blocks_resplit": (
             "Continuing will erase the Speech Blocks for the selected chunk and send a new AI request. "
@@ -2046,6 +2048,7 @@ _UI_STRINGS = {
         "speech_blocks.note_no_source": "Importa o sursa si finalizeaza Vocile Personajelor inainte de a genera blocurile de vorbire.",
         "speech_blocks.note_missing_source": "Ruleaza segmentarea textului, rezolva limba din Vocile Personajelor si aproba traducerea daca este necesar inainte de a genera blocurile de vorbire.",
         "speech_blocks.note_no_profile": "Activeaza cel putin un profil AI in Setari AI pentru a rula generarea blocurilor de vorbire.",
+        "speech_blocks.note_ready_local": "Blocurile de vorbire sunt pregatite pentru segmentarea locala.",
         "speech_blocks.note_ready": "Generarea blocurilor de vorbire este pregatita pentru limba curenta din Vocile Personajelor si profilul AI selectat.",
         "speech_blocks.note_in_progress": "Generarea blocurilor de vorbire este in curs la {progress_current}/{progress_total}.",
         "speech_blocks.note_resume": "O rulare anterioara pentru blocurile de vorbire nu a fost finalizata. Apasa Genereaza Blocuri Vorbire pentru a continua de la progresul {progress_current}/{progress_total}.",
@@ -2370,6 +2373,7 @@ _UI_STRINGS = {
         "project.confirm_chunk_edit": "Editarea acestui segment poate reseta Traducerea pentru acest segment, poate elimina Blocurile de Vorbire si Blocurile Audio pentru acest segment si poate reseta Asamblarea Audio dupa salvarea schimbarii. Segmentele neafectate sunt pastrate. Continui?",
         "project.confirm_chunk_insert": "Inserarea unui segment va adauga o inregistrare netradusa, va actualiza metadatele de secventa si va reseta Asamblarea Audio. ID-urile existente si datele downstream neafectate sunt pastrate. Continui?",
         "project.confirm_chunk_delete": "Stergerea acestui segment va elimina Traducerea, Blocurile de Vorbire, Blocurile Audio si fisierele audio generate pentru el, apoi va reseta Asamblarea Audio. Segmentele neafectate sunt pastrate. Continui?",
+        "project.confirm_speech_blocks_local": "Segmentezi naratiunea local? O rulare reusita va reseta Blocurile Audio si Asamblarea Audio.",
         "project.confirm_speech_blocks": "Generarea blocurilor de vorbire poate dura deoarece trimite cate o cerere AI pentru fiecare segment si consuma tokeni AI. O rulare reusita va reseta Blocurile Audio si Asamblarea Audio. Continui?",
         "project.confirm_speech_blocks_rerun": "Continuarea va sterge datele curente pentru blocurile de vorbire, va goli Blocurile Audio si Asamblarea Audio si va reseta progresul fluxului dupa Vocile Personajelor inainte de a porni o noua rulare. Continui?",
         "project.confirm_speech_blocks_resplit": (

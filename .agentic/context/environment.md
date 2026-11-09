@@ -66,6 +66,10 @@ Focused Character Voices checks use the character voice service, state, page
 and controller tests, with simulated generation and injected file replacement
 failures. Audio Blocks, export and project reset tests cover consumers.
 
+Focused Speech Blocks checks use the service, normalization, text split,
+document contract and offscreen Qt tests. Resume and ambience tests use
+controlled provider responses.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

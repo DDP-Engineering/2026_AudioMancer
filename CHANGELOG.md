@@ -17,7 +17,14 @@ All notable changes to this project will be documented in this file.
 - Character Voices edits the prompt and preview in a draft. Cancel keeps the
   current sample, and Save applies only confirmed changes.
 
+- Speech Blocks can split single-narrator projects locally with Scene Ambience off.
+
 ### Fixed
+
+- Interrupted Speech Blocks continue from the saved source position even when
+  the AI request budget changes. Ambience failures keep the generated speech.
+- AI-generated narration uses the narrator voice. Long dialogue keeps its
+  spoken text clean when split across blocks.
 
 - Character voice samples use stable IDs and save each WAV with its transcript.
   An interrupted generation batch resets dependent audio only for saved samples.

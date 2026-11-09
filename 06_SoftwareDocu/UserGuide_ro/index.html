@@ -986,21 +986,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     intinde in partea de sus, cu butoanele ei alaturi; dedesubt, <strong>Segment Selectat</strong> si
                     <strong>Blocuri Vorbire</strong> stau alaturi.
                 </p>
-                <div class="warning">
-                    <strong>Genereaza Tot</strong> si <strong>Imparte Segment</strong> cer un profil AI selectat in
-                    <em>orice</em> proiect, inclusiv in cele cu acelasi narator. Configureaza cel putin un profil activ
-                    in Setari AI inainte de a ajunge la aceasta pagina.
+                <div class="note">
+                    Proiectele cu acelasi narator si Ambienta Scena oprita pot genera si reimparti naratiunea local.
+                    Alege un profil AI cand proiectul foloseste voci de personaje sau genereaza Ambienta Scena.
                 </div>
                 <h3>Generarea</h3>
                 <ul>
-                    <li><strong>Genereaza Tot</strong> proceseaza fiecare segment care inca nu are blocuri. Confirma intai &mdash; o cerere AI per segment, consumand tokeni, iar o rulare reusita reseteaza Blocurile Audio si Asamblarea Audio. Cand Ambienta Scena este activata in Setari TTS, confirma si asta, pentru ca ambienta adauga apeluri suplimentare pe segment. La final deschide <strong>Instructiuni Blocuri Vorbire</strong> pentru reguli suplimentare; reluarea unei rulari intrerupte sare peste acea fereastra.</li>
-                    <li><strong>Imparte Segment</strong> reimparte doar segmentul selectat. Confirma, apoi cere mereu instructiuni &mdash; pentru un singur segment nu exista scutire la reluare.</li>
+                    <li><strong>Genereaza Tot</strong> proceseaza segmentele lipsa si continua un segment partial de la pozitia salvata in text. O rulare reusita reseteaza Blocurile Audio si Asamblarea Audio. Pentru vocile personajelor, aplicatia cere instructiuni optionale la inceput si le refoloseste la reluare. Un segment mare poate necesita mai multe cereri AI.</li>
+                    <li><strong>Imparte Segment</strong> reimparte doar segmentul selectat. Pentru vocile personajelor poti adauga instructiuni pentru rularea respectiva.</li>
                     <li><strong>Reseteaza</strong> sterge toate Blocurile de Vorbire, goleste Blocurile Audio si Asamblarea Audio si reseteaza progresul dupa Voci Personaje.</li>
                     <li><strong>Aproba Tot</strong> aproba deodata toate blocurile ramase, fara sa intrebe.</li>
                 </ul>
                 <p>
                     Seteaza <strong>Pozitionare Ambienta Scena</strong> in Setari TTS <em>inainte</em> de generare sau
                     de reimpartire: ea decide daca se creeaza deloc blocuri de ambienta.
+                    Daca cererea de ambienta esueaza, blocurile de vorbire raman disponibile cu un avertisment pentru revizie.
                 </p>
                 <h3>Cum se citeste lista de blocuri</h3>
                 <p>
@@ -1193,7 +1193,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>Un buton este inactiv</h3>
                 <p>Majoritatea paginilor depind de cele de deasupra lor, iar aproape orice actiune este dezactivata si cat timp o operatie ruleaza sau o editare este deschisa. Salveaza sau anuleaza editarea, lasa operatia sa se termine si verifica daca etapa anterioara a produs un rezultat.</p>
                 <h3>Genereaza Tot sau Imparte Segment este inactiv in Blocuri Vorbire</h3>
-                <p>Amandoua au nevoie de un profil AI selectat, in orice proiect &mdash; inclusiv in cele cu acelasi narator. Adauga un profil activ in Setari AI.</p>
+                <p>Verifica daca textul sursa este pregatit. Vocile personajelor si Ambienta Scena cer si un profil AI activ. Cu un singur narator si Ambienta Scena oprita, ambele actiuni ruleaza local.</p>
                 <h3>Genereaza Audio este inactiv in Asamblare Audio</h3>
                 <p>Asamblarea cere ca fiecare Bloc Audio sa fie aprobat. Revino la Blocuri Audio si aproba randurile ramase.</p>
                 <h3>Porneste Traducerea este inactiv</h3>

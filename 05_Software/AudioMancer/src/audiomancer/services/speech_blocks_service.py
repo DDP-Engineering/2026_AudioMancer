@@ -24,23 +24,18 @@ import re
 
 from audiomancer import config
 from audiomancer.services import (
-    ai_budget_service,
     ai_translation_service,
     character_discovery_service,
     chunking_document_service,
-    llm_provider_service,
     narrator_definition_service,
     project_workspace_service,
-    prompt_template_service,
-    speech_blocks_narrator_split_service,
+    speech_blocks_generation_service,
     speech_blocks_normalization_service,
     speech_blocks_report_state_service,
-    speech_blocks_text_split_service,
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    OperationCancelledError,
     build_operation_output_path,
     build_operation_state_payload,
     load_optional_json_artifact,
@@ -82,27 +77,20 @@ _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT = "direct_blocks"
 _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT = "atomic_unit_selection"
 _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT = "narrator_boundary_ids"
 _SPEECH_BLOCKS_DETERMINISTIC_NARRATOR_CONTRACT = "deterministic_narrator_blocks"
-_DIRECT_BLOCK_PROMPT_NAMES = ("speech_blocks_system", "speech_blocks_user")
-_SPEECH_BLOCKS_DIRECT_SOURCE_TOKEN_CAP = 2000
 _approved_block_count = speech_blocks_report_state_service.approved_block_count
 _build_speech_block_payload = speech_blocks_normalization_service.build_speech_block_payload
 _build_operation_state = speech_blocks_report_state_service.build_operation_state
 _chunk_order_from_id = speech_blocks_normalization_service.chunk_order_from_id
+_next_unused_speech_block_id = speech_blocks_normalization_service.next_unused_speech_block_id
+_stable_speech_block_id = speech_blocks_normalization_service.stable_speech_block_id
+_normalized_additional_speech_block_instructions = speech_blocks_generation_service.normalize_instructions
+requires_ai_profile = speech_blocks_generation_service.requires_ai_profile
 _is_operation_content_kind = speech_blocks_normalization_service.is_operation_content_kind
-_normalize_block_text = speech_blocks_normalization_service.normalize_block_text
-_normalize_chunk_blocks = speech_blocks_normalization_service.normalize_chunk_blocks
 _normalize_content_kind = speech_blocks_normalization_service.normalize_content_kind
 _normalize_warning_flags = speech_blocks_normalization_service.normalize_warning_flags
-_operation_display_name = speech_blocks_normalization_service.operation_display_name
 _operation_speaker_entry = speech_blocks_normalization_service.operation_speaker_entry
 _rebuild_report = speech_blocks_report_state_service.rebuild_report
-_resolve_narrator_only_budget = speech_blocks_normalization_service.resolve_narrator_only_budget
-_safe_tts_word_count = speech_blocks_normalization_service.safe_tts_word_count
-_speaker_match_key = speech_blocks_normalization_service.speaker_match_key
-_speech_block_id = speech_blocks_normalization_service.speech_block_id
-_speech_block_warning_reason = speech_blocks_normalization_service.speech_block_warning_reason
 _warning_records_from_blocks = speech_blocks_report_state_service.warning_records_from_blocks
-_split_text_for_ai_context_budget = speech_blocks_text_split_service.split_text_for_ai_context_budget
 
 SpeechBlockPayload = dict[str, object]
 SpeechBlocksReportPayload = dict[str, object]
@@ -146,20 +134,6 @@ _UNRESOLVED_TRANSLATION_DOCUMENT = object()
 
 class SpeechBlocksDocumentError(ValueError):
     """Raised when the authoritative single Speech Blocks document is invalid."""
-
-
-class _ChunkGenerationRefusedError(RuntimeError):
-    """Raised when the AI provider fails one Speech Blocks source chunk."""
-
-    def __init__(self, chunk_id: str) -> None:
-        """
-        @brief      Carry the refused source chunk identifier.
-        @param[in]  chunk_id Source chunk identifier the provider refused.
-        @return     None.
-        @exception  None
-        """
-        self.chunk_id = str(chunk_id).strip()
-        super().__init__(self.chunk_id)
 
 
 def _validate_speech_blocks_document(payload: object) -> None:
@@ -408,6 +382,38 @@ def _resolve_source_context(
     )
 
 
+def _active_checkpoint_for_source(
+    operation_state: OperationStatePayload, source_fingerprint: str
+) -> dict[str, object] | None:
+    """
+    @brief      Retain an active checkpoint when an operator mutation leaves its source unchanged.
+    @param[in]  operation_state Current projected operation state.
+    @param[in]  source_fingerprint Fingerprint of the source used by the mutation.
+    @return     Active checkpoint for the same source, if present.
+    """
+    metadata = operation_state.get("metadata", {})
+    checkpoint = operation_state.get("resume_checkpoint")
+    if (
+        isinstance(metadata, dict)
+        and metadata.get("source_snapshot_fingerprint") == source_fingerprint
+        and isinstance(checkpoint, dict)
+        and checkpoint.get("active_chunk_id")
+    ):
+        return checkpoint
+    return None
+
+
+def _covered_chunk_count(blocks: list[SpeechBlockPayload], checkpoint: object = None) -> int:
+    """
+    @brief      Count source chunks whose persisted rows are outside an active checkpoint.
+    @param[in]  blocks Current Speech Blocks.
+    @param[in]  checkpoint Optional resume checkpoint containing the active chunk identifier.
+    @return     Count of covered source chunks.
+    """
+    active_chunk = str(checkpoint.get("active_chunk_id", "")).strip() if isinstance(checkpoint, dict) else ""
+    return len({str(block.get("chunk_id", "")).strip() for block in blocks} - {"", active_chunk})
+
+
 def _project_speech_blocks_report(
     document: SpeechBlocksDocumentPayload,
     source_chunk_count: int,
@@ -416,7 +422,7 @@ def _project_speech_blocks_report(
     blocks = [block for block in document.get("blocks", []) if isinstance(block, dict)]
     source = document.get("source", {}) if isinstance(document.get("source"), dict) else {}
     checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else {}
-    processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in blocks} - {""})
+    processed_chunk_count = _covered_chunk_count(blocks, checkpoint)
     total_chunk_count = max(int(source_chunk_count), processed_chunk_count)
     budget_metadata = document.get("budget_metadata")
     report = _rebuild_report(
@@ -446,7 +452,7 @@ def _project_operation_state(
     blocks = [block for block in document.get("blocks", []) if isinstance(block, dict)]
     source = document.get("source", {}) if isinstance(document.get("source"), dict) else {}
     checkpoint = document.get("checkpoint") if isinstance(document.get("checkpoint"), dict) else None
-    processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in blocks} - {""})
+    processed_chunk_count = _covered_chunk_count(blocks, checkpoint)
     total_chunk_count = max(int(source_chunk_count), processed_chunk_count)
     warning_entries = _warning_records_from_blocks(blocks)
     scene_ambience = document.get("scene_ambience") if isinstance(document.get("scene_ambience"), dict) else {}
@@ -479,6 +485,9 @@ def _project_operation_state(
     if isinstance(budget_metadata, dict) and budget_metadata:
         metadata["budget_metadata"] = dict(budget_metadata)
     status = str(document.get("status", "not_started"))
+    # Older approval writes could leave an active checkpoint under a reviewed status.
+    if checkpoint and checkpoint.get("active_chunk_id") and status in {"review_pending", "completed"}:
+        status = "running"
     state = build_operation_state_payload(
         status=status,
         progress_current=processed_chunk_count,
@@ -760,24 +769,10 @@ def start_or_continue_generation(
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
     resolved_voice_assignment_mode = voice_assignment_mode(manifest)
-    narrator_only_mode = str(resolved_voice_assignment_mode).strip() == "same_narrator"
     speech_blocks_response_contract = _speech_blocks_response_contract(resolved_voice_assignment_mode)
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
-
     profile_id = str(ai_profile_payload.get("id", "")).strip()
-    model_name = str(ai_profile_payload.get("model_name", "")).strip()
-    base_url = str(ai_profile_payload.get("base_url", "")).strip()
-    # Same-narrator segmentation is deterministic, so a model is only needed for scene ambience.
-    requires_ai_profile = not narrator_only_mode or bool(scene_ambience_settings["enabled"])
-    if requires_ai_profile and (not profile_id or not model_name or not base_url):
-        raise ValueError("Speech Blocks generation requires a valid enabled AI profile.")
 
-    prompt_names = ("", "") if narrator_only_mode else _DIRECT_BLOCK_PROMPT_NAMES
-    if not narrator_only_mode:
-        prompt_template_service.validate_required_prompts(list(prompt_names))
-    if bool(scene_ambience_settings["enabled"]):
-        prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
-    tts_budget = _resolve_narrator_only_budget(settings_payload)
     existing_document = load_speech_blocks_document(resolved_project_root)
     existing_state = (
         _project_operation_state(existing_document, len(source_chunks)) if existing_document is not None else {}
@@ -795,27 +790,20 @@ def start_or_continue_generation(
         additional_speech_block_instructions,
     )
 
-    speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
-    system_prompt = "" if narrator_only_mode else prompt_template_service.render_prompt(prompt_names[0], {})
-    # Deterministic segmentation sends no source text to a model, so it has no context budget.
-    budget_metadata: BudgetMetadataPayload = (
-        {}
-        if narrator_only_mode
-        else _build_budget_metadata(
-            ai_profile_payload,
-            system_prompt,
-            prompt_names[1],
-            source_language,
-            speaker_catalog,
-            resolved_voice_assignment_mode,
-            tts_budget,
-            additional_speech_block_instructions,
-        )
+    generation = speech_blocks_generation_service.prepare_chunk_generation(
+        ai_profile_payload,
+        source_language,
+        _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root)),
+        resolved_voice_assignment_mode,
+        settings_payload,
+        additional_speech_block_instructions,
+        scene_ambience_settings,
     )
+    budget_metadata = generation.budget_metadata
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at, existing_state)
-    existing_blocks, start_chunk_index = _restore_resume_state(
+    existing_blocks, start_chunk_index, start_offset = _restore_resume_state(
         resolved_project_root,
         existing_state,
         input_fingerprint,
@@ -823,10 +811,9 @@ def start_or_continue_generation(
         source_chunks,
         additional_speech_block_instructions_fingerprint,
     )
-    start_segment_index = _restore_next_speech_blocks_segment_index(existing_state, source_chunks, start_chunk_index)
     skipped_chunk_ids = (
         set(_restore_skipped_chunk_ids(existing_state))
-        if start_chunk_index > 0 or existing_blocks
+        if start_chunk_index > 0 or start_offset > 0 or existing_blocks
         else set()
     )
     token_usage = (
@@ -834,10 +821,14 @@ def start_or_continue_generation(
             None if existing_report is None else existing_report.get("token_usage"),
             _metadata_token_usage(existing_state),
         )
-        if start_chunk_index > 0 or existing_blocks
+        if start_chunk_index > 0 or start_offset > 0 or existing_blocks
         else token_usage_service.empty_token_usage()
     )
-    if existing_blocks and start_chunk_index >= len(source_chunks):
+    if (
+        existing_blocks
+        and start_chunk_index >= len(source_chunks)
+        and existing_state.get("status") not in {"running", "failed"}
+    ):
         return (
             dict(existing_report)
             if isinstance(existing_report, dict)
@@ -891,11 +882,10 @@ def start_or_continue_generation(
             skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
             active_chunk_id=(
                 str(source_chunks[start_chunk_index].get("chunk_id", ""))
-                if start_chunk_index < len(source_chunks) and start_segment_index > 0
+                if start_chunk_index < len(source_chunks) and start_offset > 0
                 else ""
             ),
-            next_segment_index=start_segment_index if start_segment_index > 0 else None,
-            completed_segment_count=start_segment_index if start_segment_index > 0 else None,
+            next_source_offset=start_offset or None,
         ),
     )
     _emit_progress(
@@ -916,50 +906,40 @@ def start_or_continue_generation(
         raise_if_cancelled(cancel_requested)
         source_chunk = _source_chunk_with_attribution_context(source_chunks, chunk_index)
         chunk_id = str(source_chunk.get("chunk_id", "")).strip()
-        resumes_active_segment = chunk_index == start_chunk_index and start_segment_index > 0
-        if chunk_id in covered_chunk_ids and not resumes_active_segment:
+        source_offset = start_offset if chunk_index == start_chunk_index else 0
+        if chunk_id in covered_chunk_ids and not source_offset:
             continue
-        existing_chunk_block_count = sum(
-            1 for block in all_blocks if str(block.get("chunk_id", "")).strip() == chunk_id
-        )
+        prefix_blocks = [block for block in all_blocks if block["chunk_id"] == chunk_id]
+        other_blocks = [block for block in all_blocks if block["chunk_id"] != chunk_id]
 
         def _persist_segment_progress(
             segment_blocks: list[SpeechBlockPayload],
-            _segment_warnings: list[dict[str, object]],
             segment_token_usage: TokenUsagePayload,
-            next_segment_index: int,
-            segment_total: int,
-            base_blocks: list[SpeechBlockPayload] = all_blocks,
-            base_token_usage: TokenUsagePayload = token_usage,
+            next_source_offset: int,
+            base_blocks: list[SpeechBlockPayload] = other_blocks,
+            base_usage: TokenUsagePayload = token_usage,
             current_chunk_index: int = chunk_index,
             current_chunk_id: str = chunk_id,
-            current_chunk_block_count: int = existing_chunk_block_count,
         ) -> None:
             """
-            @brief      Persist resumable Speech Blocks progress after one direct request segment.
-            @param[in]  segment_blocks Chunk-local blocks generated so far in this call.
-            @param[in]  _segment_warnings Ignored chunk-local warning snapshot supplied by the callback contract.
-            @param[in]  segment_token_usage Chunk-local token usage generated so far in this call.
-            @param[in]  next_segment_index One-based next segment cursor after the persisted segment.
-            @param[in]  segment_total Total segment count for the active chunk.
-            @return     None.
-            @exception  None
+            @brief      Persist the active chunk prefix and the exact consumed source position.
+            @param[in]  segment_blocks Current active chunk blocks.
+            @param[in]  segment_token_usage Usage from new requests for this chunk.
+            @param[in]  next_source_offset Character offset into the original chunk.
+            @param[in]  base_blocks Rows outside the current chunk.
+            @param[in]  base_usage Usage before the current chunk.
+            @param[in]  current_chunk_index Active source chunk index.
+            @param[in]  current_chunk_id Active source chunk identifier.
             """
-            continued_segment_blocks = _continue_chunk_sequence_indices(
-                segment_blocks,
-                current_chunk_block_count,
-            )
-            persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *continued_segment_blocks])
-            persisted_usage = token_usage_service.merge_token_usage(base_token_usage, segment_token_usage)
-            chunk_complete = next_segment_index >= segment_total
-            processed_chunk_count = current_chunk_index + 1 if chunk_complete else current_chunk_index
+            persisted_blocks = _renumber_speech_blocks(source_chunks, [*base_blocks, *segment_blocks])
+            persisted_usage = token_usage_service.merge_token_usage(base_usage, segment_token_usage)
             report = _rebuild_report_with_prompt_rules(
                 persisted_blocks,
                 source_language,
                 source_kind,
                 profile_id,
                 len(source_chunks),
-                processed_chunk_count,
+                current_chunk_index,
                 persisted_usage,
                 budget_metadata,
                 additional_speech_block_instructions,
@@ -982,30 +962,21 @@ def start_or_continue_generation(
                     input_fingerprint=input_fingerprint,
                     log_path=log_path,
                     token_usage=persisted_usage,
-                    next_chunk_index=processed_chunk_count,
+                    next_chunk_index=current_chunk_index,
                     budget_metadata=budget_metadata,
                     additional_speech_block_instructions=additional_speech_block_instructions,
                     scene_ambience_settings=scene_ambience_settings,
                     speech_blocks_response_contract=speech_blocks_response_contract,
                     skipped_chunk_ids=_ordered_skipped_chunk_ids(source_chunks, skipped_chunk_ids),
-                    active_chunk_id=current_chunk_id if not chunk_complete else "",
-                    next_segment_index=next_segment_index if not chunk_complete else None,
-                    completed_segment_count=next_segment_index if not chunk_complete else None,
+                    active_chunk_id=current_chunk_id,
+                    next_source_offset=next_source_offset,
                 ),
             )
 
         try:
-            chunk_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
-                ai_profile_payload,
-                system_prompt,
+            chunk_blocks, chunk_token_usage = speech_blocks_generation_service.generate_chunk(
+                generation,
                 source_chunk,
-                source_language,
-                speaker_catalog,
-                resolved_voice_assignment_mode,
-                tts_budget,
-                prompt_names[1],
-                budget_metadata,
-                additional_speech_block_instructions,
                 log_path,
                 {
                     "operation_kind": "speech_blocks",
@@ -1013,51 +984,22 @@ def start_or_continue_generation(
                     "profile_id": profile_id,
                     "chunk_index": chunk_index + 1,
                     "chunk_total": len(source_chunks),
-                    "chunk_id": str(source_chunk.get("chunk_id", "")),
+                    "chunk_id": chunk_id,
                 },
                 cancel_requested,
-                "Speech Blocks generation cancelled while waiting for the model response.",
-                start_segment_index=start_segment_index if chunk_index == start_chunk_index else 0,
-                segment_progress_callback=(
-                    _persist_segment_progress
-                    if str(resolved_voice_assignment_mode).strip() != "same_narrator"
-                    else None
-                ),
+                source_offset=source_offset,
+                prefix_blocks=prefix_blocks,
+                segment_progress_callback=_persist_segment_progress,
             )
-            if bool(scene_ambience_settings["enabled"]):
-                ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
-                    ai_profile_payload,
-                    source_chunk,
-                    source_language,
-                    chunk_blocks,
-                    scene_ambience_settings,
-                    log_path,
-                    {
-                        "operation_kind": "speech_blocks",
-                        "stage_label": "scene_ambience_chunk",
-                        "profile_id": profile_id,
-                        "chunk_index": chunk_index + 1,
-                        "chunk_total": len(source_chunks),
-                        "chunk_id": str(source_chunk.get("chunk_id", "")),
-                    },
-                    cancel_requested,
-                )
-                chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, ambience_token_usage)
-                chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
             skipped_chunk_ids.discard(chunk_id)
             chunk_refused = False
-        except _ChunkGenerationRefusedError:
+        except speech_blocks_generation_service.ChunkGenerationRefusedError:
             chunk_blocks, chunk_refused = [], True
             chunk_token_usage = token_usage_service.empty_token_usage()
             skipped_chunk_ids.add(chunk_id)
-            all_blocks = [
-                block for block in all_blocks if str(block.get("chunk_id", "")).strip() != chunk_id
-            ]
             covered_chunk_ids.discard(chunk_id)
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
-        chunk_blocks = _continue_chunk_sequence_indices(chunk_blocks, existing_chunk_block_count)
-        all_blocks.extend(chunk_blocks)
-        all_blocks = _renumber_speech_blocks(source_chunks, all_blocks)
+        all_blocks = _renumber_speech_blocks(source_chunks, [*other_blocks, *chunk_blocks])
         if not chunk_refused:
             covered_chunk_ids.add(chunk_id)
         report = _rebuild_report_with_prompt_rules(
@@ -1557,30 +1499,15 @@ def regenerate_chunk_speech_blocks(
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
     resolved_voice_assignment_mode = voice_assignment_mode(manifest)
-    narrator_only_mode = str(resolved_voice_assignment_mode).strip() == "same_narrator"
     speech_blocks_response_contract = _speech_blocks_response_contract(resolved_voice_assignment_mode)
-    tts_budget = _resolve_narrator_only_budget(settings_payload)
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
-
     profile_id = str(ai_profile_payload.get("id", "")).strip()
-    model_name = str(ai_profile_payload.get("model_name", "")).strip()
-    base_url = str(ai_profile_payload.get("base_url", "")).strip()
-    # Same-narrator segmentation is deterministic, so a model is only needed for scene ambience.
-    requires_ai_profile = not narrator_only_mode or bool(scene_ambience_settings["enabled"])
-    if requires_ai_profile and (not profile_id or not model_name or not base_url):
-        raise ValueError("Speech Blocks generation requires a valid enabled AI profile.")
-
-    prompt_names = ("", "") if narrator_only_mode else _DIRECT_BLOCK_PROMPT_NAMES
     selected_chunk = next(
         (chunk for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip() == chunk_id),
         None,
     )
     if selected_chunk is None:
         raise ValueError("The selected chunk was not found.")
-    if not narrator_only_mode:
-        prompt_template_service.validate_required_prompts(list(prompt_names))
-    if bool(scene_ambience_settings["enabled"]):
-        prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
     existing_document = load_speech_blocks_document(resolved_project_root)
     if existing_document is not None:
         _require_matching_translation_source(existing_document, source_resolution)
@@ -1602,66 +1529,32 @@ def regenerate_chunk_speech_blocks(
     )
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at, existing_state)
-    speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
-    system_prompt = "" if narrator_only_mode else prompt_template_service.render_prompt(prompt_names[0], {})
-    # Deterministic segmentation sends no source text to a model, so it has no context budget.
-    budget_metadata: BudgetMetadataPayload = (
-        {}
-        if narrator_only_mode
-        else _build_budget_metadata(
-            ai_profile_payload,
-            system_prompt,
-            prompt_names[1],
-            source_language,
-            speaker_catalog,
-            resolved_voice_assignment_mode,
-            tts_budget,
-            additional_speech_block_instructions,
-        )
+    generation = speech_blocks_generation_service.prepare_chunk_generation(
+        ai_profile_payload,
+        source_language,
+        _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root)),
+        resolved_voice_assignment_mode,
+        settings_payload,
+        additional_speech_block_instructions,
+        scene_ambience_settings,
     )
+    budget_metadata = generation.budget_metadata
     raise_if_cancelled(cancel_requested)
     selected_chunk_index = source_chunks.index(selected_chunk)
     selected_chunk = _source_chunk_with_attribution_context(source_chunks, selected_chunk_index)
-    new_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
-        ai_profile_payload,
-        system_prompt,
-        dict(selected_chunk),
-        source_language,
-        speaker_catalog,
-        resolved_voice_assignment_mode,
-        tts_budget,
-        prompt_names[1],
-        budget_metadata,
-        additional_speech_block_instructions,
+    new_blocks, chunk_token_usage = speech_blocks_generation_service.generate_chunk(
+        generation,
+        selected_chunk,
         log_path,
         {
             "operation_kind": "speech_blocks",
             "stage_label": "speech_blocks_chunk_resplit",
             "profile_id": profile_id,
-            "chunk_id": str(selected_chunk.get("chunk_id", "")),
+            "chunk_id": chunk_id,
         },
         cancel_requested,
-        "Speech Blocks re-splitting cancelled while waiting for the model response.",
     )
     token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
-    if bool(scene_ambience_settings["enabled"]):
-        ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
-            ai_profile_payload,
-            dict(selected_chunk),
-            source_language,
-            new_blocks,
-            scene_ambience_settings,
-            log_path,
-            {
-                "operation_kind": "speech_blocks",
-                "stage_label": "scene_ambience_chunk_resplit",
-                "profile_id": profile_id,
-                "chunk_id": str(selected_chunk.get("chunk_id", "")),
-            },
-            cancel_requested,
-        )
-        token_usage = token_usage_service.merge_token_usage(token_usage, ambience_token_usage)
-        new_blocks = _insert_scene_ambience_blocks(new_blocks, ambience_blocks)
     existing_blocks = [
         block
         for block in load_speech_blocks(resolved_project_root)
@@ -1669,6 +1562,13 @@ def regenerate_chunk_speech_blocks(
     ]
     all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
+    active_checkpoint = _active_checkpoint_for_source(existing_state, input_fingerprint)
+    if active_checkpoint is not None and active_checkpoint["active_chunk_id"] == chunk_id:
+        active_checkpoint = None
+    if active_checkpoint is not None:
+        additional_speech_block_instructions = _restore_persisted_additional_speech_block_instructions(
+            existing_report, existing_state
+        )
     completed_at = _utc_now_iso()
     report = _rebuild_report_with_prompt_rules(
         all_blocks,
@@ -1676,7 +1576,7 @@ def regenerate_chunk_speech_blocks(
         source_kind,
         profile_id,
         len(source_chunks),
-        len({str(block.get("chunk_id", "")).strip() for block in all_blocks}),
+        _covered_chunk_count(all_blocks, active_checkpoint),
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
@@ -1702,6 +1602,9 @@ def regenerate_chunk_speech_blocks(
         speech_blocks_response_contract=speech_blocks_response_contract,
         skipped_chunk_ids=_uncovered_skipped_chunk_ids(existing_state, all_blocks),
     )
+    if active_checkpoint is not None:
+        resplit_state["status"] = "running"
+        resplit_state["resume_checkpoint"] = active_checkpoint
     _persist_state(
         resolved_project_root,
         all_blocks,
@@ -1810,74 +1713,6 @@ def _speech_blocks_response_contract(voice_assignment_mode: str) -> str:
     return _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
 
 
-def _chunk_user_prompt(
-    source_chunk: dict[str, object],
-    source_language: str,
-    speaker_catalog: dict[str, dict[str, object]],
-    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-    tts_budget: dict[str, object] | None = None,
-    prompt_name: str = "speech_blocks_user",
-    additional_speech_block_instructions: str = "",
-) -> str:
-    """
-    @brief      Render the chunk-specific Speech Blocks user prompt.
-    @param[in]  source_chunk Source chunk payload.
-    @param[in]  source_language Active source language code.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  voice_assignment_mode Active project voice-assignment mode.
-    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
-    @param[in]  prompt_name Prompt template name.
-    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
-    @return     Rendered prompt text.
-    @exception  None
-    """
-    budget_payload = tts_budget or _resolve_narrator_only_budget(None)
-    return _render_speech_blocks_user_prompt(
-        prompt_name,
-        {
-            "source_language": narrator_definition_service.narrator_language_label(source_language),
-            "chunk_id": str(source_chunk.get("chunk_id", "")),
-            "chunk_text": str(source_chunk.get("text", "")),
-            "source_context_json": json.dumps(
-                _compact_source_context_for_prompt(source_chunk),
-                indent=2,
-                ensure_ascii=False,
-            ),
-            "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
-            "voice_assignment_mode": voice_assignment_mode,
-            "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
-            "safe_tts_words": str(int(budget_payload.get("safe_word_count", 0))),
-            "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
-            "additional_speech_block_instructions": additional_speech_block_instructions,
-        },
-    )
-
-
-def _render_speech_blocks_user_prompt(prompt_name: str, variables: dict[str, object]) -> str:
-    """
-    @brief      Render one Speech Blocks user prompt with optional operator rules.
-    @param[in]  prompt_name Prompt template identifier.
-    @param[in]  variables Prompt variables.
-    @return     Rendered Speech Blocks prompt.
-    @exception  None
-    """
-    template = prompt_template_service.load_prompt(prompt_name)
-    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
-    rendered_prompt = prompt_template_service.render_prompt(
-        prompt_name,
-        {key: value for key, value in variables.items() if key in placeholder_names},
-    )
-    additional_speech_block_instructions = _normalized_additional_speech_block_instructions(
-        variables.get("additional_speech_block_instructions")
-    )
-    if additional_speech_block_instructions and "additional_speech_block_instructions" not in placeholder_names:
-        rendered_prompt = _append_additional_speech_block_instructions(
-            rendered_prompt,
-            additional_speech_block_instructions,
-        )
-    return rendered_prompt
-
-
 def _resolve_additional_speech_block_instructions(
     additional_speech_block_instructions: str | None,
     existing_state: dict[str, object],
@@ -1948,6 +1783,11 @@ def _resolve_scene_ambience_settings(
         "allowed_positions": allowed_positions,
         "negative_prompt": negative_prompt or config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT,
     }
+
+
+def scene_ambience_enabled(settings_payload: dict[str, object] | None) -> bool:
+    """@brief Return whether Speech Blocks is configured to add scene ambience."""
+    return bool(_resolve_scene_ambience_settings(settings_payload)["enabled"])
 
 
 def _scene_ambience_allowed_positions(placement_policy: str) -> list[str]:
@@ -2051,34 +1891,6 @@ def _restore_persisted_speech_blocks_response_contract(operation_state: dict[str
     return _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT
 
 
-def _normalized_additional_speech_block_instructions(value: object) -> str:
-    """
-    @brief      Normalize optional operator Speech Blocks rules for prompts and state storage.
-    @param[in]  value Candidate instruction text.
-    @return     Trimmed instruction text.
-    @exception  None
-    """
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _append_additional_speech_block_instructions(prompt_text: str, additional_speech_block_instructions: str) -> str:
-    """
-    @brief      Append operator Speech Blocks rules to one rendered prompt.
-    @param[in]  prompt_text Rendered prompt template text.
-    @param[in]  additional_speech_block_instructions Normalized operator rules.
-    @return     Prompt text with an additional-rules section.
-    @exception  None
-    """
-    if not additional_speech_block_instructions:
-        return prompt_text
-    return (
-        f"{prompt_text.rstrip()}\n\n"
-        f"Additional operator Speech Blocks instructions:\n{additional_speech_block_instructions}\n"
-    )
-
-
 def _compute_prompt_fingerprint(prompt_text: str) -> str:
     """
     @brief      Compute a stable fingerprint for operator-supplied prompt rules.
@@ -2087,647 +1899,6 @@ def _compute_prompt_fingerprint(prompt_text: str) -> str:
     @exception  None
     """
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
-
-
-def _build_budget_metadata(
-    ai_profile_payload: dict[str, object],
-    system_prompt: str,
-    prompt_name: str,
-    source_language: str,
-    speaker_catalog: dict[str, dict[str, object]],
-    voice_assignment_mode: str,
-    tts_budget: dict[str, object] | None,
-    additional_speech_block_instructions: str = "",
-) -> BudgetMetadataPayload:
-    """
-    @brief      Build context-window budget metadata for AI Speech Blocks requests.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  system_prompt Rendered Speech Blocks system prompt.
-    @param[in]  prompt_name Active Speech Blocks user prompt template name.
-    @param[in]  source_language Active source language code.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  voice_assignment_mode Active project voice-assignment mode.
-    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
-    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
-    @return     Context-budget metadata used for source chunk segmentation.
-    @exception  ValueError Raised when context and output settings leave too little input room.
-    """
-    prompt_shell = _chunk_user_prompt(
-        {"chunk_id": "", "text": ""},
-        source_language,
-        speaker_catalog,
-        voice_assignment_mode,
-        tts_budget,
-        prompt_name,
-        additional_speech_block_instructions,
-    )
-    return ai_budget_service.context_budget_metadata(
-        ai_profile_payload,
-        f"{system_prompt}\n\n{prompt_shell}",
-        config.DEFAULT_SPEECH_BLOCKS_MIN_SAFETY_MARGIN_TOKENS,
-        config.DEFAULT_SPEECH_BLOCKS_SAFETY_MARGIN_CONTEXT_FRACTION,
-        config.DEFAULT_SPEECH_BLOCKS_TEXT_CONTEXT_FRACTION,
-        config.DEFAULT_SPEECH_BLOCKS_MIN_TEXT_BUDGET_TOKENS,
-        "AI-assisted Speech Blocks generation cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for source chunk input",
-        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
-    )
-
-
-def _generate_budgeted_chunk_blocks(
-    ai_profile_payload: dict[str, object],
-    system_prompt: str,
-    source_chunk: dict[str, object],
-    source_language: str,
-    speaker_catalog: dict[str, dict[str, object]],
-    voice_assignment_mode: str,
-    tts_budget: dict[str, object] | None,
-    prompt_name: str,
-    budget_metadata: BudgetMetadataPayload,
-    additional_speech_block_instructions: str,
-    log_path: Path,
-    log_context: dict[str, object],
-    cancel_requested,
-    cancellation_message: str,
-    start_segment_index: int = 0,
-    segment_progress_callback=None,
-) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], TokenUsagePayload]:
-    """
-    @brief      Generate one source chunk through budgeted AI request segments.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  system_prompt Rendered Speech Blocks system prompt.
-    @param[in]  source_chunk Full source chunk payload.
-    @param[in]  source_language Active source language code.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  voice_assignment_mode Active project voice-assignment mode.
-    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
-    @param[in]  prompt_name Active Speech Blocks user prompt template name.
-    @param[in]  budget_metadata Context-budget metadata.
-    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  log_context Base AI transaction log context.
-    @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @param[in]  cancellation_message Message used when the request is cancelled.
-    @return     Generated Speech Blocks, warning entries, and provider token usage for this chunk.
-    @exception  OperationCancelledError Raised when the operator cancels the run.
-    @exception  _ChunkGenerationRefusedError Raised when the AI provider fails this chunk.
-    """
-    if str(voice_assignment_mode).strip() == "same_narrator":
-        raise_if_cancelled(cancel_requested)
-        chunk_blocks, chunk_warnings = _deterministic_narrator_chunk_blocks(
-            source_chunk,
-            source_language,
-            tts_budget,
-        )
-        return (
-            _renumber_single_chunk_blocks(str(source_chunk.get("chunk_id", "")).strip(), chunk_blocks),
-            chunk_warnings,
-            token_usage_service.empty_token_usage(),
-        )
-
-    chunk_segments = _budgeted_source_chunk_segments(
-        source_chunk,
-        budget_metadata,
-        source_token_cap=_SPEECH_BLOCKS_DIRECT_SOURCE_TOKEN_CAP,
-    )
-    combined_blocks: list[SpeechBlockPayload] = []
-    combined_warnings: list[dict[str, object]] = []
-    chunk_token_usage = token_usage_service.empty_token_usage()
-    for segment_zero_index, segment_chunk in enumerate(chunk_segments):
-        if segment_zero_index < max(0, int(start_segment_index)):
-            continue
-        segment_index = segment_zero_index + 1
-        user_prompt = _chunk_user_prompt(
-            segment_chunk,
-            source_language,
-            speaker_catalog,
-            voice_assignment_mode,
-            tts_budget,
-            prompt_name,
-            additional_speech_block_instructions,
-        )
-        try:
-            response_result = _generate_direct_block_response(
-                ai_profile_payload,
-                system_prompt,
-                user_prompt,
-                segment_chunk,
-                log_path=log_path,
-                log_context={
-                    **dict(log_context),
-                    "segment_index": segment_index,
-                    "segment_total": len(chunk_segments),
-                    "response_contract": _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
-                },
-                cancel_requested=cancel_requested,
-            )
-        except OperationCancelledError as error:
-            raise OperationCancelledError(cancellation_message) from error
-        except RuntimeError as error:
-            raise _ChunkGenerationRefusedError(str(source_chunk.get("chunk_id", "")).strip()) from error
-        chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, response_result.get("usage"))
-        segment_blocks, segment_warnings = _normalize_chunk_blocks(
-            segment_chunk,
-            dict(response_result.get("payload", {})),
-            speaker_catalog,
-            source_language,
-            voice_assignment_mode=voice_assignment_mode,
-            tts_budget=tts_budget,
-        )
-        combined_blocks.extend(segment_blocks)
-        combined_blocks = _renumber_single_chunk_blocks(
-            str(source_chunk.get("chunk_id", "")).strip(),
-            combined_blocks,
-        )
-        combined_warnings.extend(segment_warnings)
-        if segment_progress_callback is not None:
-            segment_progress_callback(
-                list(combined_blocks),
-                list(combined_warnings),
-                dict(chunk_token_usage),
-                segment_index,
-                len(chunk_segments),
-            )
-            raise_if_cancelled(cancel_requested)
-    return (
-        _renumber_single_chunk_blocks(str(source_chunk.get("chunk_id", "")).strip(), combined_blocks),
-        combined_warnings,
-        chunk_token_usage,
-    )
-
-
-def _deterministic_narrator_chunk_blocks(
-    source_chunk: dict[str, object],
-    source_language: str,
-    tts_budget: dict[str, object] | None,
-) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
-    """
-    @brief      Segment one source chunk into same-narrator Speech Blocks without any model call.
-    @details    Every block keeps whole sentences and the narrator voice, so the only decision
-                left is where to place block boundaries, which is purely structural. Blocks the
-                TTS budget cannot hold are flagged rather than cut, because Audio Blocks splits
-                them again at generation time against the real loaded-model budget.
-    @param[in]  source_chunk Source chunk payload, normally one cleaned paragraph.
-    @param[in]  source_language Active source language code.
-    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
-    @return     Generated Speech Blocks plus warning entries.
-    @exception  ValueError Raised when segmentation would not reproduce the source chunk.
-    """
-    chunk_id = str(source_chunk.get("chunk_id", "")).strip()
-    planned_blocks = speech_blocks_narrator_split_service.plan_narrator_blocks(
-        str(source_chunk.get("text", "")),
-        _safe_tts_word_count(tts_budget),
-    )
-    review_flags = _cleanup_review_warning_flags(source_chunk)
-
-    speech_blocks: list[SpeechBlockPayload] = []
-    warning_entries: list[dict[str, object]] = []
-    for sequence_index, planned_block in enumerate(planned_blocks, start=1):
-        warning_flags = [*list(planned_block.get("warning_flags", [])), *review_flags]
-        if speech_blocks_narrator_split_service.NARRATOR_BUDGET_EXCEEDED_FLAG in warning_flags:
-            warning_entries.append(
-                {
-                    "chunk_id": chunk_id,
-                    "reason": _speech_block_warning_reason(
-                        speech_blocks_narrator_split_service.NARRATOR_BUDGET_EXCEEDED_FLAG
-                    ),
-                }
-            )
-        speech_blocks.append(
-            _build_speech_block_payload(
-                chunk_id,
-                sequence_index,
-                source_language,
-                SPEAKER_KIND_NARRATOR,
-                _NARRATOR_SPEAKER_ID,
-                _NARRATOR_DISPLAY_NAME,
-                CONTENT_KIND_NARRATION,
-                str(planned_block.get("text", "")),
-                _normalize_warning_flags(warning_flags),
-                source_text=str(planned_block.get("source_text", "")),
-            )
-        )
-    if review_flags and speech_blocks:
-        warning_entries.append({"chunk_id": chunk_id, "reason": _speech_block_warning_reason("weak_source_boundary")})
-    return speech_blocks, warning_entries
-
-
-def _cleanup_review_warning_flags(source_chunk: dict[str, object]) -> list[str]:
-    """
-    @brief      Surface uncertain upstream paragraph boundaries as Speech Block review flags.
-    @details    Cleanup already decides whether a paragraph was stitched back together across a
-                page break and how confident that decision was. Carrying the verdict here is
-                what makes a sentence broken by a page separator visible to the operator.
-    @param[in]  source_chunk Source chunk payload carrying cleanup provenance.
-    @return     Warning flags to attach to every block of this chunk.
-    @exception  None
-    """
-    boundary_confidence = str(source_chunk.get("cleanup_boundary_confidence", "") or "").strip()
-    joined_across_page_break = bool(source_chunk.get("cleanup_joined_across_page_break", False))
-    if not joined_across_page_break and boundary_confidence in {"", "strong"}:
-        return []
-    return ["weak_source_boundary", "needs_review"]
-
-
-def _generate_direct_block_response(
-    ai_profile_payload: dict[str, object],
-    system_prompt: str,
-    user_prompt: str,
-    source_chunk: dict[str, object],
-    log_path: Path,
-    log_context: dict[str, object],
-    cancel_requested,
-) -> dict[str, object]:
-    """
-    @brief      Request one direct Speech Blocks response without repair.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  system_prompt Rendered Speech Blocks system prompt.
-    @param[in]  user_prompt Rendered Speech Blocks user prompt.
-    @param[in]  source_chunk Source chunk or source segment.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  log_context Base AI transaction log context.
-    @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @return     Provider result or deterministic segment fallback payload.
-    @exception  OperationCancelledError Raised when the operator cancels the run.
-    """
-    response_schema = _direct_block_response_schema()
-    response_schema_name = "speech_blocks_direct_blocks"
-    raise_if_cancelled(cancel_requested)
-    try:
-        response_result = llm_provider_service.chat_json(
-            ai_profile_payload,
-            system_prompt,
-            user_prompt,
-            log_path=log_path,
-            log_context=log_context,
-            cancel_requested=cancel_requested,
-            structured_output=True,
-            response_schema=response_schema,
-            response_schema_name=response_schema_name,
-        )
-    except ValueError:
-        return {
-            "payload": {
-                "blocks": [
-                    {
-                        "text": str(source_chunk.get("text", "")),
-                        "speaker_id": _NARRATOR_SPEAKER_ID,
-                        "content_kind": CONTENT_KIND_NARRATION,
-                        "confidence": "low",
-                        "warning_flags": ["speech_blocks_ai_parse_failed", "needs_review"],
-                    }
-                ]
-            },
-            "usage": token_usage_service.empty_token_usage(),
-        }
-    raise_if_cancelled(cancel_requested)
-    return response_result
-
-
-def _direct_block_response_schema() -> dict[str, object]:
-    """
-    @brief      Build the structured-output schema for direct Speech Blocks responses.
-    @return     JSON Schema payload.
-    @exception  None
-    """
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["blocks"],
-        "properties": {
-            "blocks": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["text", "speaker_id", "content_kind", "confidence", "warning_flags"],
-                    "properties": {
-                        "text": {"type": "string"},
-                        "speaker_id": {"type": "string"},
-                        "content_kind": {"type": "string", "enum": ["narration", "dialogue"]},
-                        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                        "warning_flags": {"type": "array", "items": {"type": "string"}},
-                    },
-                },
-            }
-        },
-    }
-
-
-def _compact_source_context_for_prompt(source_chunk: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Build non-selectable attribution context for a Speech Blocks prompt.
-    @param[in]  source_chunk Source chunk or AI-budget segment payload.
-    @return     Previous/next context rows marked as non-selectable.
-    @exception  None
-    """
-    return {
-        "previous_context": {
-            "available": bool(str(source_chunk.get("previous_context", "")).strip()),
-            "selectable": False,
-            "text": str(source_chunk.get("previous_context", "")).strip(),
-        },
-        "next_context": {
-            "available": bool(str(source_chunk.get("next_context", "")).strip()),
-            "selectable": False,
-            "text": str(source_chunk.get("next_context", "")).strip(),
-        },
-        "rule": "This context may help attribution only. It is not selectable source text.",
-    }
-
-
-def _generate_scene_ambience_blocks(
-    ai_profile_payload: dict[str, object],
-    source_chunk: dict[str, object],
-    source_language: str,
-    speech_blocks: list[SpeechBlockPayload],
-    scene_ambience_settings: dict[str, object],
-    log_path: Path,
-    log_context: dict[str, object],
-    cancel_requested,
-) -> tuple[list[SpeechBlockPayload], TokenUsagePayload]:
-    """
-    @brief      Generate prompt-based scene ambience blocks for one completed source chunk.
-    @param[in]  ai_profile_payload Selected validated AI profile payload.
-    @param[in]  source_chunk Source chunk payload.
-    @param[in]  source_language Active source language code.
-    @param[in]  speech_blocks Chunk-local narration and dialogue Speech Blocks.
-    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
-    @param[in]  log_path Operation-local AI transaction log path.
-    @param[in]  log_context Base AI transaction log context.
-    @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @return     Scene ambience blocks and provider token usage.
-    @exception  OperationCancelledError Raised when the operator cancels the run.
-    @exception  _ChunkGenerationRefusedError Raised when the AI provider fails this chunk.
-    """
-    if not speech_blocks:
-        return [], token_usage_service.empty_token_usage()
-    system_prompt = prompt_template_service.render_prompt("scene_ambience_system", {})
-    user_prompt = _scene_ambience_user_prompt(
-        source_chunk,
-        source_language,
-        speech_blocks,
-        scene_ambience_settings,
-    )
-    try:
-        response_result = llm_provider_service.chat_json(
-            ai_profile_payload,
-            system_prompt,
-            user_prompt,
-            log_path=log_path,
-            log_context={**dict(log_context), "response_contract": "scene_ambience_blocks"},
-            cancel_requested=cancel_requested,
-        )
-    except OperationCancelledError as error:
-        raise OperationCancelledError(
-            "Speech Blocks generation cancelled while waiting for scene ambience analysis."
-        ) from error
-    except RuntimeError as error:
-        raise _ChunkGenerationRefusedError(str(source_chunk.get("chunk_id", "")).strip()) from error
-    return (
-        _normalize_scene_ambience_response(
-            dict(response_result.get("payload", {})),
-            str(source_chunk.get("chunk_id", "")).strip(),
-            source_language,
-            scene_ambience_settings,
-        ),
-        token_usage_service.restore_token_usage(response_result.get("usage")),
-    )
-
-
-def _scene_ambience_user_prompt(
-    source_chunk: dict[str, object],
-    source_language: str,
-    speech_blocks: list[SpeechBlockPayload],
-    scene_ambience_settings: dict[str, object],
-) -> str:
-    """
-    @brief      Render the scene-ambience chunk prompt.
-    @param[in]  source_chunk Source chunk payload.
-    @param[in]  source_language Active source language code.
-    @param[in]  speech_blocks Chunk-local Speech Blocks.
-    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
-    @return     Rendered scene-ambience prompt text.
-    @exception  None
-    """
-    compact_blocks = [
-        {
-            "speech_block_id": str(block.get("speech_block_id", "")).strip(),
-            "sequence_index": int(block.get("sequence_index", 0)),
-            "speaker": str(block.get("speaker_display_name", "")).strip(),
-            "content_kind": str(block.get("content_kind", "")).strip(),
-            "text": str(block.get("text", "")),
-        }
-        for block in speech_blocks
-    ]
-    allowed_positions = list(scene_ambience_settings.get("allowed_positions", []))
-    return prompt_template_service.render_prompt(
-        "scene_ambience_user",
-        {
-            "source_language": narrator_definition_service.narrator_language_label(source_language),
-            "chunk_id": str(source_chunk.get("chunk_id", "")),
-            "chunk_text": str(source_chunk.get("text", "")),
-            "placement_policy": str(scene_ambience_settings.get("placement_policy", "")),
-            "duration_seconds": str(float(scene_ambience_settings.get("duration_seconds", 10.0))),
-            "max_blocks_per_sequence": str(int(scene_ambience_settings.get("max_blocks_per_sequence", 6))),
-            "allowed_positions": ", ".join(allowed_positions),
-            "negative_prompt_core": _scene_ambience_negative_prompt_core(scene_ambience_settings),
-            "speech_blocks_json": json.dumps(compact_blocks, indent=2, ensure_ascii=False),
-        },
-    )
-
-
-def _normalize_scene_ambience_response(
-    payload: dict[str, object],
-    chunk_id: str,
-    source_language: str,
-    scene_ambience_settings: dict[str, object],
-) -> list[SpeechBlockPayload]:
-    """
-    @brief      Normalize one scene-ambience LLM response into operation Speech Blocks.
-    @param[in]  payload Raw JSON response payload.
-    @param[in]  chunk_id Current source chunk identifier.
-    @param[in]  source_language Active source language code.
-    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
-    @return     Normalized scene-ambience Speech Blocks.
-    @exception  None
-    """
-    raw_blocks = payload.get("scene_ambience_blocks", [])
-    if not isinstance(raw_blocks, list):
-        return []
-    allowed_positions = {str(item) for item in scene_ambience_settings.get("allowed_positions", [])}
-    max_sequence_duration = float(scene_ambience_settings.get("duration_seconds", 10.0))
-    max_blocks_per_sequence = int(scene_ambience_settings.get("max_blocks_per_sequence", 6))
-    normalized_blocks: list[SpeechBlockPayload] = []
-    sequence_counts: dict[tuple[str, str], int] = {}
-    for raw_block in raw_blocks:
-        if not isinstance(raw_block, dict):
-            continue
-        ambience_position = str(raw_block.get("ambience_position", "")).strip()
-        if ambience_position not in allowed_positions:
-            continue
-        after_speech_block_id = str(raw_block.get("after_speech_block_id", "")).strip()
-        sound_prompt = str(raw_block.get("sound_prompt", raw_block.get("text", ""))).strip()
-        if not sound_prompt:
-            continue
-        sequence_key = (ambience_position, after_speech_block_id if ambience_position == "scene_change" else "")
-        negative_prompt = str(raw_block.get("negative_prompt", "")).strip()
-        if not negative_prompt:
-            negative_prompt = _scene_ambience_negative_prompt_core(scene_ambience_settings)
-        remaining_slots = max_blocks_per_sequence - sequence_counts.get(sequence_key, 0)
-        if remaining_slots <= 0:
-            continue
-        split_prompts = _split_composed_scene_ambience_prompt(sound_prompt)[:remaining_slots]
-        if not split_prompts:
-            continue
-        for split_prompt in split_prompts:
-            sequence_counts[sequence_key] = sequence_counts.get(sequence_key, 0) + 1
-            normalized_blocks.append(
-                {
-                    "speech_block_id": "",
-                    "sequence_index": 0,
-                    "chunk_id": chunk_id,
-                    "source_language": source_language,
-                    "speaker_kind": SPEAKER_KIND_OPERATION,
-                    "speaker_id": CONTENT_KIND_SCENE_AMBIENCE,
-                    "speaker_display_name": _operation_display_name(CONTENT_KIND_SCENE_AMBIENCE),
-                    "content_kind": CONTENT_KIND_SCENE_AMBIENCE,
-                    "source_text": "",
-                    "text": split_prompt,
-                    "sound_prompt": split_prompt,
-                    "negative_prompt": negative_prompt,
-                    "duration_seconds": max_sequence_duration,
-                    "ambience_position": ambience_position,
-                    "after_speech_block_id": after_speech_block_id,
-                    "warning_flags": [],
-                    "approved": False,
-                    "approved_at": None,
-                }
-            )
-    return normalized_blocks
-
-
-def _scene_ambience_negative_prompt_core(scene_ambience_settings: dict[str, object]) -> str:
-    """
-    @brief      Resolve the exclusions applied to every Scene Ambience block whatever the scene.
-    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
-    @return     Universal exclusion list.
-    @exception  None
-    """
-    configured_core = str(scene_ambience_settings.get("negative_prompt", "")).strip()
-    return configured_core or config.DEFAULT_SCENE_AMBIENCE_NEGATIVE_PROMPT
-
-
-def _split_composed_scene_ambience_prompt(sound_prompt: str) -> list[str]:
-    """
-    @brief      Split one composed Scene Ambience prompt into simple sound-source prompts.
-    @param[in]  sound_prompt Candidate sound prompt.
-    @return     One or more simple sound prompts.
-    @exception  None
-    """
-    normalized_prompt = " ".join(str(sound_prompt).strip().split())
-    if not normalized_prompt:
-        return []
-    separators = (
-        r"\s*;\s*",
-        r"\s*,\s*(?=(?:a |an |the |low-volume |subtle |soft |occasional |intermittent |sparse |"
-        r"irregular |distant |muffled |fading |shifting |approaching |receding |quiet |faint |"
-        r"very faint |steady |sudden |heavy |rapid |rhythmic ))",
-        r"\s+(?:and|plus)\s+(?=(?:a |an |the |low-volume |subtle |soft |occasional |intermittent |"
-        r"sparse |irregular |distant |muffled |fading |shifting |approaching |receding |quiet |"
-        r"faint |very faint |steady |sudden |heavy |rapid |rhythmic ))",
-    )
-    parts = [normalized_prompt]
-    for separator in separators:
-        split_parts: list[str] = []
-        for part in parts:
-            split_parts.extend(re.split(separator, part, flags=re.IGNORECASE))
-        parts = split_parts
-    normalized_parts: list[str] = []
-    for part in parts:
-        normalized_part = " ".join(str(part).strip(" .").split())
-        if normalized_part and normalized_part not in normalized_parts:
-            normalized_parts.append(normalized_part)
-    return normalized_parts or [normalized_prompt]
-
-
-def _insert_scene_ambience_blocks(
-    speech_blocks: list[SpeechBlockPayload],
-    scene_ambience_blocks: list[SpeechBlockPayload],
-) -> list[SpeechBlockPayload]:
-    """
-    @brief      Insert scene ambience blocks at chunk-local opener, closer, and scene-change positions.
-    @param[in]  speech_blocks Chunk-local spoken Speech Blocks.
-    @param[in]  scene_ambience_blocks Scene ambience operation Speech Blocks.
-    @return     Renumbered chunk-local Speech Blocks including scene ambience.
-    @exception  None
-    """
-    if not scene_ambience_blocks:
-        return speech_blocks
-    opener_blocks = [
-        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "opener"
-    ]
-    closer_blocks = [
-        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "closer"
-    ]
-    scene_change_blocks = [
-        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "scene_change"
-    ]
-    ordered_blocks: list[SpeechBlockPayload] = [*opener_blocks]
-    spoken_block_positions: list[tuple[str, int]] = []
-    pending_scene_changes = list(scene_change_blocks)
-    for speech_block in speech_blocks:
-        spoken_block_positions.append(
-            (str(speech_block.get("speech_block_id", "")).strip(), len(ordered_blocks))
-        )
-        ordered_blocks.append(dict(speech_block))
-        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
-        matching_changes = [
-            block
-            for block in pending_scene_changes
-            if str(block.get("after_speech_block_id", "")).strip() == speech_block_id
-        ]
-        ordered_blocks.extend(matching_changes)
-        pending_scene_changes = [block for block in pending_scene_changes if block not in matching_changes]
-    ordered_blocks.extend(pending_scene_changes)
-    ordered_blocks.extend(closer_blocks)
-    chunk_id = str(speech_blocks[0].get("chunk_id", "") if speech_blocks else "").strip()
-    renumbered_blocks = _renumber_single_chunk_blocks(chunk_id, ordered_blocks)
-    spoken_id_remap = {
-        old_id: str(renumbered_blocks[position].get("speech_block_id", "")).strip()
-        for old_id, position in spoken_block_positions
-        if old_id
-    }
-    for block in renumbered_blocks:
-        if str(block.get("content_kind", "")).strip() != CONTENT_KIND_SCENE_AMBIENCE:
-            continue
-        after_speech_block_id = str(block.get("after_speech_block_id", "")).strip()
-        if after_speech_block_id in spoken_id_remap:
-            block["after_speech_block_id"] = spoken_id_remap[after_speech_block_id]
-    return renumbered_blocks
-
-
-def _budgeted_source_chunk_segments(
-    source_chunk: dict[str, object],
-    budget_metadata: BudgetMetadataPayload,
-    source_token_cap: int | None = None,
-) -> list[dict[str, object]]:
-    """
-    @brief      Split one source chunk into AI-context-budgeted request segment payloads.
-    @param[in]  source_chunk Full source chunk payload.
-    @param[in]  budget_metadata Context-budget metadata.
-    @return     Ordered source chunk segment payloads using the original chunk id.
-    @exception  None
-    """
-    text_budget_tokens = int(budget_metadata["text_budget_tokens"])
-    if source_token_cap is not None:
-        text_budget_tokens = min(text_budget_tokens, max(1, int(source_token_cap)))
-    source_text = str(source_chunk.get("text", ""))
-    text_segments = _split_text_for_ai_context_budget(source_text, text_budget_tokens)
-    if not text_segments:
-        return [dict(source_chunk)]
-    return [{**dict(source_chunk), "text": text_segment} for text_segment in text_segments]
 
 
 def _source_chunk_with_attribution_context(
@@ -2833,7 +2004,9 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     """
     sequence_index = int(payload.get("sequence_index", 0))
     chunk_id = str(payload.get("chunk_id", "")).strip()
-    speech_block_id = str(payload.get("speech_block_id", "")).strip() or _speech_block_id(chunk_id, sequence_index)
+    speech_block_id = str(payload.get("speech_block_id", "")).strip() or (
+        speech_blocks_normalization_service.speech_block_id(chunk_id, sequence_index)
+    )
     speaker_kind = str(payload.get("speaker_kind", SPEAKER_KIND_NARRATOR)).strip() or SPEAKER_KIND_NARRATOR
     speaker_id = str(payload.get("speaker_id", _NARRATOR_SPEAKER_ID)).strip() or _NARRATOR_SPEAKER_ID
     speaker_display_name = str(payload.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)).strip()
@@ -2966,8 +2139,7 @@ def _build_operation_state_with_prompt_rules(
     scene_ambience_settings: dict[str, object] | None = None,
     speech_blocks_response_contract: str = _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT,
     active_chunk_id: str = "",
-    next_segment_index: int | None = None,
-    completed_segment_count: int | None = None,
+    next_source_offset: int | None = None,
     source_chunk_count: int | None = None,
     skipped_chunk_ids: list[str] | None = None,
 ) -> OperationStatePayload:
@@ -2989,6 +2161,8 @@ def _build_operation_state_with_prompt_rules(
     @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @param[in]  speech_blocks_response_contract Active model response contract token.
+    @param[in]  active_chunk_id Source chunk whose generation is incomplete.
+    @param[in]  next_source_offset Consumed character count within that chunk.
     @param[in]  source_chunk_count Optional shared projection count when source rows are unavailable.
     @param[in]  skipped_chunk_ids Source chunk identifiers the provider refused during this run.
     @return     Persisted operation-state payload.
@@ -3043,10 +2217,8 @@ def _build_operation_state_with_prompt_rules(
         resume_checkpoint["speech_blocks_response_contract"] = response_contract
         if active_chunk_id:
             resume_checkpoint["active_chunk_id"] = str(active_chunk_id)
-        if next_segment_index is not None:
-            resume_checkpoint["next_segment_index"] = max(0, int(next_segment_index))
-        if completed_segment_count is not None:
-            resume_checkpoint["completed_segment_count"] = max(0, int(completed_segment_count))
+        if next_source_offset is not None:
+            resume_checkpoint["next_source_offset"] = next_source_offset
         state["resume_checkpoint"] = resume_checkpoint
     return state
 
@@ -3185,6 +2357,8 @@ def _build_compact_review_operation_state(
     resume_checkpoint = operation_state.get("resume_checkpoint")
     if isinstance(resume_checkpoint, dict):
         resume_checkpoint = dict(resume_checkpoint)
+        if resume_checkpoint.get("active_chunk_id"):
+            status = "running"
         resume_checkpoint["run_token"] = started_at
         resume_checkpoint["log_relative_path"] = str(log_path.name)
     else:
@@ -3267,7 +2441,10 @@ def _persist_report_update(
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
-    started_at = _resolve_started_at(operation_state if isinstance(operation_state, dict) else {})
+    active_checkpoint = _active_checkpoint_for_source(
+        operation_state, _build_source_fingerprint(source_chunks, source_language, source_kind)
+    )
+    started_at = _resolve_started_at(operation_state)
     completed_at = None
     log_path = _resolve_log_path(project_root, started_at, operation_state)
     renumbered_blocks = _renumber_speech_blocks(source_chunks, speech_blocks)
@@ -3277,7 +2454,7 @@ def _persist_report_update(
         source_kind,
         profile_id,
         source_chunk_count,
-        len({str(block.get("chunk_id", "")).strip() for block in renumbered_blocks}),
+        _covered_chunk_count(renumbered_blocks, active_checkpoint),
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
@@ -3311,6 +2488,9 @@ def _persist_report_update(
         source_chunk_count=source_chunk_count,
         skipped_chunk_ids=_uncovered_skipped_chunk_ids(operation_state, renumbered_blocks),
     )
+    if active_checkpoint is not None:
+        updated_state["status"] = "running"
+        updated_state["resume_checkpoint"] = active_checkpoint
     _persist_state(
         project_root,
         renumbered_blocks,
@@ -3375,67 +2555,6 @@ def _renumber_speech_blocks(
     return renumbered_blocks
 
 
-def _renumber_single_chunk_blocks(
-    chunk_id: str,
-    speech_blocks: list[SpeechBlockPayload],
-) -> list[SpeechBlockPayload]:
-    """
-    @brief      Recompute block order for one chunk while preserving current list order.
-    @param[in]  chunk_id Source chunk identifier.
-    @param[in]  speech_blocks Current Speech Blocks payload list for the chunk.
-    @return     Renumbered Speech Blocks payload list.
-    @exception  None
-    """
-    normalized_chunk_id = str(chunk_id).strip()
-    renumbered_blocks: list[SpeechBlockPayload] = []
-    used_ids: set[str] = set()
-    for sequence_index, block in enumerate(speech_blocks, start=1):
-        renumbered_block = dict(block)
-        renumbered_block["sequence_index"] = sequence_index
-        renumbered_block["chunk_id"] = normalized_chunk_id
-        renumbered_block["speech_block_id"] = _stable_speech_block_id(renumbered_block, normalized_chunk_id, used_ids)
-        renumbered_blocks.append(renumbered_block)
-    return renumbered_blocks
-
-
-def _continue_chunk_sequence_indices(
-    speech_blocks: list[SpeechBlockPayload],
-    existing_block_count: int,
-) -> list[SpeechBlockPayload]:
-    """
-    @brief      Continue new chunk-local sequence indices after already persisted rows.
-    @param[in]  speech_blocks New Speech Blocks in canonical list order.
-    @param[in]  existing_block_count Number of earlier rows retained for the same chunk.
-    @return     Copied blocks with contiguous continued sequence indices.
-    @exception  None
-    """
-    sequence_offset = max(0, int(existing_block_count))
-    continued_blocks: list[SpeechBlockPayload] = []
-    for sequence_index, block in enumerate(speech_blocks, start=sequence_offset + 1):
-        continued_block = dict(block)
-        continued_block["sequence_index"] = sequence_index
-        continued_blocks.append(continued_block)
-    return continued_blocks
-
-
-def _stable_speech_block_id(block: SpeechBlockPayload, chunk_id: str, used_ids: set[str]) -> str:
-    """
-    @brief      Preserve one existing Speech Block id or allocate a new stable id.
-    @param[in]  block Speech Block payload being renumbered.
-    @param[in]  chunk_id Source chunk identifier.
-    @param[in]  used_ids Speech Block ids already emitted in this renumbering pass.
-    @return     Stable Speech Block identifier.
-    @exception  None
-    """
-    existing_id = str(block.get("speech_block_id", "")).strip()
-    if existing_id and existing_id not in used_ids:
-        used_ids.add(existing_id)
-        return existing_id
-    generated_id = _next_unused_speech_block_id(chunk_id, used_ids)
-    used_ids.add(generated_id)
-    return generated_id
-
-
 def _used_speech_block_ids(speech_blocks: list[SpeechBlockPayload]) -> set[str]:
     """
     @brief      Collect non-empty Speech Block identifiers from current payloads.
@@ -3448,28 +2567,6 @@ def _used_speech_block_ids(speech_blocks: list[SpeechBlockPayload]) -> set[str]:
         for block in speech_blocks
         if str(block.get("speech_block_id", "")).strip()
     }
-
-
-def _next_unused_speech_block_id(chunk_id: str, used_ids: set[str]) -> str:
-    """
-    @brief      Allocate an id absent from the current Speech Blocks document.
-    @param[in]  chunk_id Source chunk identifier.
-    @param[in]  used_ids Speech Block ids present in the document or emitted in this pass.
-    @return     Unused Speech Block identifier.
-    @exception  None
-    """
-    chunk_numeric_prefix = f"{_chunk_order_from_id(chunk_id):04d}"
-    next_index = 1
-    suffix_pattern = re.compile(rf"^{re.escape(chunk_numeric_prefix)}-(\d+)$")
-    for speech_block_id in used_ids:
-        match = suffix_pattern.match(speech_block_id)
-        if match is not None:
-            next_index = max(next_index, int(match.group(1)) + 1)
-    candidate_id = _speech_block_id(chunk_id, next_index)
-    while candidate_id in used_ids:
-        next_index += 1
-        candidate_id = _speech_block_id(chunk_id, next_index)
-    return candidate_id
 
 
 def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_block_id: str) -> SpeechBlockPayload:
@@ -3549,7 +2646,7 @@ def _restore_resume_state(
     source_language: str,
     source_chunks: list[dict[str, object]],
     additional_speech_block_instructions_fingerprint: str,
-) -> tuple[list[SpeechBlockPayload], int]:
+) -> tuple[list[SpeechBlockPayload], int, int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
     @param[in]  project_root Active project root folder.
@@ -3558,31 +2655,31 @@ def _restore_resume_state(
     @param[in]  source_language Active source language code.
     @param[in]  source_chunks Ordered current source chunk snapshot.
     @param[in]  additional_speech_block_instructions_fingerprint Operator instruction fingerprint.
-    @return     Existing blocks and the next chunk index.
+    @return     Existing blocks, next chunk index and consumed source characters.
     @exception  None
     """
     if not isinstance(existing_state, dict):
-        return [], 0
+        return [], 0, 0
     if str(existing_state.get("status", "")).strip() not in {"running", "failed", "review_pending", "completed"}:
-        return [], 0
+        return [], 0, 0
     metadata = existing_state.get("metadata", {})
     resume_checkpoint = existing_state.get("resume_checkpoint", {})
     if not isinstance(metadata, dict):
-        return [], 0
+        return [], 0, 0
     if str(metadata.get("source_snapshot_fingerprint", "")).strip() != input_fingerprint:
-        return [], 0
+        return [], 0, 0
     if str(metadata.get("source_language", "")).strip() != source_language:
-        return [], 0
+        return [], 0, 0
     resume_checkpoint_payload = resume_checkpoint if isinstance(resume_checkpoint, dict) else {}
     if not _is_resumable_speech_blocks_response_contract(metadata, resume_checkpoint_payload):
-        return [], 0
+        return [], 0, 0
     stored_instruction_fingerprint = str(
         metadata.get("additional_speech_block_instructions_fingerprint")
         or resume_checkpoint_payload.get("additional_speech_block_instructions_fingerprint")
         or _compute_prompt_fingerprint("")
     )
     if stored_instruction_fingerprint != additional_speech_block_instructions_fingerprint:
-        return [], 0
+        return [], 0, 0
     existing_blocks = load_speech_blocks(project_root)
     next_chunk_index = _restore_next_speech_blocks_chunk_index(
         existing_state,
@@ -3590,15 +2687,20 @@ def _restore_resume_state(
         source_chunks,
         existing_blocks,
     )
-    next_segment_index = 0
-    if 0 <= next_chunk_index < len(source_chunks):
-        raw_segment_index = resume_checkpoint_payload.get("next_segment_index")
-        if raw_segment_index not in (None, ""):
-            next_segment_index = max(0, int(raw_segment_index))
+    active_chunk_id = str(resume_checkpoint_payload.get("active_chunk_id", "")).strip()
+    if active_chunk_id and next_chunk_index < len(source_chunks):
+        chunk = source_chunks[next_chunk_index]
+        if active_chunk_id == str(chunk["chunk_id"]):
+            offset = resume_checkpoint_payload.get("next_source_offset")
+            if type(offset) is int and 0 < offset <= len(str(chunk["text"])):
+                return existing_blocks, next_chunk_index, offset
+            # A segment index cannot safely identify the remaining source under a new budget.
+            existing_blocks = [block for block in existing_blocks if block["chunk_id"] != active_chunk_id]
+            return existing_blocks, next_chunk_index, 0
     active_checkpoint_status = str(existing_state.get("status", "")).strip() in {"running", "failed"}
-    if next_chunk_index <= 0 and next_segment_index <= 0 and (active_checkpoint_status or not existing_blocks):
-        return [], 0
-    return existing_blocks, next_chunk_index
+    if next_chunk_index == 0 and (active_checkpoint_status or not existing_blocks):
+        return [], 0, 0
+    return existing_blocks, next_chunk_index, 0
 
 
 def _is_resumable_speech_blocks_response_contract(
@@ -3641,6 +2743,11 @@ def _restore_next_speech_blocks_chunk_index(
     @return     Clamped next source-chunk index.
     @exception  None
     """
+    active_chunk_id = str(resume_checkpoint.get("active_chunk_id", "")).strip()
+    if active_chunk_id:
+        for chunk_index, source_chunk in enumerate(source_chunks):
+            if str(source_chunk.get("chunk_id", "")).strip() == active_chunk_id:
+                return chunk_index
     if str(existing_state.get("status", "")).strip() in {"running", "failed"}:
         raw_checkpoint_index = resume_checkpoint.get("next_chunk_index")
         if raw_checkpoint_index not in (None, ""):
@@ -3658,39 +2765,6 @@ def _restore_next_speech_blocks_chunk_index(
         ),
         len(source_chunks),
     )
-
-
-def _restore_next_speech_blocks_segment_index(
-    existing_state: dict[str, object],
-    source_chunks: list[dict[str, object]],
-    next_chunk_index: int,
-) -> int:
-    """
-    @brief      Restore the next segment index for an active direct-block chunk.
-    @param[in]  existing_state Existing operation-state payload.
-    @param[in]  source_chunks Current source chunk snapshot.
-    @param[in]  next_chunk_index Restored next chunk index.
-    @return     Zero-based segment index to resume inside the active chunk.
-    @exception  None
-    """
-    if not isinstance(existing_state, dict):
-        return 0
-    resume_checkpoint = existing_state.get("resume_checkpoint", {})
-    if not isinstance(resume_checkpoint, dict):
-        return 0
-    checkpoint_contract = str(resume_checkpoint.get("speech_blocks_response_contract", "")).strip()
-    if checkpoint_contract != _SPEECH_BLOCKS_DIRECT_BLOCK_CONTRACT:
-        return 0
-    if next_chunk_index < 0 or next_chunk_index >= len(source_chunks):
-        return 0
-    active_chunk_id = str(resume_checkpoint.get("active_chunk_id", "")).strip()
-    expected_chunk_id = str(source_chunks[next_chunk_index].get("chunk_id", "")).strip()
-    if active_chunk_id and active_chunk_id != expected_chunk_id:
-        return 0
-    raw_segment_index = resume_checkpoint.get("next_segment_index")
-    if raw_segment_index in (None, ""):
-        return 0
-    return max(0, int(raw_segment_index))
 
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:

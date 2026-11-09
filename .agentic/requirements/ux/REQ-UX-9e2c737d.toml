@@ -1,0 +1,29 @@
+schema = 1
+
+id = "REQ-UX-9e2c737d"
+
+title = "Local Speech Blocks generation is available without AI settings"
+
+status = "active"
+
+requirement = """
+When a project uses a single narrator with Scene Ambience disabled, Speech Blocks shall offer Generate All and Split Chunk without an AI profile.
+"""
+
+verification = "Exercise both page and controller actions without a profile for local narration and verify the AI path still requires one."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_page.py::test_speech_blocks_page_offers_local_generation_without_profile",
+  "05_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py::test_speech_blocks_ui_controller_runs_both_local_actions_without_profile",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

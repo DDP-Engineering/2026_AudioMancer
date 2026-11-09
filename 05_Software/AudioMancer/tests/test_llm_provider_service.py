@@ -1418,7 +1418,8 @@ def test_chat_json_rejects_null_or_refused_content_without_repair(
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
     log_path = tmp_path / "transactions.log"
 
-    with pytest.raises(ValueError) as error_info:
+    expected_type = llm_provider_service.ProviderRefusalError if message_payload.get("refusal") else ValueError
+    with pytest.raises(expected_type) as error_info:
         llm_provider_service.chat_json(
             {
                 "id": "profile_1",

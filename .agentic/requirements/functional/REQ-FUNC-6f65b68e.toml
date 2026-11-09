@@ -1,24 +1,26 @@
 schema = 1
 id = "REQ-FUNC-6f65b68e"
-title = "Speech Blocks resume shall read next_chunk_index, active_chunk_id"
+title = "Resume Speech Blocks from the exact source offset"
 status = "active"
 
 requirement = """
-Speech Blocks resume shall read next_chunk_index, active_chunk_id, next_segment_index, completed_segment_count, run_token and source.fingerprint from document.checkpoint.
+When an interrupted Speech Blocks chunk resumes from a matching source snapshot, generation shall continue at the exact persisted source offset regardless of changes to the AI request budget.
 """
 
-verification = "Resume cursors read from document.checkpoint."
+verification = "Interrupt a multi-request chunk, change the effective budget and compare saved source coverage with the original."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py"]
 linked_tests = [
-  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_resume_reads_segment_cursor_from_document_checkpoint",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_legacy_reviewed_active_checkpoint_restarts_only_its_chunk",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resume_finalizes_checkpoint_already_at_end_of_source",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_keeps_exact_source_when_budget_changes",
+  "05_Software/AudioMancer/tests/test_speech_blocks_single_document_contract.py::test_resume_reads_source_offset_from_document_checkpoint",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_cancelled_ambience_resumes_without_repeating_speech",
 ]
 
 priority = "high"
 rationale = """
-Persisted chunk and segment cursors allow interrupted generation to continue without repeating completed work.
+A source offset remains meaningful when the request budget and its segment boundaries change.
 """
 created = 2026-07-24
 updated = 2026-07-24

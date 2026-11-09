@@ -125,6 +125,8 @@ def build_speech_blocks_state(
                 selected_source_language = str(source_resolution["selected_source_language"])
         except (KeyError, TypeError, ValueError):
             pass
+    scene_ambience_enabled = speech_blocks_service.scene_ambience_enabled(settings_payload)
+    voice_assignment_mode = speech_blocks_service.voice_assignment_mode(manifest)
     source_chunk_count = len(source_chunks)
     report = speech_blocks_service.load_speech_blocks_report(project_root, source_chunk_count)
     operation_state = speech_blocks_service.load_operation_state(project_root, source_chunk_count)
@@ -144,6 +146,7 @@ def build_speech_blocks_state(
             operation_state,
             bool(profile_state["entries"]),
             language,
+            requires_profile=speech_blocks_service.requires_ai_profile(voice_assignment_mode, scene_ambience_enabled),
         ),
         "selected_profile_id": selected_profile_id or profile_state["selected_profile_id"],
         "stage_status": _speech_blocks_stage_status(report, operation_state),
@@ -152,7 +155,8 @@ def build_speech_blocks_state(
         "total_chunk_count": len(source_chunks),
         "approved_block_count": 0 if report is None else int(report.get("approved_block_count", 0)),
         "total_block_count": len(speech_blocks),
-        "voice_assignment_mode": speech_blocks_service.voice_assignment_mode(manifest),
+        "voice_assignment_mode": voice_assignment_mode,
+        "scene_ambience_enabled": scene_ambience_enabled,
         "speaker_catalog": _speaker_catalog_entries(project_root, manifest),
         "content_kind_options": _content_kind_options(language),
         "can_reset": bool(speech_blocks),
@@ -209,6 +213,8 @@ def build_speech_blocks_notes(
     operation_state: dict[str, object] | None,
     has_ai_profiles: bool,
     language: str,
+    *,
+    requires_profile: bool = True,
 ) -> list[str]:
     """
     @brief      Build operator-facing Speech Blocks notes for the active project.
@@ -218,6 +224,7 @@ def build_speech_blocks_notes(
     @param[in]  operation_state Persisted Speech Blocks operation state or `None`.
     @param[in]  has_ai_profiles True when at least one enabled AI profile exists.
     @param[in]  language Runtime UI language code.
+    @param[in]  requires_profile Whether either generation step requires a model.
     @return     Ordered Speech Blocks notes for the page.
     @exception  None
     """
@@ -272,7 +279,7 @@ def build_speech_blocks_notes(
             ui_state_service.translate("speech_blocks.note_skipped_entry", language).format(chunk_id=chunk_id)
             for chunk_id in skipped_chunk_ids
         )
-    if not has_ai_profiles:
+    if requires_profile and not has_ai_profiles:
         notes.append(ui_state_service.translate("speech_blocks.note_no_profile", language))
         return notes
     if stage_status == "running":
@@ -301,7 +308,8 @@ def build_speech_blocks_notes(
     elif speech_block_count > 0:
         notes.append(ui_state_service.translate("speech_blocks.note_waiting_for_approval", language))
     else:
-        notes.append(ui_state_service.translate("speech_blocks.note_ready", language))
+        message_key = "speech_blocks.note_ready" if requires_profile else "speech_blocks.note_ready_local"
+        notes.append(ui_state_service.translate(message_key, language))
     return notes
 
 

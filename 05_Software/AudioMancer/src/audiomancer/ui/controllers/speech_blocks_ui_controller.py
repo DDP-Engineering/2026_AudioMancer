@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QMessageBox
 
-from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
     audio_blocks_service,
@@ -74,7 +73,10 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
             _translated_source_error_message(str(error), current_language),
         )
         return
-    profile_payload = _resolve_ai_profile(window._settings_payload, profile_id)
+    scene_ambience_enabled = speech_blocks_service.scene_ambience_enabled(window._settings_payload)
+    mode = speech_blocks_service.voice_assignment_mode(window._current_manifest)
+    requires_profile = speech_blocks_service.requires_ai_profile(mode, scene_ambience_enabled)
+    profile_payload = _resolve_ai_profile(window._settings_payload, profile_id) if requires_profile else {}
     if profile_payload is None:
         QMessageBox.warning(
             window,
@@ -83,13 +85,12 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
 
-    scene_ambience_enabled = _scene_ambience_enabled_from_settings(window._settings_payload)
     if not _confirm_generation(window, current_language):
         return
     if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
         return
     additional_speech_block_instructions = None
-    if not _is_resuming_speech_blocks_generation(window):
+    if mode != "same_narrator" and not _is_resuming_speech_blocks_generation(window):
         additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
         if additional_speech_block_instructions is None:
             return
@@ -388,7 +389,11 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
         return
     if window._current_project_root is None or window._current_manifest is None:
         return
-    profile_payload = _resolve_ai_profile(window._settings_payload, window._speech_blocks_page.current_profile_id())
+    scene_ambience_enabled = speech_blocks_service.scene_ambience_enabled(window._settings_payload)
+    mode = speech_blocks_service.voice_assignment_mode(window._current_manifest)
+    requires_profile = speech_blocks_service.requires_ai_profile(mode, scene_ambience_enabled)
+    profile_id = window._speech_blocks_page.current_profile_id()
+    profile_payload = _resolve_ai_profile(window._settings_payload, profile_id) if requires_profile else {}
     if profile_payload is None:
         QMessageBox.warning(
             window,
@@ -396,14 +401,15 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
             ui_state_service.translate("project.error_missing_speech_blocks_profile", current_language),
         )
         return
-    scene_ambience_enabled = _scene_ambience_enabled_from_settings(window._settings_payload)
     if not _confirm_speech_blocks_resplit(window, current_language):
         return
     if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
         return
-    additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
-    if additional_speech_block_instructions is None:
-        return
+    additional_speech_block_instructions = None
+    if mode != "same_narrator":
+        additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
+        if additional_speech_block_instructions is None:
+            return
     speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
@@ -595,19 +601,6 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     @exception  None
     """
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
-
-
-def _scene_ambience_enabled_from_settings(settings_payload: dict[str, object] | None) -> bool:
-    """
-    @brief      Resolve whether TTS settings enable Speech Blocks Scene Ambience generation.
-    @param[in]  settings_payload Persisted application settings payload.
-    @return     True when the configured placement is not `none`.
-    @exception  None
-    """
-    if not isinstance(settings_payload, dict):
-        return False
-    placement = str(settings_payload.get("scene_ambience_placement", config.DEFAULT_SCENE_AMBIENCE_PLACEMENT)).strip()
-    return placement in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS and placement != "none"
 
 
 def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
@@ -993,11 +986,13 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     @return     True when the operator confirms the run.
     @exception  None
     """
+    mode = speech_blocks_service.voice_assignment_mode(window._current_manifest)
+    message_key = "project.confirm_speech_blocks_local" if mode == "same_narrator" else "project.confirm_speech_blocks"
     return misc_ui_controller.confirm_question(
         window,
         language,
         "dialog.confirm_speech_blocks_title",
-        "project.confirm_speech_blocks",
+        message_key,
     )
 
 

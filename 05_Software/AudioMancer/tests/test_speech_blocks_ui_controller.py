@@ -110,6 +110,41 @@ def test_speech_blocks_ui_controller_rejects_corrupt_document_before_confirmatio
     assert start_calls == []
 
 
+def test_speech_blocks_ui_controller_runs_both_local_actions_without_profile(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Run real local workers from the UI with an empty AI profile list.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root = _create_project(tmp_path, "SpeechBlocksLocalActions")
+    manifest = project_workspace_service.load_manifest(root)
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, root)
+    window = SimpleNamespace(
+        _active_operation_kind=None,
+        _settings_payload={"language": "en", "llm_profiles": []},
+        _current_project_root=root,
+        _current_manifest=manifest,
+        _speech_blocks_page=SimpleNamespace(current_profile_id=lambda: None),
+    )
+    calls = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *_args: calls.append("warning"))
+    monkeypatch.setattr(
+        speech_blocks_ui_controller, "prompt_ai_speech_blocks_instructions",
+        lambda *_args: calls.append("instructions"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller, "_start_operation",
+        lambda _window, **kwargs: calls.append(kwargs["worker_callable"](root, manifest)),
+    )
+    speech_blocks_ui_controller.handle_generate_requested(window, "")
+    speech_blocks_ui_controller.handle_resplit_selected_requested(window, "chunk-0001")
+    assert len(calls) == 2
+    assert all(result["speech_block_count"] > 0 for result in calls)
+    assert speech_blocks_service.load_speech_blocks_document(root)["ai_profile_id"] == ""
+
+
 def test_speech_blocks_ui_controller_passes_extra_prompt_to_generation(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Speech Blocks generation asks for optional operator rules and passes them to the worker.

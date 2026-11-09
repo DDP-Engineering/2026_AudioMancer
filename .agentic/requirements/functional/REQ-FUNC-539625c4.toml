@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-FUNC-539625c4"
+
+title = "Speech Blocks preserves spoken dialogue when splitting"
+
+status = "active"
+
+requirement = """
+When an aligned dialogue block is split to fit TTS, the normalizer shall preserve spoken text without the outer dialogue delimiters and retain exact source provenance.
+"""
+
+verification = "Force a quoted two-sentence turn to split and compare spoken text and concatenated source slices."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_split_dialogue_removes_outer_quotes_and_keeps_source_slices",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

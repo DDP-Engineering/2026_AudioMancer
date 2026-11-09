@@ -35,6 +35,12 @@ from audiomancer.services import (
     speech_blocks_service,
     speech_blocks_text_split_service,
 )
+from audiomancer.services import (
+    speech_blocks_generation_service as generation_service,
+)
+from audiomancer.services import (
+    speech_blocks_normalization_service as normalization_service,
+)
 from chunking_test_support import bind_translation_source, build_chunking_document
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -123,9 +129,9 @@ def test_retired_span_and_atomic_generation_machinery_is_absent() -> None:
     assert retired_text_split_names.isdisjoint(vars(speech_blocks_text_split_service))
     assert retired_service_names.isdisjoint(vars(speech_blocks_service))
     assert "attach_source_spans" not in inspect.signature(
-        speech_blocks_service._budgeted_source_chunk_segments  # noqa: SLF001
+        generation_service._budgeted_source_chunk_segments  # noqa: SLF001
     ).parameters
-    assert "atomic_units_json" not in inspect.getsource(speech_blocks_service._chunk_user_prompt)  # noqa: SLF001
+    assert "atomic_units_json" not in inspect.getsource(generation_service._chunk_user_prompt)  # noqa: SLF001
 
 
 @pytest.mark.parametrize("warning_flag", ["source_span_selection_invalid", "atomic_unit_selection_invalid"])
@@ -136,7 +142,7 @@ def test_retired_span_warning_tokens_remain_projectable(warning_flag: str) -> No
     @return     None.
     @exception  None
     """
-    warning_reason = speech_blocks_service._speech_block_warning_reason(warning_flag)  # noqa: SLF001
+    warning_reason = normalization_service.speech_block_warning_reason(warning_flag)  # noqa: SLF001
 
     assert warning_reason != warning_flag
     assert "fell back to narrator" in warning_reason
@@ -261,9 +267,9 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     character_voices_service.save_selected_voice_language(project_root, "en")
     character_discovery_service.add_character_profile(project_root, "Maria")
 
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -312,7 +318,7 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
         },
     ]
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: responses.pop(0),
     )
@@ -366,7 +372,7 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
         [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Rain falls. The shelling starts."}],
     )
     character_voices_service.save_selected_voice_language(project_root, "en")
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
 
     responses = [
         {
@@ -432,7 +438,7 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
         captured_requests.append((str(system_prompt), str(user_prompt)))
         return responses.pop(0)
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     report = speech_blocks_service.start_or_continue_generation(
         project_root,
@@ -504,7 +510,7 @@ def test_scene_ambience_prompt_carries_the_configured_negative_core() -> None:
         {"scene_ambience_placement": "openers_and_closers", "scene_ambience_negative_prompt": "kazoo, bagpipes"},
         True,
     )
-    rendered_prompt = speech_blocks_service._scene_ambience_user_prompt(  # noqa: SLF001
+    rendered_prompt = generation_service._scene_ambience_user_prompt(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "The clock ticked in the empty hall."},
         "en",
         [{"speech_block_id": "0001-000001", "sequence_index": 1, "content_kind": "narration", "text": "Quiet."}],
@@ -521,7 +527,7 @@ def test_scene_ambience_block_without_exclusions_falls_back_to_the_configured_co
     @return     None.
     @exception  None
     """
-    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(  # noqa: SLF001
+    speech_blocks = generation_service._normalize_scene_ambience_response(  # noqa: SLF001
         {"scene_ambience_blocks": [{"ambience_position": "opener", "sound_prompt": "steady rain on a tin roof"}]},
         "chunk-0001",
         "en",
@@ -542,7 +548,7 @@ def test_scene_ambience_block_keeps_model_chosen_exclusions() -> None:
     @return     None.
     @exception  None
     """
-    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(  # noqa: SLF001
+    speech_blocks = generation_service._normalize_scene_ambience_response(  # noqa: SLF001
         {
             "scene_ambience_blocks": [
                 {
@@ -594,7 +600,7 @@ def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
     @return     None.
     @exception  None
     """
-    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(
+    speech_blocks = generation_service._normalize_scene_ambience_response(
         {
             "scene_ambience_blocks": [
                 {
@@ -629,9 +635,9 @@ def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
     assert all("ambient_sound_type" not in block for block in speech_blocks)
 
 
-def test_scene_ambience_insertion_remaps_references_after_opener_renumbering() -> None:
+def test_scene_ambience_opener_preserves_spoken_ids_and_references() -> None:
     """
-    @brief      Verify opener insertion keeps scene-change references attached to their spoken rows.
+    @brief      Verify opener insertion preserves spoken IDs and their scene-change references.
     @return     None.
     @exception  None
     """
@@ -675,12 +681,15 @@ def test_scene_ambience_insertion_remaps_references_after_opener_renumbering() -
         },
     ]
 
-    combined_blocks = speech_blocks_service._insert_scene_ambience_blocks(  # noqa: SLF001
+    combined_blocks = generation_service._insert_scene_ambience_blocks(  # noqa: SLF001
         spoken_blocks,
         ambience_blocks,
     )
 
     assert combined_blocks[0]["ambience_position"] == "opener"
+    assert [
+        block["speech_block_id"] for block in combined_blocks if block["content_kind"] == "narration"
+    ] == [block["speech_block_id"] for block in spoken_blocks]
     blocks_by_id = {str(block["speech_block_id"]): block for block in combined_blocks}
     scene_changes = [block for block in combined_blocks if block.get("ambience_position") == "scene_change"]
     referenced_blocks = [blocks_by_id[str(block["after_speech_block_id"])] for block in scene_changes]
@@ -702,7 +711,7 @@ def test_start_generation_appends_and_persists_operator_speech_block_rules(monke
     character_voices_service.save_selected_voice_language(project_root, "en")
     additional_rules = "Keep stage directions as indication blocks."
     requested_prompts: list[str] = []
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
         """
@@ -731,7 +740,7 @@ def test_start_generation_appends_and_persists_operator_speech_block_rules(monke
             "usage": {"input_tokens": 5, "output_tokens": 4, "total_tokens": 9, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     report = speech_blocks_service.start_or_continue_generation(
         project_root,
@@ -770,7 +779,7 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
     character_voices_service.save_selected_voice_language(project_root, "en")
     long_chunk_text = " ".join(f"Sentence {index}." for index in range(1, 700))
     _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_chunk_text}])
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
 
     def _fake_render_prompt(_name, variables):
         """
@@ -782,7 +791,7 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
             return "system prompt"
         return f"Chunk id: {variables['chunk_id']}\nChunk text:\n{variables['chunk_text']}"
 
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "render_prompt", _fake_render_prompt)
+    monkeypatch.setattr(generation_service.prompt_template_service, "render_prompt", _fake_render_prompt)
     requested_segments: list[str] = []
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
@@ -808,7 +817,7 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
     profile_payload = {**_profile_payload(), "context_window": 2048, "output_reserve_tokens": 512}
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
@@ -836,9 +845,9 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
     character_voices_service.save_selected_voice_language(project_root, "en")
     long_chunk_text = " ".join(f"Sentence {index}." for index in range(1, 1400))
     _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_chunk_text}])
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: (
             f"Chunk text:\n{variables['chunk_text']}" if "chunk_text" in variables else "system prompt"
@@ -869,7 +878,7 @@ def test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
     profile_payload = {**_profile_payload(), "context_window": 32768, "output_reserve_tokens": 512}
 
     speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
@@ -892,16 +901,16 @@ def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monk
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
     _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "First.Second."}])
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: (
             f"Chunk text:\n{variables['chunk_text']}" if "chunk_text" in variables else "system prompt"
         ),
     )
     monkeypatch.setattr(
-        speech_blocks_service,
+        generation_service,
         "_budgeted_source_chunk_segments",
         lambda _source_chunk, _budget_metadata, **_kwargs: [
             {"chunk_id": "chunk-0001", "text": "First."},
@@ -935,7 +944,7 @@ def test_start_generation_direct_malformed_json_falls_back_for_segment_only(monk
             "usage": {"input_tokens": 4, "output_tokens": 2, "total_tokens": 6, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
@@ -986,14 +995,14 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
         for sequence_index, text in enumerate(("First A.", "First B."), start=1)
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_resolution["source_chunks"], "en", "original")  # noqa: SLF001
-    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+    budget_metadata = generation_service._build_budget_metadata(  # noqa: SLF001
         _profile_payload(),
         "system prompt",
         "speech_blocks_user",
         "en",
         speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
         config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+        normalization_service.resolve_narrator_only_budget(None),  # noqa: SLF001
     )
     report = speech_blocks_service._rebuild_report(  # noqa: SLF001
         existing_blocks,
@@ -1024,29 +1033,25 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
     operation_state["resume_checkpoint"]["speech_blocks_response_contract"] = "direct_blocks"
     operation_state["resume_checkpoint"]["active_chunk_id"] = "chunk-0001"
     operation_state["resume_checkpoint"]["next_chunk_index"] = 0
-    operation_state["resume_checkpoint"]["next_segment_index"] = 1
-    operation_state["resume_checkpoint"]["completed_segment_count"] = 1
+    operation_state["resume_checkpoint"]["next_source_offset"] = len("First A. First B. ")
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
         existing_blocks,
         report,
         operation_state,
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: (
             f"Chunk text:\n{variables['chunk_text']}" if "chunk_text" in variables else "system prompt"
         ),
     )
     monkeypatch.setattr(
-        speech_blocks_service,
+        generation_service,
         "_budgeted_source_chunk_segments",
-        lambda _source_chunk, _budget_metadata, **_kwargs: [
-            {"chunk_id": "chunk-0001", "text": "First A. First B."},
-            {"chunk_id": "chunk-0001", "text": "Second."},
-        ],
+        lambda source_chunk, _budget_metadata, **_kwargs: [source_chunk],
     )
     requested_segments: list[str] = []
 
@@ -1087,7 +1092,7 @@ def test_speech_blocks_resume_with_scene_ambience_preserves_unfinished_direct_se
             "usage": {"input_tokens": 4, "output_tokens": 2, "total_tokens": 6, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     speech_blocks_service.start_or_continue_generation(
         project_root,
@@ -1123,21 +1128,20 @@ def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, t
         project_root,
         [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A1.A2.B1.B2.C1.C2."}],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: (
             f"Chunk text:\n{variables['chunk_text']}" if "chunk_text" in variables else "system prompt"
         ),
     )
     monkeypatch.setattr(
-        speech_blocks_service,
+        generation_service,
         "_budgeted_source_chunk_segments",
-        lambda _source_chunk, _budget_metadata, **_kwargs: [
-            {"chunk_id": "chunk-0001", "text": "A1.A2."},
-            {"chunk_id": "chunk-0001", "text": "B1.B2."},
-            {"chunk_id": "chunk-0001", "text": "C1.C2."},
+        lambda source_chunk, _budget_metadata, **_kwargs: [
+            {**source_chunk, "text": source_chunk["text"][index:index + 6]}
+            for index in range(0, len(source_chunk["text"]), 6)
         ],
     )
     block_texts = {
@@ -1155,7 +1159,7 @@ def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, t
         """
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         if interrupt_third_segment and segment_text == "C1.C2.":
-            raise speech_blocks_service.OperationCancelledError("planned interruption")
+            raise generation_service.OperationCancelledError("planned interruption")
         return {
             "payload": {
                 "blocks": [
@@ -1172,9 +1176,9 @@ def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, t
             "usage": {"input_tokens": 4, "output_tokens": 2, "total_tokens": 6, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
-    with pytest.raises(speech_blocks_service.OperationCancelledError):
+    with pytest.raises(generation_service.OperationCancelledError):
         speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
     checkpoint_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -1182,7 +1186,7 @@ def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, t
     assert [block["sequence_index"] for block in checkpoint_blocks] == [1, 2, 3, 4]
     checkpoint_state = speech_blocks_service.load_operation_state(project_root)
     assert checkpoint_state is not None
-    assert checkpoint_state["resume_checkpoint"]["next_segment_index"] == 2
+    assert checkpoint_state["resume_checkpoint"]["next_source_offset"] == len("A1.A2.B1.B2.")
 
     interrupt_third_segment = False
     speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
@@ -1207,6 +1211,66 @@ def test_multi_segment_checkpoint_and_resume_preserve_block_order(monkeypatch, t
     ]
 
 
+@pytest.mark.parametrize("split_other_chunk", [False, True])
+def test_speech_blocks_resume_keeps_exact_source_when_budget_changes(monkeypatch, tmp_path, split_other_chunk) -> None:
+    """
+    @brief      Resume at the saved source position after increasing the request budget.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  split_other_chunk Whether to re-split another chunk before resuming.
+    """
+    root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksOffsetResume")
+    text = "First person spoke. Another person replied. A third person laughed. The room fell silent."
+    source_chunks = [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": text}]
+    if split_other_chunk:
+        source_chunks.append({"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Later."})
+    _write_source_chunks(root, source_chunks)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "render_prompt", _refusal_render_prompt)
+    monkeypatch.setattr(
+        generation_service, "_build_budget_metadata",
+        lambda profile, *_args: {"text_budget_tokens": profile["test_budget"]},
+    )
+    requests = []
+    interrupt = True
+
+    def chat(_profile, _system, user_prompt, **kwargs):
+        """@brief Echo each source slice and interrupt before the second saved response."""
+        segment = user_prompt.split("Chunk text:\n", maxsplit=1)[1]
+        if kwargs["log_context"]["chunk_id"] == "chunk-0001":
+            if interrupt and requests:
+                raise generation_service.OperationCancelledError("planned stop")
+            requests.append(segment)
+        return {"payload": {"blocks": [{
+            "text": segment, "speaker_id": "narrator", "content_kind": "narration",
+            "confidence": "high", "warning_flags": [],
+        }]}}
+
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", chat)
+    with pytest.raises(generation_service.OperationCancelledError):
+        speech_blocks_service.start_or_continue_generation(root, manifest, {**_profile_payload(), "test_budget": 8})
+
+    prefix = requests[0]
+    checkpoint = speech_blocks_service.load_speech_blocks_document(root)["checkpoint"]
+    block = speech_blocks_service.load_speech_blocks(root)[0]
+    speech_blocks_service.update_speech_block(root, block["speech_block_id"], "narrator", "narration", "Edited.")
+    speech_blocks_service.approve_speech_block(root, block["speech_block_id"])
+    interrupt = False
+    if split_other_chunk:
+        speech_blocks_service.regenerate_chunk_speech_blocks(
+            root, manifest, "chunk-0002", {**_profile_payload(), "test_budget": 16},
+            additional_speech_block_instructions="Use separate dialogue turns.",
+        )
+    speech_blocks_service.start_or_continue_generation(root, manifest, {**_profile_payload(), "test_budget": 16})
+
+    assert "".join(requests) == text
+    resumed = [block for block in speech_blocks_service.load_speech_blocks(root) if block["chunk_id"] == "chunk-0001"]
+    assert "".join(block["source_text"] for block in resumed) == text
+    assert resumed[0]["text"] == "Edited."
+    assert resumed[0]["approved"] is True
+    assert checkpoint["next_source_offset"] == len(prefix)
+
+
 def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Speech Blocks fails early when context and output budgets leave too little source input room.
@@ -1219,9 +1283,9 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -1239,7 +1303,7 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
     @exception  None
     """
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -1250,14 +1314,14 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
         "output_reserve_tokens": 9900,
     }
 
-    budget_metadata = speech_blocks_service._build_budget_metadata(
+    budget_metadata = generation_service._build_budget_metadata(
         profile_payload,
         "system",
         "speech_blocks_user",
         "en",
         {"narrator": {"speaker_id": "narrator", "display_name": "Narrator"}},
         config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        speech_blocks_service._resolve_narrator_only_budget(None),
+        normalization_service.resolve_narrator_only_budget(None),
     )
 
     assert budget_metadata["text_budget_tokens"] == 3000
@@ -1308,7 +1372,7 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], 0)
+    assert restored == ([], 0, 0)
 
 
 def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) -> None:
@@ -1354,7 +1418,7 @@ def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) 
         speech_blocks_service._compute_generation_rules_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], 0)
+    assert restored == ([], 0, 0)
 
 
 def test_speech_blocks_resume_ignores_source_chunk_count_without_processed_count(tmp_path) -> None:
@@ -1411,7 +1475,7 @@ def test_speech_blocks_resume_restarts_previous_full_cast_state(tmp_path) -> Non
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], 0)
+    assert restored == ([], 0, 0)
 
 
 @pytest.mark.parametrize(
@@ -1465,7 +1529,7 @@ def test_same_narrator_resume_depends_on_the_recorded_response_contract(
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
-    assert restored == ([], expected_next_chunk_index)
+    assert restored == ([], expected_next_chunk_index, 0)
 
 
 @pytest.mark.parametrize("response_contract", ["atomic_unit_selection", "narrator_boundary_ids"])
@@ -2071,14 +2135,14 @@ def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
     _seed_review_speech_blocks(project_root)
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
             "payload": {
@@ -2201,7 +2265,7 @@ def test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries
         ]
     }
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         source_chunk,
         response_payload,
         speaker_catalog,
@@ -2254,7 +2318,7 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
         },
     }
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": '"Where is the engineer now?"'},
         {
             "speech_blocks": [
@@ -2289,7 +2353,7 @@ def test_normalize_chunk_blocks_supports_french_guillemets() -> None:
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "Il dit : « Bonjour. » Elle sourit."},
         {
             "speech_blocks": [
@@ -2339,7 +2403,7 @@ def test_normalize_chunk_blocks_supports_dash_dialogue() -> None:
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
-    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, _warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "- Bonjour, dit-elle. - Venez ici."},
         {
             "speech_blocks": [
@@ -2376,7 +2440,7 @@ def test_normalize_chunk_blocks_flags_direct_source_gaps_and_unmatched_text() ->
     """
     speaker_catalog = {"narrator": _narrator_catalog_entry()}
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "A. B. C."},
         {
             "speech_blocks": [
@@ -2414,27 +2478,27 @@ def test_normalize_block_text_only_strips_wrapping_dialogue_quotes() -> None:
     @exception  None
     """
     assert (
-        speech_blocks_service._normalize_block_text('"Hello there."', "dialogue")  # noqa: SLF001
+        normalization_service.normalize_block_text('"Hello there."', "dialogue")  # noqa: SLF001
         == "Hello there."
     )
     assert (
-        speech_blocks_service._normalize_block_text("“Hello there.”", "dialogue")  # noqa: SLF001
+        normalization_service.normalize_block_text("“Hello there.”", "dialogue")  # noqa: SLF001
         == "Hello there."
     )
     assert (
-        speech_blocks_service._normalize_block_text("« Bonjour. »", "dialogue")  # noqa: SLF001
+        normalization_service.normalize_block_text("« Bonjour. »", "dialogue")  # noqa: SLF001
         == "Bonjour."
     )
     assert (
-        speech_blocks_service._normalize_block_text("- Bonjour.", "dialogue")  # noqa: SLF001
+        normalization_service.normalize_block_text("- Bonjour.", "dialogue")  # noqa: SLF001
         == "Bonjour."
     )
     assert (
-        speech_blocks_service._normalize_block_text('He said "Hello there."', "dialogue")  # noqa: SLF001
+        normalization_service.normalize_block_text('He said "Hello there."', "dialogue")  # noqa: SLF001
         == 'He said "Hello there."'
     )
     assert (
-        speech_blocks_service._normalize_block_text('"Hello there."', "narration")  # noqa: SLF001
+        normalization_service.normalize_block_text('"Hello there."', "narration")  # noqa: SLF001
         == '"Hello there."'
     )
 
@@ -2451,9 +2515,9 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -2474,14 +2538,14 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
         }
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_resolution["source_chunks"], "en", "original")  # noqa: SLF001
-    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+    budget_metadata = generation_service._build_budget_metadata(  # noqa: SLF001
         _profile_payload(),
         "prompt {}",
         "speech_blocks_user",
         "en",
         speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
         config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+        normalization_service.resolve_narrator_only_budget(None),  # noqa: SLF001
     )
     report = speech_blocks_service._rebuild_report(  # noqa: SLF001
         existing_blocks,
@@ -2547,7 +2611,7 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
     selected_profile = {**_profile_payload(), "id": "profile-2", "model_name": "qwen3-14b", "temperature": 0.7}
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, selected_profile)
@@ -2578,9 +2642,9 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -2605,14 +2669,14 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
     token_usage = {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True}
-    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+    budget_metadata = generation_service._build_budget_metadata(  # noqa: SLF001
         _profile_payload(),
         "prompt {}",
         "speech_blocks_user",
         "en",
         speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
         config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+        normalization_service.resolve_narrator_only_budget(None),  # noqa: SLF001
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
@@ -2681,7 +2745,7 @@ def test_start_or_continue_generation_resumes_after_partial_review_approval(monk
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
@@ -2729,9 +2793,9 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
             for chunk_index, source_text in enumerate(source_texts, start=1)
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -2771,14 +2835,14 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
     token_usage = {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True}
-    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+    budget_metadata = generation_service._build_budget_metadata(  # noqa: SLF001
         _profile_payload(),
         "prompt {}",
         "speech_blocks_user",
         "en",
         speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
         config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+        normalization_service.resolve_narrator_only_budget(None),  # noqa: SLF001
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
@@ -2840,7 +2904,7 @@ def test_review_resume_restores_missing_middle_chunk_without_duplicate_covered_b
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
@@ -2888,6 +2952,7 @@ def test_start_generation_preserves_french_dash_and_guillemet_dialogue(monkeypat
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksFrenchGeneration")
     manifest["original_language"] = "en"
+    manifest["target_language"] = "fr"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "fr")
     _write_translation_artifacts(
@@ -2899,9 +2964,9 @@ def test_start_generation_preserves_french_dash_and_guillemet_dialogue(monkeypat
             {"chunk_id": "chunk-0002", "translated_text": "- Bonjour, dit-elle. - Venez ici."},
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -2957,7 +3022,7 @@ def test_start_generation_preserves_french_dash_and_guillemet_dialogue(monkeypat
         },
     ]
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: responses.pop(0),
     )
@@ -3018,7 +3083,7 @@ def test_start_generation_splits_same_narrator_without_calling_a_model(monkeypat
         raise AssertionError("same-narrator generation must not call the model")
 
     monkeypatch.setattr(speech_blocks_service, "resolve_source_chunks", _count_source_resolution)
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fail_on_model_call)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fail_on_model_call)
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
@@ -3158,7 +3223,7 @@ def test_speech_blocks_production_prompt_contract_matrix(
         source_chunk = {"chunk_id": "chunk-contract-0001", "text": 'Contract narration. "Hello there."'}
 
     rendered_system_prompt = prompt_template_service.render_prompt(system_prompt_name, {})
-    rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
+    rendered_prompt = generation_service._chunk_user_prompt(  # noqa: SLF001
         source_chunk,
         "en",
         speaker_catalog,
@@ -3221,7 +3286,7 @@ def test_speech_blocks_prompt_uses_direct_blocks_and_forbids_text_rewrites() -> 
     }
 
     rendered_system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
-    rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
+    rendered_prompt = generation_service._chunk_user_prompt(  # noqa: SLF001
         source_chunk,
         "en",
         speaker_catalog,
@@ -3266,7 +3331,7 @@ def test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints() ->
         "text": "„Vii?” întrebă Ion. „Curând.”",
     }
 
-    rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
+    rendered_prompt = generation_service._chunk_user_prompt(  # noqa: SLF001
         source_chunk,
         "ro",
         speaker_catalog,
@@ -3362,7 +3427,7 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:
     @exception  None
     """
     source_chunk = {"chunk_id": "chunk-0001", "text": "- Bonjour. Â« Venez. Â»"}
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         source_chunk,
         {
             "speech_blocks": [
@@ -3399,7 +3464,7 @@ def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None
     @exception  None
     """
     source_text = "One two. Three four. Five six."
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": source_text},
         {
             "speech_blocks": [
@@ -3433,7 +3498,7 @@ def test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries() -> 
     @exception  None
     """
     source_text = "one two three four five"
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": source_text},
         {
             "speech_blocks": [
@@ -3462,7 +3527,7 @@ def test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks() -> No
     @return     None.
     @exception  None
     """
-    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, _warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "pause 2500 ms"},
         {
             "speech_blocks": [
@@ -3496,7 +3561,7 @@ def test_direct_blocks_align_mixed_narration_dialogue_to_source_text() -> None:
     """
     source_text = 'Despite the plan, Paul whispered, "Stay ready." The room stilled.'
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": source_text},
         {
             "blocks": [
@@ -3547,7 +3612,7 @@ def test_direct_blocks_unknown_speaker_defaults_to_review_narrator() -> None:
     @return     None.
     @exception  None
     """
-    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, _warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": '"Who speaks?"'},
         {
             "blocks": [
@@ -3577,7 +3642,7 @@ def test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text() -> None:
     @return     None.
     @exception  None
     """
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "First. Second. Third."},
         {
             "blocks": [
@@ -3623,7 +3688,7 @@ def test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps()
     @return     None.
     @exception  None
     """
-    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, _warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": "A.\n\nB."},
         {
             "blocks": [
@@ -3660,7 +3725,7 @@ def test_direct_blocks_split_long_blocks_to_tts_budget() -> None:
     """
     source_text = "One two. Three four. Five six."
 
-    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+    blocks, warnings = normalization_service.normalize_chunk_blocks(  # noqa: SLF001
         {"chunk_id": "chunk-0001", "text": source_text},
         {
             "blocks": [
@@ -3910,9 +3975,9 @@ def _prepare_single_chunk_generation_project(monkeypatch, tmp_path, name: str, s
             }
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         lambda _name, variables: f"prompt {variables}",
     )
@@ -4014,17 +4079,23 @@ def test_generation_skips_a_refused_source_chunk_and_continues(monkeypatch, tmp_
             {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
-    monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
-        "chat_json",
-        _refusing_chat_json({"chunk-0002"}),
-    )
+    echo = _refusing_chat_json(set())
+
+    def chat(*args, **kwargs):
+        """@brief Exercise the provider's explicit refusal classification."""
+        if kwargs["log_context"]["chunk_id"] == "chunk-0002":
+            generation_service.llm_provider_service._extract_message_content(  # noqa: SLF001
+                {"choices": [{"message": {"content": None, "refusal": "Refused by provider."}}]}
+            )
+        return echo(*args, **kwargs)
+
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", chat)
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
@@ -4050,9 +4121,9 @@ def test_refused_chunk_discards_its_checkpointed_segment_blocks(monkeypatch, tmp
     character_voices_service.save_selected_voice_language(project_root, "en")
     long_chunk_text = " ".join(f"Sentence {index}." for index in range(1, 700))
     _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_chunk_text}])
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
@@ -4083,7 +4154,7 @@ def test_refused_chunk_discards_its_checkpointed_segment_blocks(monkeypatch, tmp
             "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
     profile_payload = {**_profile_payload(), "context_window": 2048, "output_reserve_tokens": 512}
 
     speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
@@ -4107,9 +4178,9 @@ def test_generation_aborts_when_the_provider_seam_cancels(monkeypatch, tmp_path)
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
@@ -4120,11 +4191,11 @@ def test_generation_aborts_when_the_provider_seam_cancels(monkeypatch, tmp_path)
         @return     None.
         @exception  OperationCancelledError Always raised.
         """
-        raise speech_blocks_service.OperationCancelledError("Speech Blocks generation cancelled.")
+        raise generation_service.OperationCancelledError("Speech Blocks generation cancelled.")
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _cancelling_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _cancelling_chat_json)
 
-    with pytest.raises(speech_blocks_service.OperationCancelledError):
+    with pytest.raises(generation_service.OperationCancelledError):
         speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
 
@@ -4149,14 +4220,14 @@ def test_refused_source_chunks_are_recorded_in_the_persisted_document(monkeypatc
             {"chunk_id": "chunk-0004", "sequence_index": 4, "text": "The works began in autumn."},
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         _refusing_chat_json({"chunk-0002", "chunk-0004"}),
     )
@@ -4172,7 +4243,7 @@ def test_refused_source_chunks_are_recorded_in_the_persisted_document(monkeypatc
 
     speech_blocks_service.reset_speech_blocks(project_root)
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         _refusing_chat_json(set()),
     )
@@ -4309,21 +4380,21 @@ def test_regenerating_a_skipped_chunk_clears_it_from_the_record(monkeypatch, tmp
             {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         _refusing_chat_json({"chunk-0002", "chunk-0003"}),
     )
     speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
     monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
+        generation_service.llm_provider_service,
         "chat_json",
         _refusing_chat_json(set()),
     )
@@ -4343,9 +4414,141 @@ def test_regenerating_a_skipped_chunk_clears_it_from_the_record(monkeypatch, tmp
     assert covered_chunk_ids == {"chunk-0001", "chunk-0002"}
 
 
-def test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("narrator_only", [False, True])
+def test_cancelled_ambience_resumes_without_repeating_speech(monkeypatch, tmp_path, narrator_only) -> None:
     """
-    @brief      Verify a refused scene-ambience request skips its source chunk and lets the run finish.
+    @brief      Resume optional ambience after the entire speech source was checkpointed.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  narrator_only Whether speech is generated by the deterministic narrator splitter.
+    """
+    text = "The room fell silent."
+    root, manifest = _prepare_single_chunk_generation_project(monkeypatch, tmp_path, "AmbienceResume", text)
+    if narrator_only:
+        manifest["voice_assignment_mode"] = "same_narrator"
+        project_workspace_service.save_manifest(manifest, root)
+    monkeypatch.setattr(generation_service.prompt_template_service, "render_prompt", _refusal_render_prompt)
+    requests = []
+
+    def chat(_profile, _system_prompt, user_prompt, **kwargs):
+        """@brief Cancel once while requesting ambience, then return no cues."""
+        contract = kwargs["log_context"]["response_contract"]
+        requests.append(contract)
+        if contract == "scene_ambience_blocks":
+            if requests.count(contract) == 1:
+                raise generation_service.OperationCancelledError("stop ambience")
+            return {"payload": {"scene_ambience_blocks": []}}
+        segment = user_prompt.split("Chunk text:\n", maxsplit=1)[1]
+        return {"payload": {"blocks": [{
+            "text": segment, "speaker_id": "narrator", "content_kind": "narration",
+            "confidence": "high", "warning_flags": [],
+        }]}}
+
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", chat)
+    settings = {"scene_ambience_placement": "openers_and_closers"}
+    with pytest.raises(generation_service.OperationCancelledError):
+        speech_blocks_service.start_or_continue_generation(root, manifest, _profile_payload(), settings)
+
+    checkpoint = speech_blocks_service.load_speech_blocks_document(root)["checkpoint"]
+    assert checkpoint["next_source_offset"] == len(text)
+    assert speech_blocks_service.load_speech_blocks_report(root)["processed_chunk_count"] == 0
+    speech_blocks_service.start_or_continue_generation(root, manifest, _profile_payload(), settings)
+
+    expected_speech_requests = [] if narrator_only else ["direct_blocks"]
+    assert requests == [*expected_speech_requests, "scene_ambience_blocks", "scene_ambience_blocks"]
+    assert [block["text"] for block in speech_blocks_service.load_speech_blocks(root)] == [text]
+    assert speech_blocks_service.load_speech_blocks_report(root)["processed_chunk_count"] == 1
+
+
+@pytest.mark.parametrize("legacy_status", ["review_pending", "completed"])
+def test_legacy_reviewed_active_checkpoint_restarts_only_its_chunk(monkeypatch, tmp_path, legacy_status) -> None:
+    """
+    @brief      Recover an old segment checkpoint whose status was changed by operator approval.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  legacy_status Status stored by the previous review code.
+    """
+    root, manifest = _create_chunked_project(tmp_path, "LegacySpeechCheckpoint")
+    active_text = "First person spoke. Another person replied. A third person laughed."
+    _write_source_chunks(root, [
+        {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Earlier."},
+        {"chunk_id": "chunk-0002", "sequence_index": 2, "text": active_text},
+    ])
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "render_prompt", _refusal_render_prompt)
+    monkeypatch.setattr(generation_service, "_build_budget_metadata", lambda *_args: {"text_budget_tokens": 8})
+    echo = _refusing_chat_json(set())
+    requests = []
+    interrupt = True
+
+    def chat(*args, **kwargs):
+        """@brief Stop before the second active slice, while retaining the earlier chunk."""
+        chunk_id = kwargs["log_context"]["chunk_id"]
+        if interrupt and chunk_id == "chunk-0002" and chunk_id in requests:
+            raise generation_service.OperationCancelledError("planned stop")
+        requests.append(chunk_id)
+        return echo(*args, **kwargs)
+
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", chat)
+    with pytest.raises(generation_service.OperationCancelledError):
+        speech_blocks_service.start_or_continue_generation(
+            root, manifest, _profile_payload(), additional_speech_block_instructions="Keep short turns."
+        )
+
+    document = speech_blocks_service.load_speech_blocks_document(root)
+    document["status"] = legacy_status
+    document["checkpoint"].pop("next_source_offset")
+    document["checkpoint"]["next_segment_index"] = 1
+    first_block = document["blocks"][0]
+    first_block["approved"] = True
+    speech_blocks_service.write_speech_blocks_document(root, document)
+
+    interrupt = False
+    requests.clear()
+    speech_blocks_service.start_or_continue_generation(root, manifest, _profile_payload())
+
+    assert requests and set(requests) == {"chunk-0002"}
+    final_document = speech_blocks_service.load_speech_blocks_document(root)
+    assert final_document["blocks"][0] == first_block
+    assert final_document["instructions"] == "Keep short turns."
+    active_blocks = [block for block in final_document["blocks"] if block["chunk_id"] == "chunk-0002"]
+    assert "".join(block["source_text"] for block in active_blocks) == active_text
+
+
+def test_resume_finalizes_checkpoint_already_at_end_of_source(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Finalize a running document after its terminal write fails.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _prepare_single_chunk_generation_project(monkeypatch, tmp_path, "TerminalSpeechResume")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, root)
+    persist = speech_blocks_service._persist_state  # noqa: SLF001
+
+    def fail_terminal_write(project_root, blocks, report, state):
+        """@brief Fail publication only after the final running checkpoint is saved."""
+        if state["status"] == "review_pending":
+            raise OSError("terminal write failed")
+        persist(project_root, blocks, report, state)
+
+    monkeypatch.setattr(speech_blocks_service, "_persist_state", fail_terminal_write)
+    with pytest.raises(OSError, match="terminal write failed"):
+        speech_blocks_service.start_or_continue_generation(root, manifest, {})
+
+    document = speech_blocks_service.load_speech_blocks_document(root)
+    assert document["status"] == "running"
+    assert document["checkpoint"]["next_chunk_index"] == 1
+    monkeypatch.setattr(speech_blocks_service, "_persist_state", persist)
+    speech_blocks_service.start_or_continue_generation(root, manifest, {})
+    finalized = speech_blocks_service.load_speech_blocks_document(root)
+    assert finalized["status"] == "review_pending"
+    assert finalized["blocks"] == document["blocks"]
+
+
+def test_scene_ambience_refusal_retains_the_chunk_speech(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify optional ambience refusal keeps the source speech and allows the run to finish.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -4363,9 +4566,9 @@ def test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run(monkeypat
             {"chunk_id": "chunk-0003", "sequence_index": 3, "text": "The motion funded the crossing."},
         ],
     )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(generation_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
     monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
+        generation_service.prompt_template_service,
         "render_prompt",
         _refusal_render_prompt,
     )
@@ -4398,7 +4601,7 @@ def test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run(monkeypat
             "usage": usage,
         }
 
-    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    monkeypatch.setattr(generation_service.llm_provider_service, "chat_json", _fake_chat_json)
 
     speech_blocks_service.start_or_continue_generation(
         project_root,
@@ -4414,9 +4617,12 @@ def test_scene_ambience_refusal_skips_the_chunk_without_ending_the_run(monkeypat
     covered_chunk_ids = {
         str(block["chunk_id"]) for block in speech_blocks_service.load_speech_blocks(project_root)
     }
-    assert covered_chunk_ids == {"chunk-0001", "chunk-0003"}
+    assert covered_chunk_ids == {"chunk-0001", "chunk-0002", "chunk-0003"}
+    middle = next(block for block in speech_blocks_service.load_speech_blocks(project_root)
+                  if block["chunk_id"] == "chunk-0002")
+    assert "scene_ambience_failed" in middle["warning_flags"]
     document = speech_blocks_service.load_speech_blocks_document(project_root)
     assert document is not None
-    assert document["failure"] == {"skipped_chunk_ids": ["chunk-0002"]}
+    assert document["failure"] is None
 
 # END OF FILE

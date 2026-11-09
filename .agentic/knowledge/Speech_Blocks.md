@@ -14,15 +14,15 @@ Converts approved text and voice context into an ordered, operator-reviewable sp
 
 ## 3. Implementation Overview
 
-The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Its public `voice_assignment_mode()` is also the state service's canonical normalization point (`REQ-NFR-7fcf36ea`). Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`; one public read or mutation shares one resolved source context/count across its projections and log-path work. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
+The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Its public `voice_assignment_mode()` is also the state service's canonical normalization point (`REQ-NFR-7fcf36ea`). Generate All and Split Chunk share preparation and execution in speech_blocks_generation_service.py. That module owns model prompts, request slices, deterministic narration and optional ambience for a single chunk. The orchestration service writes checkpoints and completed chunk results. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`; one public read or mutation shares one resolved source context/count across its projections and log-path work. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
 
 The two narration modes take different paths. `narrator_and_characters` sends
 plain budgeted source segments to the model under the `direct_blocks` contract
 and realigns the returned text to the source, so uncovered text becomes
-narrator review rows. `same_narrator` calls no model at all: because every
+narrator review rows. Generated narration uses the narrator voice. The editor can still change a block's speaker. `same_narrator` calls no model at all: because every
 block gets the narrator voice, the only remaining decision is structural, and
 `speech_blocks_narrator_split_service` makes it by packing whole sentences into
-evenly sized blocks under the `deterministic_narrator_blocks` contract.
+evenly sized blocks under the `deterministic_narrator_blocks` contract. Both page actions work without an AI profile when Scene Ambience is disabled.
 
 ## 4. Dependencies
 
@@ -94,8 +94,7 @@ approved translation. Reset and regenerate Speech Blocks when it differs.
   (REQ-REL-63e230dd). Generated output remains `review_pending` until every
   persisted block is approved, and resumptions require a compatible source
   snapshot and response-contract marker.
-- A source chunk whose AI request fails - its block-splitting request or its
-  scene-ambience analysis - is left with no blocks, recorded by
+- A source chunk whose AI request fails - its block-splitting request - is left with no blocks, recorded by
   identifier in the document's `failure` field, and generation continues with the
   next chunk to the end of the book; operator cancellation raised at the same
   request seam still aborts the run (REQ-REL-a54e058d, REQ-DATA-2caf6e05). A chunk
@@ -108,11 +107,16 @@ approved translation. Reset and regenerate Speech Blocks when it differs.
   stays in progress rather than completed (REQ-FUNC-27de7656), and the state notes
   give the operator the uncovered count and every skipped identifier
   (REQ-UX-4260d6a4).
-- Multi-segment generation assigns contiguous chunk-local order before every
-  checkpoint. Resuming an active segment continues after the already persisted
-  rows, including when Scene Ambience insertion renumbers the new chunk-local
-  rows, so intermediate, resumed, and uninterrupted documents preserve the same
-  canonical source order (REQ-REL-0e236c91, REQ-FUNC-b355f8e6).
+- Multi-segment generation atomically checkpoints the active chunk with `next_source_offset`,
+  the number of characters already sent in successfully processed source slices.
+  Resume plans the remaining text using the current budget. Manual review and
+  splitting a different chunk preserve that cursor and the batch instructions.
+  An earlier checkpoint with only a segment index reprocesses its active chunk.
+- The chunk remains active through optional Scene Ambience, even after the
+  final speech slice. On provider refusal the speech remains with a review
+  warning. On cancellation, resume can request only the missing ambience.
+- Long dialogue is split from the unwrapped spoken text. Exact source slices
+  still include the outer dialogue delimiters.
 - `same_narrator` segmentation is deterministic and total: concatenating the
   `source_text` of a chunk's blocks reproduces that chunk character for
   character, and the service raises rather than persisting a lossy plan. A

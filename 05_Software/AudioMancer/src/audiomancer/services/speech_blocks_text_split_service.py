@@ -122,7 +122,7 @@ def ai_word_spans(text: str) -> list[str]:
     @return     Ordered word spans.
     @exception  None
     """
-    return [match.group(0) for match in re.finditer(r"\S+\s*", str(text)) if match.group(0)]
+    return [match.group(0) for match in re.finditer(r"\S+\s*|^\s+", str(text)) if match.group(0)]
 
 
 def hard_split_text_for_ai_context_budget(text: str, text_budget_tokens: int) -> list[str]:

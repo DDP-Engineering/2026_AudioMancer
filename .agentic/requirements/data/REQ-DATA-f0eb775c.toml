@@ -38,23 +38,23 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When scene-ambience insertion renumbers a chunk, each after_speech_block_id shall continue to identify the narration or dialogue block that the ambience row originally matched.
+When Scene Ambience is inserted, each after_speech_block_id shall continue to identify the same spoken block with its original ID.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "A service regression inserts opener and after-block scene ambience into a chunk, then proves every scene-change reference resolves to the original spoken block after renumbering and no reference is dangling or redirected."
+verification = "A service regression inserts opener and after-block scene ambience into a chunk, then proves every scene-change reference resolves to the original spoken block and confirms each spoken ID is preserved."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py",
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py",
 ]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_insertion_remaps_references_after_opener_renumbering",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_opener_preserves_spoken_ids_and_references",
 ]
 
 # --- optional below this line ---

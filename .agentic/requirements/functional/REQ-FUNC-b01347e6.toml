@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-FUNC-b01347e6"
+
+title = "Speech Blocks assigns generated narration to the narrator"
+
+status = "active"
+
+requirement = """
+When an AI Speech Blocks response labels a fragment as narration, the normalizer shall assign it to the narrator.
+"""
+
+verification = "Normalize narration with a valid character ID and verify the narrator while adjacent dialogue retains its character."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_generated_narration_uses_narrator_even_with_valid_character_id",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

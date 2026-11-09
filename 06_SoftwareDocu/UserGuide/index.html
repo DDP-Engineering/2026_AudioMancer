@@ -958,21 +958,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     action buttons beside it; below, <strong>Selected Chunk</strong> and <strong>Speech
                     Blocks</strong> sit side by side.
                 </p>
-                <div class="warning">
-                    <strong>Generate All</strong> and <strong>Split Chunk</strong> require a selected AI profile in
-                    <em>every</em> project, including same-narrator ones. Set up at least one enabled profile in AI
-                    Settings before you reach this page.
+                <div class="note">
+                    Same-narrator projects with Scene Ambience off can generate and re-split narration locally.
+                    Choose an AI profile when the project uses character voices or generates Scene Ambience.
                 </div>
                 <h3>Generating</h3>
                 <ul>
-                    <li><strong>Generate All</strong> processes every chunk that has none yet. It confirms first &mdash; one AI request per chunk, consuming tokens, and a successful run resets Audio Blocks and Audio Assembly. When Scene Ambience is enabled in TTS Settings it confirms that too, because ambience adds further calls per chunk. Finally it opens <strong>Speech Blocks Instructions</strong> for optional extra rules; resuming an interrupted run skips that dialog.</li>
-                    <li><strong>Split Chunk</strong> re-splits just the selected chunk. It confirms, then always asks for instructions &mdash; there is no resume exemption for a single chunk.</li>
+                    <li><strong>Generate All</strong> processes missing chunks and resumes a partially generated chunk from the saved position in its text. A successful run resets Audio Blocks and Audio Assembly. For character voices, the app asks for optional instructions at the start and uses the saved instructions when resuming. A large chunk can require multiple AI requests.</li>
+                    <li><strong>Split Chunk</strong> re-splits only the selected chunk. With character voices you can add instructions for that run.</li>
                     <li><strong>Reset</strong> deletes all Speech Blocks, clears Audio Blocks and Audio Assembly, and resets progress after Character Voices.</li>
                     <li><strong>Approve All</strong> approves every outstanding block at once, without asking.</li>
                 </ul>
                 <p>
                     Set <strong>Scene Ambience Placement</strong> in TTS Settings <em>before</em> generating or
                     re-splitting: it is what decides whether ambience blocks are created at all.
+                    If the ambience request fails, the speech stays available with a review warning.
                 </p>
                 <h3>Reading The Block List</h3>
                 <p>
@@ -1161,7 +1161,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>A button is greyed out</h3>
                 <p>Most pages depend on the pages above them, and almost every action is also disabled while an operation is running or while an edit is open. Save or cancel the edit, let the operation finish, and check that the earlier stage produced a result.</p>
                 <h3>Generate All or Split Chunk is greyed out on Speech Blocks</h3>
-                <p>Both need an AI profile selected, in every project &mdash; including same-narrator ones. Add an enabled profile in AI Settings.</p>
+                <p>Check that the source text is ready. Character voices and Scene Ambience also require an enabled AI profile. With a single narrator and Scene Ambience off, both actions work locally.</p>
                 <h3>Generate Audio is greyed out on Audio Assembly</h3>
                 <p>Assembly requires every Audio Block to be approved. Return to Audio Blocks and approve the remaining rows.</p>
                 <h3>Start Translation is greyed out</h3>

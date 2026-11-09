@@ -24,6 +24,39 @@ from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
 
 
+def test_speech_blocks_page_offers_local_generation_without_profile(qtbot) -> None:
+    """
+    @brief      Enable both local entry points without an AI profile.
+    @param[in]  qtbot Qt test helper fixture.
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([], None)
+    payload = {
+        "source_chunks": [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        "speech_blocks": [],
+        "notes": [],
+        "selected_profile_id": None,
+        "stage_status": "not_started",
+        "selected_source_language": "en",
+        "processed_chunk_count": 0,
+        "total_chunk_count": 1,
+        "can_resplit_selected": True,
+        "voice_assignment_mode": "same_narrator",
+    }
+    page.set_speech_blocks_state(**payload)
+    assert page._generate_button.isEnabled()
+    assert page._resplit_button.isEnabled()
+    with qtbot.waitSignal(page.generate_requested) as generated:
+        page._generate_button.click()
+    assert generated.args == [""]
+
+    page.set_speech_blocks_state(**payload, scene_ambience_enabled=True)
+    assert not page._generate_button.isEnabled()
+    assert not page._resplit_button.isEnabled()
+
+
 def test_speech_blocks_page_shows_reset_recovery_without_generation(qtbot) -> None:
     """
     @brief      Verify the Speech Blocks page renders a reset-only corrupt-document recovery state.

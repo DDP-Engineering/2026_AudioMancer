@@ -1,0 +1,30 @@
+schema = 1
+
+id = "REQ-FUNC-42f8c617"
+
+title = "Speech Blocks retains speech when optional ambience fails"
+
+status = "active"
+
+requirement = """
+When optional Scene Ambience generation fails for a chunk with valid speech, Speech Blocks shall retain its speech rows with a review warning.
+"""
+
+verification = "Refuse ambience for a middle chunk and verify speech remains with a warning and subsequent chunks complete."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_opener_preserves_spoken_ids_and_references",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_scene_ambience_refusal_retains_the_chunk_speech",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_cancelled_ambience_resumes_without_repeating_speech",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09
