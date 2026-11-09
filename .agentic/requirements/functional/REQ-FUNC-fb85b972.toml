@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-fb85b972"
+title = "Keep uncertain character evidence reviewable and editable"
+status = "active"
+requirement = "Character Discovery shall keep a possible speaker reviewable when its AI citation cannot be resolved and allow the operator to edit the excerpt in the existing character draft."
+verification = "Ground a valid Romanian span and clear an invalid AI citation without dropping the speaker; edit the excerpt in the Characters page and persist it with the profile."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/characters_page.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/characters_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_keeps_possible_speakers_when_citations_cannot_be_resolved", "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_edits_excerpt_without_replacing_source_preview", "05_Software/AudioMancer/tests/test_characters_page.py::test_characters_page_can_enter_evidence_for_a_profile_without_citations", "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_save_new_character_persists_and_selects", "05_Software/AudioMancer/tests/test_characters_ui_controller.py::test_character_ui_controller_saves_evidence_edit_and_keeps_existing_audio"]
+created = 2026-11-09
+updated = 2026-11-09

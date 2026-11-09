@@ -56,7 +56,18 @@ and `character_voices_service` resolves the localized default once it is. Previe
 normalization never discards text: length is judged by the shared range, and line
 breaks are preserved because they are spoken as pauses.
 
-Discovery checkpoints after every successful window. Synthesis remains
+Discovery checkpoints the actual start of the next planned window after every
+successful window, retaining its overlap on resume. Character IDs use a suffix
+when their name-derived IDs collide. Manual additions also reserve pending
+synthesis IDs. Existing completed profiles retain their IDs.
+
+AI citations resolve against the request window. A dialogue-span ID or excerpt
+that cannot be found is cleared while a possible speaking character remains
+available for review. Synthesis keeps discovery evidence. The Evidence excerpt
+editor saves operator corrections in the current profile draft while the source
+preview stays read-only.
+
+Synthesis remains
 sequential: each candidate is compacted to the current profile budget and sent
 in one AI request, then the resulting character and next index are committed
 atomically.

@@ -59,6 +59,9 @@ Focused AI Translation checks use the translation service/state/page/controller
 modules and selected Chunking, Character Discovery, Speech Blocks, narrator and
 project tests. AI replies and publication failures use controlled test doubles.
 
+Focused Character Discovery checks use the discovery service/state and Characters
+page/controller tests with simulated provider responses and offscreen Qt.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-09974cdc"
+title = "Allocate unique Character Discovery IDs"
+status = "active"
+requirement = "Character Discovery shall persist distinct characters under unique IDs even when their names produce the same slug or a manual character is added during an interrupted run."
+verification = "Synthesize two colliding names and assert both persist; reserve pending synthesis IDs when adding a manual character."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_reserves_unique_ids_for_colliding_names_and_manual_profile"]
+created = 2026-11-09
+updated = 2026-11-09

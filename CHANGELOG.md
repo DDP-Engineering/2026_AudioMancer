@@ -24,6 +24,9 @@ All notable changes to this project will be documented in this file.
   boundaries, and warns when resuming with changed request settings.
 - AI Translation retries a fragment once when the model changes the paragraph count
   and reports both counts if the mismatch persists.
+- Character Discovery keeps distinct characters whose names produce the same ID
+  and preserves shared context between windows when resuming. Evidence excerpts
+  can be corrected and saved with the character profile.
 
 ## [2.2.1] - 2026-11-06
 

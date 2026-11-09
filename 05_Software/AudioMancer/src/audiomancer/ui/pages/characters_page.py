@@ -19,7 +19,7 @@
 
 from copy import deepcopy
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -246,6 +246,14 @@ class CharactersPage(QWidget):
         self._evidence_splitter.setSizes([240, 240])
         self._evidence_splitter.splitterMoved.connect(self._clamp_evidence_splitter_sizes)
         evidence_layout.addWidget(self._evidence_splitter)
+        self._evidence_excerpt_label = QLabel(self)
+        self._evidence_excerpt_edit = QPlainTextEdit(self)
+        self._evidence_excerpt_edit.setReadOnly(True)
+        self._evidence_excerpt_edit.setMaximumHeight(80)
+        self._evidence_excerpt_edit.textChanged.connect(self._handle_evidence_excerpt_changed)
+        self._evidence_excerpt_label.setBuddy(self._evidence_excerpt_edit)
+        evidence_layout.addWidget(self._evidence_excerpt_label)
+        evidence_layout.addWidget(self._evidence_excerpt_edit)
 
         self._main_splitter.addWidget(self._left_splitter)
         self._main_splitter.addWidget(self._evidence_group)
@@ -574,6 +582,7 @@ class CharactersPage(QWidget):
         self._list_group.setTitle(ui_state_service.translate("characters.list_group", language))
         self._editor_group.setTitle(ui_state_service.translate("characters.profile_group", language))
         self._evidence_group.setTitle(ui_state_service.translate("characters.evidence_group", language))
+        self._evidence_excerpt_label.setText(ui_state_service.translate("characters.evidence_excerpt", language))
         self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
         self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
         self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
@@ -656,6 +665,7 @@ class CharactersPage(QWidget):
         )
         self._character_list.setEnabled(self._project_active and not self._busy)
         self._evidence_list.setEnabled(self._project_active and has_selected_character)
+        self._evidence_excerpt_edit.setReadOnly(not editor_enabled)
         for widget in self._editor_widgets:
             widget.setEnabled(editor_enabled)
             if hasattr(widget, "setReadOnly"):
@@ -832,6 +842,28 @@ class CharactersPage(QWidget):
             current_item.setText(_format_profile_item(self._draft_profile))
         self._apply_control_state()
 
+    def _handle_evidence_excerpt_changed(self) -> None:
+        """@brief Store a corrected citation or an operator note in the current draft."""
+        if self._loading_profile or self._draft_profile is None or self._evidence_excerpt_edit.isReadOnly():
+            return
+        evidence = self._draft_profile.setdefault("evidence", [])
+        row = self._evidence_list.currentRow()
+        excerpt = self._evidence_excerpt_edit.toPlainText().strip()
+        if row >= 0:
+            evidence[row]["source_excerpt"] = excerpt
+        elif excerpt:
+            evidence[:] = [
+                {
+                    "chunk_id": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
+                    "sequence_index": 0,
+                    "source_excerpt": excerpt,
+                    "reason": "",
+                }
+            ]
+        else:
+            evidence.clear()
+        self._handle_editor_changed()
+
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
         """
         @brief      Load one profile payload into the read-only or editable widgets.
@@ -854,7 +886,7 @@ class CharactersPage(QWidget):
         if self._evidence_list.count() > 0:
             self._evidence_list.setCurrentRow(0)
         else:
-            self._evidence_preview.clear()
+            self._show_selected_evidence(-1)
         self._loading_profile = False
 
     def _clear_editor(self) -> None:
@@ -874,29 +906,22 @@ class CharactersPage(QWidget):
         self._confidence_edit.clear()
         self._evidence_list.clear()
         self._evidence_preview.clear()
+        self._evidence_excerpt_edit.clear()
         self._loading_profile = False
 
     def _show_selected_evidence(self, row: int) -> None:
         """
-        @brief      Show the source chunk or synthetic note for one evidence row.
+        @brief      Show the source context and draft excerpt for the selected evidence row.
         @param[in]  row Selected evidence-row index.
         @return     None.
-        @exception  None
         """
-        profile = self._active_profile()
-        if profile is None:
-            self._evidence_preview.clear()
-            return
-        evidence_list = list(profile.get("evidence", []))
-        if row < 0 or row >= len(evidence_list):
-            self._evidence_preview.clear()
-            return
-        evidence = dict(evidence_list[row])
-        source_text = self._source_chunk_map.get(
-            str(evidence.get("chunk_id", "")),
-            str(evidence.get("source_excerpt", "")),
-        )
+        evidence_list = (self._active_profile() or {}).get("evidence", [])
+        evidence = evidence_list[row] if 0 <= row < len(evidence_list) else {}
+        excerpt = str(evidence.get("source_excerpt", ""))
+        source_text = self._source_chunk_map.get(str(evidence.get("chunk_id", "")), excerpt)
         self._evidence_preview.setPlainText(source_text)
+        with QSignalBlocker(self._evidence_excerpt_edit):
+            self._evidence_excerpt_edit.setPlainText(excerpt)
 
     def _select_list_row(self, row: int) -> None:
         """

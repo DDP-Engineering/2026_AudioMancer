@@ -34,6 +34,10 @@ AI Translation binds approvals to current source chunks and uses one eligibility
 rule across downstream text consumers. Review mutations, reset and finalization
 stage the translation and workflow effects together.
 
+Character Discovery consumes that same effective source, resumes overlapping
+windows from the saved next start, and keeps operator evidence edits in the
+character inventory.
+
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.

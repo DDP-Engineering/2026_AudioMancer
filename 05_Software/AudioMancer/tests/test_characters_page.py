@@ -262,6 +262,45 @@ def test_characters_page_selection_change_emits_requested_character_id(qtbot) ->
     assert page.current_character_id() == "alice"
 
 
+def test_characters_page_edits_excerpt_without_replacing_source_preview(qtbot) -> None:
+    """@brief Keep edits per row in the draft while the source preview remains read-only."""
+    profile = _profile_payload()
+    original_excerpt = profile["evidence"][0]["source_excerpt"]
+    profile["evidence"].append({"chunk_id": "chunk-0002", "reason": "Another citation", "source_excerpt": "Second."})
+    page = _build_page(qtbot, [profile])
+    source_preview = page._evidence_preview.toPlainText()
+    assert page._evidence_excerpt_edit.isReadOnly()
+
+    page.begin_edit_mode()
+    page._evidence_excerpt_edit.setPlainText("Corrected excerpt.")
+    page._evidence_list.setCurrentRow(1)
+    assert page._evidence_excerpt_edit.toPlainText() == "Second."
+    page._evidence_list.setCurrentRow(0)
+    assert page._evidence_excerpt_edit.toPlainText() == "Corrected excerpt."
+    assert page._evidence_preview.toPlainText() == source_preview
+    assert page._evidence_preview.isReadOnly()
+    assert page.is_dirty()
+    with qtbot.waitSignal(page.save_character_requested) as request:
+        page._save_character_button.click()
+    assert request.args[0]["evidence"][0]["source_excerpt"] == "Corrected excerpt."
+
+    page.discard_changes()
+    assert page._evidence_excerpt_edit.toPlainText() == original_excerpt
+
+
+def test_characters_page_can_enter_evidence_for_a_profile_without_citations(qtbot) -> None:
+    """@brief Enter an operator note using the same draft when there is no AI citation."""
+    profile = _profile_payload()
+    profile["evidence"] = []
+    page = _build_page(qtbot, [profile])
+
+    page.begin_edit_mode()
+    page._evidence_excerpt_edit.setPlainText("Operator observation.")
+
+    assert page.is_dirty()
+    assert page.current_draft_payload()["evidence"][0]["source_excerpt"] == "Operator observation."
+
+
 def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -> None:
     """
     @brief      Validate characters page evidence preview supports find next wraparound.

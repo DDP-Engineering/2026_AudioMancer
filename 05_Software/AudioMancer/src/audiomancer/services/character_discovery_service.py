@@ -355,9 +355,7 @@ def start_or_continue_discovery(
         else token_usage_service.empty_token_usage()
     )
     log_path = _resolve_log_path(resolved_project_root, run_token)
-    chunk_map = {
-        str(chunk.get("chunk_id", "")): dict(chunk) for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip()
-    }
+    chunk_indexes = {str(chunk["chunk_id"]): index for index, chunk in enumerate(source_chunks)}
     initial_progress_current = (
         discovery_progress_total + next_candidate_index if merged_candidates else completed_window_count
     )
@@ -448,10 +446,15 @@ def start_or_continue_discovery(
             raw_candidates.extend(
                 _normalize_window_candidates(
                     response_payload.get("characters", []),
-                    chunk_map,
+                    {str(chunk["chunk_id"]): chunk for chunk in window_records},
                 )
             )
-            next_discovery_start_chunk_index = _next_chunk_index_after_window(source_chunks, window_records)
+            next_window_index = relative_window_index + 1
+            next_discovery_start_chunk_index = (
+                chunk_indexes[str(windows[next_window_index][0]["chunk_id"])]
+                if next_window_index < len(windows)
+                else len(source_chunks)
+            )
             discovery_progress_current = progress_window_index + 1
             discovery_checkpoint = {
                 "completed_window_count": discovery_progress_current,
@@ -508,8 +511,20 @@ def start_or_continue_discovery(
         )
         raise
 
+    reserved_ids = {str(item["character_id"]) for item in character_inventory}
     if not merged_candidates:
-        merged_candidates, rejected_candidates = _merge_character_candidates_with_rejections(raw_candidates)
+        merged_candidates, rejected_candidates = _merge_character_candidates_with_rejections(
+            raw_candidates, reserved_ids
+        )
+    else:
+        # Completed IDs remain reserved even if the operator deleted the associated profile.
+        reserved_ids.update(str(item.get("character_id", "")) for item in merged_candidates[:next_candidate_index])
+        for index in range(next_candidate_index, len(merged_candidates)):
+            candidate = merged_candidates[index]
+            base_slug = str(candidate.get("character_id", "")) or _slugify_character_id(
+                str(candidate.get("canonical_name", "")), index + 1
+            )
+            candidate["character_id"] = _reserve_character_id(base_slug, reserved_ids)
     total_progress = max(discovery_progress_total + len(merged_candidates), 1)
     _write_operation_state(
         state_path=document_path,
@@ -543,16 +558,14 @@ def start_or_continue_discovery(
     try:
         for profile_index in range(next_candidate_index, len(merged_candidates)):
             raise_if_cancelled(cancel_requested)
-            candidate = _budgeted_synthesis_candidate_payload(
-                dict(merged_candidates[profile_index]),
-                budget_metadata,
-            )
+            candidate = merged_candidates[profile_index]
+            prompt_candidate = _budgeted_synthesis_candidate_payload(candidate, budget_metadata)
             user_prompt = _append_additional_character_discovery_instructions(
                 prompt_template_service.render_prompt(
                     "character_profile_synthesis_user",
                     {
                         "character_payload": json.dumps(
-                            candidate,
+                            prompt_candidate,
                             indent=2,
                             ensure_ascii=False,
                         )
@@ -691,8 +704,16 @@ def add_character_profile(
     resolved_project_root = Path(project_root)
     existing_profiles = load_character_profiles(resolved_project_root)
     normalized_name = validate_manual_character_name(existing_profiles, canonical_name)
-    updated_profiles = list(existing_profiles)
-    updated_profiles.append(_build_manual_character_profile(existing_profiles, normalized_name))
+    document = load_character_document(resolved_project_root)
+    checkpoint = (document or {}).get("checkpoint") or {}
+    reserved_ids = {str(item["character_id"]) for item in existing_profiles}
+    if checkpoint.get("phase") == "synthesis":
+        reserved_ids.update(
+            str(candidate.get("character_id", "")) for candidate in _restore_mapping_list(checkpoint.get("candidates"))
+        )
+    base_slug = _slugify_character_id(normalized_name, len(existing_profiles) + 1)
+    character_id = _reserve_character_id(base_slug, reserved_ids)
+    updated_profiles = [*existing_profiles, _build_manual_character_profile(character_id, normalized_name)]
     updated_profiles = sorted(updated_profiles, key=_profile_sort_key)
     _write_character_profiles(resolved_project_root, updated_profiles)
     return updated_profiles
@@ -1179,19 +1200,19 @@ def _write_character_profiles(
 
 
 def _build_manual_character_profile(
-    existing_profiles: list[CharacterProfilePayload],
+    character_id: str,
     canonical_name: str,
 ) -> CharacterProfilePayload:
     """
     @brief      Build one persisted manual-character profile payload.
-    @param[in]  existing_profiles Existing persisted character profile list.
+    @param[in]  character_id Allocated persisted identifier.
     @param[in]  canonical_name Validated canonical character name.
     @return     New manual character profile payload.
     @exception  None
     """
     return regenerate_character_voice_definition(
         {
-            "character_id": _next_manual_character_id(existing_profiles, canonical_name),
+            "character_id": character_id,
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
@@ -1212,27 +1233,6 @@ def _build_manual_character_profile(
             ],
         }
     )
-
-
-def _next_manual_character_id(
-    existing_profiles: list[CharacterProfilePayload],
-    canonical_name: str,
-) -> str:
-    """
-    @brief      Generate one unique persisted identifier for a manual character.
-    @param[in]  existing_profiles Existing persisted character profile list.
-    @param[in]  canonical_name Validated canonical character name.
-    @return     Unique character identifier string.
-    @exception  None
-    """
-    base_slug = _slugify_character_id(canonical_name, len(existing_profiles) + 1)
-    existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
-    if base_slug not in existing_ids:
-        return base_slug
-    suffix = 2
-    while f"{base_slug}_{suffix}" in existing_ids:
-        suffix += 1
-    return f"{base_slug}_{suffix}"
 
 
 def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], dict[str, str]]:
@@ -1348,7 +1348,7 @@ def _detect_dialogue_spans(text: str) -> list[dict[str, object]]:
     normalized_text = str(text)
     quote_patterns = (
         ('"([^"\\n]{1,500})"', "quote"),
-        ("\u201c([^\u201d\\n]{1,500})\u201d", "quote"),
+        ("[\u201c\u201e]([^\u201d\\n]{1,500})\u201d", "quote"),
         ("\u00ab([^\u00bb\\n]{1,500})\u00bb", "quote"),
         ("\u300c([^\u300d\\n]{1,500})\u300d", "quote"),
         ("\u300e([^\u300f\\n]{1,500})\u300f", "quote"),
@@ -1709,33 +1709,6 @@ def _restore_resume_state(
     )
 
 
-def _next_chunk_index_after_window(
-    source_chunks: list[dict[str, object]],
-    window_records: list[dict[str, object]],
-) -> int:
-    """
-    @brief      Return the next source chunk index after one completed discovery window.
-    @param[in]  source_chunks Current source chunk records.
-    @param[in]  window_records Completed discovery window records.
-    @return     Source chunk index immediately after the completed window.
-    """
-    if not window_records:
-        return 0
-    chunk_index_by_id = {
-        str(chunk.get("chunk_id", "")).strip(): index
-        for index, chunk in enumerate(source_chunks)
-        if str(chunk.get("chunk_id", "")).strip()
-    }
-    completed_indexes = [
-        chunk_index_by_id[str(chunk.get("chunk_id", "")).strip()]
-        for chunk in window_records
-        if str(chunk.get("chunk_id", "")).strip() in chunk_index_by_id
-    ]
-    if not completed_indexes:
-        return 0
-    return min(max(completed_indexes) + 1, len(source_chunks))
-
-
 def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
     """
     @brief      Restore the token usage.
@@ -1973,7 +1946,8 @@ def _normalize_window_candidates(
         canonical_name = str(entry.get("canonical_name", "")).strip()
         if not canonical_name:
             continue
-        evidence = _normalize_evidence(entry.get("evidence", []), chunk_map)
+        reported_evidence = _restore_evidence(entry.get("evidence"))
+        evidence = _normalize_evidence(reported_evidence, chunk_map)
         gender_hint = str(entry.get("gender_hint", "")).strip()
         age_hint = str(entry.get("age_hint", "")).strip()
         normalized_candidates.append(
@@ -1986,9 +1960,8 @@ def _normalize_window_candidates(
                 "age_confidence": _demographic_confidence_for_hint(age_hint, entry.get("age_confidence")),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
-                "has_dialogue_evidence": any(
-                    _evidence_has_direct_dialogue(item) for item in evidence if item.get("chunk_id") in chunk_map
-                ),
+                "has_dialogue_evidence": any(_evidence_has_direct_dialogue(item) for item in evidence)
+                or any(_evidence_has_speech_marker(item) for item in reported_evidence),
             }
         )
     return normalized_candidates
@@ -2033,19 +2006,20 @@ def _normalize_evidence(
         if not chunk_id or chunk_id not in chunk_map:
             continue
         source_chunk = dict(chunk_map[chunk_id])
-        dialogue_span_id = str(entry.get("dialogue_span_id", "")).strip()
-        source_excerpt = str(entry.get("source_excerpt", "")).strip()
-        if not source_excerpt and dialogue_span_id:
-            source_excerpt = _dialogue_span_excerpt(source_chunk, dialogue_span_id)
-        if not source_excerpt:
-            source_excerpt = _excerpt_text(str(source_chunk.get("text", "")))
+        dialogue_span_id = str(entry.get("dialogue_span_id") or "").strip()
+        cited_span = _dialogue_span_excerpt(source_chunk, dialogue_span_id) if dialogue_span_id else ""
+        reported_excerpt = " ".join(str(entry.get("source_excerpt") or "").split())
+        source_text = " ".join(str(source_chunk.get("text", "")).split())
+        source_excerpt = cited_span or (reported_excerpt if reported_excerpt in source_text else "")
+        if not cited_span:
+            dialogue_span_id = ""
         reason = str(entry.get("reason", "")).strip() or "Mentioned in source chunk."
-        confidence = _normalize_evidence_confidence(
-            entry.get("confidence"),
-            source_chunk,
-            dialogue_span_id,
-            source_excerpt,
-            reason,
+        confidence = (
+            _normalize_evidence_confidence(
+                entry.get("confidence"), source_chunk, dialogue_span_id, source_excerpt, reason
+            )
+            if source_excerpt
+            else EVIDENCE_CONFIDENCE_LOW
         )
         evidence_items.append(
             {
@@ -2107,10 +2081,12 @@ def _normalize_evidence_confidence(
 
 def _merge_character_candidates_with_rejections(
     candidates: list[dict[str, object]],
+    reserved_ids: set[str] | None = None,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """
     @brief      Merge candidates by identity and retain rejected candidate diagnostics.
     @param[in]  candidates Candidate payload list.
+    @param[in]  reserved_ids IDs already used by the current inventory.
     @return     Accepted merged candidates and rejected candidate diagnostics.
     @exception  None
     """
@@ -2119,18 +2095,18 @@ def _merge_character_candidates_with_rejections(
     rejected: list[dict[str, object]] = []
     for entry in sorted(merged, key=_candidate_sort_key):
         entry["evidence"] = _restore_evidence(entry.get("evidence", []))
-        if not entry["evidence"]:
+        has_dialogue = _candidate_has_spoken_dialogue(entry)
+        if not entry["evidence"] and not has_dialogue:
             rejected.append(_rejected_candidate_payload(entry, "missing_evidence"))
             continue
-        if not _candidate_has_spoken_dialogue(entry):
+        if not has_dialogue:
             rejected.append(_rejected_candidate_payload(entry, "missing_spoken_dialogue_evidence"))
             continue
         accepted.append(entry)
+    used_ids = set(reserved_ids or ())
     for index, entry in enumerate(accepted, start=1):
-        entry["character_id"] = _slugify_character_id(
-            str(entry.get("canonical_name", "")),
-            index,
-        )
+        base_slug = _slugify_character_id(str(entry.get("canonical_name", "")), index)
+        entry["character_id"] = _reserve_character_id(base_slug, used_ids)
     return accepted, rejected
 
 
@@ -2450,10 +2426,13 @@ def _build_profile_from_synthesis(
     """
     gender_hint = str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip()
     age_hint = str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip()
+    canonical_name = str(response_payload.get("canonical_name") or "").strip()
+    if not canonical_name:
+        canonical_name = str(candidate.get("canonical_name", ""))
     return regenerate_character_voice_definition(
         {
             "character_id": str(candidate.get("character_id", "")),
-            "canonical_name": str(response_payload.get("canonical_name", candidate.get("canonical_name", ""))).strip(),
+            "canonical_name": canonical_name,
             "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
             "gender_hint": gender_hint,
             "gender_confidence": _demographic_confidence_for_hint(
@@ -2474,8 +2453,7 @@ def _build_profile_from_synthesis(
                     candidate.get("review_status", CHARACTER_REVIEW_STATUS_DISCOVERED),
                 )
             ),
-            "evidence": _restore_evidence(response_payload.get("evidence", candidate.get("evidence", [])))
-            or _restore_evidence(candidate.get("evidence", [])),
+            "evidence": _restore_evidence(candidate.get("evidence", [])),
         }
     )
 
@@ -2719,6 +2697,22 @@ def _slugify_character_id(name: str, fallback_index: int) -> str:
     return slug or f"character_{fallback_index:04d}"
 
 
+def _reserve_character_id(base_slug: str, used_ids: set[str]) -> str:
+    """
+    @brief         Allocate one stable identifier within the current inventory and checkpoint.
+    @param[in]     base_slug Preferred identifier derived from the character name.
+    @param[in,out] used_ids IDs already allocated, updated with the returned ID.
+    @return        Unique identifier with a numeric suffix when needed.
+    """
+    character_id = base_slug
+    suffix = 2
+    while character_id in used_ids:
+        character_id = f"{base_slug}_{suffix}"
+        suffix += 1
+    used_ids.add(character_id)
+    return character_id
+
+
 def _candidate_sort_key(candidate: dict[str, object]) -> tuple[int, str]:
     """
     @brief      Execute the candidate sort key helper.
@@ -2779,13 +2773,24 @@ def _evidence_has_direct_dialogue(evidence: dict[str, object]) -> bool:
     @return     True when the evidence is anchored to dialogue without depending on natural-language keywords.
     @exception  None
     """
-    if str(evidence.get("dialogue_span_id", "")).strip():
-        return True
-    if str(evidence.get("confidence", "")).strip().casefold() == EVIDENCE_CONFIDENCE_HIGH:
-        return True
-    if _text_contains_dialogue_markers(str(evidence.get("source_excerpt", ""))):
-        return True
-    return _reason_mentions_dialogue(str(evidence.get("reason", "")))
+    return (
+        str(evidence.get("confidence", "")).strip().casefold() == EVIDENCE_CONFIDENCE_HIGH
+        or _evidence_has_speech_marker(evidence)
+        or _reason_mentions_dialogue(str(evidence.get("reason") or ""))
+    )
+
+
+def _evidence_has_speech_marker(evidence: dict[str, object]) -> bool:
+    """
+    @brief      Identify a concrete speech marker in a model citation.
+    @param[in]  evidence Grounded or unresolved evidence record.
+    @return     Whether the record points to a span or contains dialogue punctuation.
+    """
+    span_id = evidence.get("dialogue_span_id")
+    return (
+        isinstance(span_id, str) and bool(span_id.strip())
+        or _text_contains_dialogue_markers(str(evidence.get("source_excerpt") or ""))
+    )
 
 
 def _text_contains_dialogue_markers(text: str) -> bool:

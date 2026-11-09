@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-50ad0471"
+title = "Resume Character Discovery with window overlap"
+status = "active"
+requirement = "Character Discovery shall resume at the next planned discovery window start, including its overlap, after a successful window checkpoint."
+verification = "Interrupt after the first of two overlapping windows and compare the next source range on resume to the uninterrupted plan."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_character_discovery_service.py::test_discovery_resume_persists_real_window_progress_before_synthesis"]
+created = 2026-11-09
+updated = 2026-11-09

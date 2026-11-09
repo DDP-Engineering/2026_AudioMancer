@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-2fa97648"
+title = "Preserve the Character Discovery text source rule"
+status = "active"
+requirement = "Character Discovery shall select the fully approved verified translation for the project target when eligible and otherwise use the original text."
+verification = "Exercise the existing verified-translation and original-fallback tests."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_character_discovery_service.py::test_load_input_chunks_uses_fully_approved_translation", "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_load_input_chunks_uses_original_when_translation_is_not_fully_approved", "05_Software/AudioMancer/tests/test_ai_translation_service.py::test_consumers_agree_on_approved_source"]
+created = 2026-11-09
+updated = 2026-11-09

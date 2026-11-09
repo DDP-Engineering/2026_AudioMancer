@@ -283,6 +283,7 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     window = _build_window(qtbot, project_root)
     _write_downstream_artifacts(project_root, window)
     window._characters_page.begin_add_mode(_manual_draft_payload("Bob"))
+    window._characters_page._evidence_excerpt_edit.setPlainText("Manual citation for Bob.")
     monkeypatch.setattr(characters_ui_controller, "_confirm_add_character", lambda *_args, **_kwargs: True)
 
     characters_ui_controller.handle_save_character_requested(
@@ -291,7 +292,8 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     )
 
     saved_profiles = character_discovery_service.load_character_profiles(project_root)
-    assert any(profile["canonical_name"] == "Bob" for profile in saved_profiles)
+    bob = next(profile for profile in saved_profiles if profile["canonical_name"] == "Bob")
+    assert bob["evidence"][0]["source_excerpt"] == "Manual citation for Bob."
     assert window._characters_page.current_character_id() is not None
     assert (project_root / config.NARRATOR_VOICE_FILE_NAME).is_file()
     voice_targets = character_voices_service.load_voice_plan(project_root)
@@ -341,6 +343,23 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
     assert window._current_manifest["narrator_profile_name"] == "Narrator"
     assert window._current_manifest["narrator_language"] == "en"
+
+
+def test_character_ui_controller_saves_evidence_edit_and_keeps_existing_audio(qtbot, tmp_path) -> None:
+    """@brief Save the edited excerpt through the controller without resetting audio."""
+    root, _manifest = _create_project(tmp_path, "CharacterEvidenceEdit")
+    window = _build_window(qtbot, root)
+    _write_downstream_artifacts(root, window)
+    audio_before = audio_blocks_service.load_audio_blocks(root)
+    page = window._characters_page
+    page.begin_edit_mode()
+    page._evidence_excerpt_edit.setPlainText("The operator corrected this citation.")
+
+    assert characters_ui_controller.handle_save_character_requested(window, page.current_draft_payload())
+
+    saved = character_discovery_service.load_character_profiles(root)[0]
+    assert saved["evidence"][0]["source_excerpt"] == "The operator corrected this citation."
+    assert audio_blocks_service.load_audio_blocks(root) == audio_before
 
 
 def test_character_ui_controller_edit_preserves_speech_approval_for_voice_definition_change(

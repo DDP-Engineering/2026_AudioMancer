@@ -2029,6 +2029,102 @@ def test_discovery_synthesizes_repeated_unicode_identity_once(monkeypatch, tmp_p
     assert [item["canonical_name"] for item in document["characters"]] == ["Алиса"]
 
 
+def test_discovery_reserves_unique_ids_for_colliding_names_and_manual_profile(monkeypatch, tmp_path) -> None:
+    """@brief Preserve both AI profiles and a manual profile added while synthesis is paused."""
+    root, manifest = _create_character_project(tmp_path, "UniqueDiscoveryIds")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    names = ["Li", "\u00c9li"]
+
+    def interrupt_synthesis(*_args, **kwargs):
+        """@brief Discover both names, then interrupt before the first profile."""
+        if kwargs["log_context"]["stage_label"] == "character_discovery_window":
+            return _window_response_for_names(names, "chunk-0001")
+        raise character_discovery_service.OperationCancelledError("Pause synthesis.")
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", interrupt_synthesis)
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(root, manifest, _profile_payload("profile-1"))
+
+    character_discovery_service.add_character_profile(root, "\u0160li")
+    remaining_names = iter(names)
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: _synthesis_response_for_name(next(remaining_names)),
+    )
+    result = character_discovery_service.start_or_continue_discovery(root, manifest, _profile_payload("profile-1"))
+
+    assert {item["canonical_name"] for item in result["characters"]} == {*names, "\u0160li"}
+    assert {item["character_id"] for item in result["characters"]} == {"li", "li_2", "li_3"}
+
+
+def test_discovery_keeps_possible_speakers_when_citations_cannot_be_resolved() -> None:
+    """@brief Ground Romanian dialogue and leave unresolved AI excerpts available for review."""
+    text = "\u201eBun\u0103!\u201d a spus Mara."
+    span = character_discovery_service._detect_dialogue_spans(text)  # noqa: SLF001
+    assert len(span) == 1
+    chunks = {"c1": {**_chunk_payload("c1", 1, text), "dialogue_spans": span}}
+    candidates = [
+        {
+            "canonical_name": "Mara",
+            "evidence": [{"chunk_id": "c1", "dialogue_span_id": span[0]["dialogue_span_id"],
+                          "source_excerpt": "Model paraphrase"}],
+        },
+        {
+            "canonical_name": "Dan",
+            "evidence": [{"chunk_id": "c1", "dialogue_span_id": "dialogue-999",
+                          "source_excerpt": '"Invented."'}],
+        },
+        {
+            "canonical_name": "Ana",
+            "evidence": [{"chunk_id": "outside-window", "source_excerpt": '"Another reply."'}],
+        },
+        {
+            "canonical_name": "Narrated Bea",
+            "evidence": [
+                {
+                    "chunk_id": "outside-window",
+                    "source_excerpt": "Bea is mentioned by the narrator.",
+                    "reason": "Narration-only reference",
+                    "confidence": "high",
+                }
+            ],
+        },
+        {
+            "canonical_name": "Narrated Cal",
+            "evidence": [
+                {"chunk_id": "outside-window", "dialogue_span_id": None, "source_excerpt": "Cal opened a door."}
+            ],
+        },
+        {
+            "canonical_name": "Narrated Eve",
+            "evidence": [{"chunk_id": "outside-window", "reason": "Narration only, no dialogue."}],
+        },
+    ]
+
+    normalized = character_discovery_service._normalize_window_candidates(candidates, chunks)  # noqa: SLF001
+    accepted, rejected = character_discovery_service._merge_character_candidates_with_rejections(  # noqa: SLF001
+        normalized
+    )
+    assert {item["canonical_name"] for item in rejected} == {"Narrated Bea", "Narrated Cal", "Narrated Eve"}
+    assert all(item["reason"] == "missing_evidence" for item in rejected)
+    by_name = {item["canonical_name"]: item for item in accepted}
+    assert by_name["Mara"]["evidence"][0]["source_excerpt"] == "\u201eBun\u0103!\u201d"
+    assert by_name["Dan"]["evidence"][0]["source_excerpt"] == ""
+    assert by_name["Dan"]["evidence"][0]["dialogue_span_id"] == ""
+    assert by_name["Ana"]["evidence"] == []
+
+    profile = character_discovery_service._build_profile_from_synthesis(  # noqa: SLF001
+        {
+            "canonical_name": "",
+            "evidence": [{"chunk_id": "outside-window", "source_excerpt": "Invented in synthesis."}],
+        },
+        by_name["Mara"],
+    )
+    assert profile["canonical_name"] == "Mara"
+    assert profile["evidence"] == by_name["Mara"]["evidence"]
+
+
 def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
     """
     @brief      Validate budgeted chunk windows use eight chunks as cap.
@@ -2225,21 +2321,16 @@ def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeyp
         budget_metadata,
     )
     completed_before_cancel = next(
-        index + 1
-        for index, window in enumerate(planned_windows)
-        if character_discovery_service._next_chunk_index_after_window(source_chunks, window) >= 40  # noqa: SLF001
+        index + 1 for index, window in enumerate(planned_windows) if window[-1]["sequence_index"] >= 40
     )
-    expected_cursor = character_discovery_service._next_chunk_index_after_window(  # noqa: SLF001
-        source_chunks,
-        planned_windows[completed_before_cancel - 1],
-    )
-    resumed_planned_window_count = completed_before_cancel + len(
-        character_discovery_service._build_chunk_windows(  # noqa: SLF001
-            source_chunks[expected_cursor:],
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-            budget_metadata,
-        )
+    next_window = planned_windows[completed_before_cancel]
+    expected_cursor = next_window[0]["sequence_index"] - 1
+    resumed_planned_window_count = len(planned_windows)
+    assert next_window[0] == planned_windows[completed_before_cancel - 1][-1]
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: payload.get("units_block", prompt_name),
     )
     discovery_call_count = 0
     progress_updates: list[tuple[int, int]] = []
@@ -2304,9 +2395,12 @@ def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeyp
             persisted_writes.append(json.loads(json.dumps(payload)))
         return original_write_json_atomic(path, payload)
 
-    def _complete_resume(*_args, **kwargs):
+    resumed_window_prompts: list[str] = []
+
+    def _complete_resume(_profile, _system_prompt, user_prompt, **kwargs):
         """Complete remaining discovery windows and the one saved synthesis candidate."""
         if str(kwargs["log_context"]["stage_label"]) == "character_discovery_window":
+            resumed_window_prompts.append(user_prompt)
             return _window_response_for_names([], "chunk-0001")
         return _synthesis_response_for_name("Alice")
 
@@ -2325,6 +2419,7 @@ def test_discovery_resume_persists_real_window_progress_before_synthesis(monkeyp
         for payload in persisted_writes
         if isinstance(payload.get("checkpoint"), dict) and payload["checkpoint"].get("phase") == "synthesis"
     )
+    assert resumed_window_prompts[0].startswith(f"CHUNK_ID: {next_window[0]['chunk_id']}\n")
     assert synthesis_checkpoint["completed_window_count"] == resumed_planned_window_count
     assert synthesis_checkpoint["planned_window_count"] == resumed_planned_window_count
     assert completed_document["character_profile_id_last_used"] == "profile-2"

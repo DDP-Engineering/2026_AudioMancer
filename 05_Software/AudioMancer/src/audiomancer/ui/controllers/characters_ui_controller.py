@@ -242,7 +242,7 @@ def handle_save_character_requested(
             persisted_payload = dict(profile_payload)
             persisted_payload["character_id"] = created_profile["character_id"]
             persisted_payload["canonical_name"] = normalized_name
-            persisted_payload["evidence"] = [dict(item) for item in created_profile["evidence"]]
+            persisted_payload.setdefault("evidence", [dict(item) for item in created_profile["evidence"]])
             character_discovery_service.update_character_profile(
                 window._current_project_root,
                 persisted_payload,
