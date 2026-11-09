@@ -136,6 +136,7 @@ class NaratorVoicePage(QWidget):
         self._profile_name_edit = QLineEdit(self)
         self._profile_name_edit.textChanged.connect(self._handle_editor_changed)
         self._profile_name_edit.hide()
+        editor_layout.addWidget(self._profile_name_edit)
 
         self._designer_group = QGroupBox("Voice Designer Prompt", self)
         designer_layout = QVBoxLayout(self._designer_group)
@@ -162,6 +163,8 @@ class NaratorVoicePage(QWidget):
         self._edit_profile_button.clicked.connect(self._emit_edit_profile)
         self._save_profile_button = QPushButton("Save", self)
         self._save_profile_button.clicked.connect(self._emit_save_profile)
+        self._cancel_edit_button = QPushButton("Cancel", self)
+        self._cancel_edit_button.clicked.connect(self._discard_profile_draft)
         self._delete_profile_button = QPushButton("Delete", self)
         self._delete_profile_button.clicked.connect(self._emit_delete_profile)
         self._generate_sample_button = QPushButton("Generate Sample", self)
@@ -171,6 +174,7 @@ class NaratorVoicePage(QWidget):
         actions_row.addWidget(self._create_profile_button)
         actions_row.addWidget(self._edit_profile_button)
         actions_row.addWidget(self._save_profile_button)
+        actions_row.addWidget(self._cancel_edit_button)
         actions_row.addWidget(self._delete_profile_button)
         actions_row.addWidget(self._generate_sample_button)
         actions_row.addWidget(self._preview_toggle_button)
@@ -345,6 +349,19 @@ class NaratorVoicePage(QWidget):
         self._original_profile = self.current_editor_payload()
         self._apply_control_state()
 
+    def _discard_profile_draft(self) -> None:
+        """@brief Restore the saved fields and leave edit mode without writing files."""
+        original = self._original_profile
+        if original is None:
+            return
+        self._edit_mode = False
+        self._dirty = False
+        self._original_profile = None
+        self._load_profile_into_editor(
+            str(original["display_name"]), str(original["prompt_text"]), str(original["preview_text"])
+        )
+        self._apply_control_state()
+
     def current_profile_id(self) -> str | None:
         """
         @brief      Read the currently selected narrator-profile identifier.
@@ -429,6 +446,10 @@ class NaratorVoicePage(QWidget):
         self._create_profile_button.setText(ui_state_service.translate("narator_voice.create_profile", language))
         self._edit_profile_button.setText(ui_state_service.translate("narator_voice.edit_profile", language))
         self._save_profile_button.setText(ui_state_service.translate("narator_voice.save_profile", language))
+        self._cancel_edit_button.setText(ui_state_service.translate("project.cancel", language))
+        profile_name_label = ui_state_service.translate("narator_voice.profile_name", language)
+        self._profile_name_edit.setPlaceholderText(profile_name_label)
+        self._profile_name_edit.setAccessibleName(profile_name_label)
         self._delete_profile_button.setText(ui_state_service.translate("narator_voice.delete_profile", language))
         self._generate_sample_button.setText(ui_state_service.translate("narator_voice.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
@@ -502,6 +523,9 @@ class NaratorVoicePage(QWidget):
             self._project_active and self._preview_available and (not self._busy or self._preview_active)
         )
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), self._ui_language))
+        self._profile_name_edit.setVisible(self._edit_mode)
+        self._cancel_edit_button.setVisible(self._edit_mode)
+        self._cancel_edit_button.setEnabled(editor_enabled)
         self._profile_name_edit.setReadOnly(not editor_enabled)
         self._designer_prompt.setReadOnly(not editor_enabled)
         self._preview_text_edit.setReadOnly(not editor_enabled)

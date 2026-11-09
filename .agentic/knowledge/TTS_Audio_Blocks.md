@@ -167,12 +167,10 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   clone budget selection and its runtime-effective early return remain explicit
   (`REQ-NFR-7fcf36ea`, `REQ-NFR-5bda19fd`).
 - Every VoiceWeaver voice request routes its language through one private
-  helper, `voiceweaver_runtime_service._add_tts_language_field()`. The runtime
-  offers seven languages and refuses any other with `unsupported_language`, so
-  the helper omits the field entirely for Romanian and for any code the active
-  model does not list in its reported `supported_languages`; a Romanian project
-  therefore still generates rather than aborting its Audio Blocks run
-  (`REQ-FUNC-1562fca1`).
+  helper, `voiceweaver_runtime_service._add_tts_language_field()`. It maps Romanian to the Italian
+  synthesis hint at the outbound boundary and preserves Romanian text,
+  reference transcripts, and project metadata. When the active model reports a
+  supported-language list, the helper omits a hint outside that list (`REQ-FUNC-1562fca1`).
 - `voiceweaver_runtime_service.normalize_model()` owns the discovered-model
   cache contract. It normalizes status, capabilities, scalar defaults and
   `generation_parameter_ranges`, while settings calls that exact contract and

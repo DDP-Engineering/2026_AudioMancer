@@ -4,10 +4,10 @@ title = "Send generation requests using the simplified VoiceWeaver contract"
 status = "active"
 
 requirement = """
-When AudioMancer requests voice design, direct clone, clone-prompt creation, clone-from-prompt generation, or sound generation, it shall use the documented unversioned route and exact required fields, naming the selected language only when the runtime offers that language and omitting the language field otherwise, and shall keep every field within the range the runtime accepts so that no request is refused for a value AudioMancer chose.
+When AudioMancer requests voice design, direct clone, clone-prompt creation, clone-from-prompt generation, or sound generation, it shall use the documented unversioned route and exact required fields, sending Italian for Romanian synthesis at the request boundary while preserving Romanian text and metadata, omitting a language hint that the active model's reported list excludes, and shall keep every field within the range the runtime accepts so that no request is refused for a value AudioMancer chose.
 """
 
-verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract, including one request whose selected language is Romanian and one whose selected language is outside the model's reported supported list, both of which carry no language field, and one sound request whose requested duration exceeds the model's output ceiling and is submitted at the ceiling; settings and TTS Settings tests confirm no out-of-range duration can be configured in the first place."
+verification = "Focused runtime-service tests capture every generation request and compare its route, content type, and fields with the simplified VoiceWeaver REST contract, including Italian hints and unchanged Romanian content for design and clone routes, omission for an unoffered hint when capabilities are reported, and one sound request whose requested duration exceeds the model's output ceiling and is submitted at the ceiling; settings and TTS Settings tests confirm no out-of-range duration can be configured in the first place."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/config.py",
@@ -23,7 +23,7 @@ linked_tests = [
   "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_generation_payloads_use_current_contract",
   "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract",
   "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract",
-  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_voiceweaver_runtime_service_direct_clone_uses_italian_hint_for_romanian",
   "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
   "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_sound_prompt_duration_is_bounded_by_the_model_output_ceiling",
   "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_scene_ambience_duration_above_the_model_ceiling",
@@ -34,8 +34,8 @@ priority = "high"
 rationale = """
 TTS invocation must match the runtime's current request contract. The runtime
 offers seven languages and refuses any other with `unsupported_language`, so a
-Romanian project would abort its whole Audio Blocks run if the selection were
-forwarded verbatim.
+Romanian project sends the Italian hint while keeping its Romanian text and
+reference transcript.
 """
 created = 2026-07-19
-updated = 2026-08-22
+updated = 2026-11-09

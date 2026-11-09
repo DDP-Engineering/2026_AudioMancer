@@ -212,7 +212,7 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
 
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:
     """
-    @brief      Verify voice-design generation sends the exact simplified REST request and omits unoffered languages.
+    @brief      Verify exact Voice Designer payloads and the Italian hint for Romanian.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -241,9 +241,19 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     voiceweaver_runtime_service.generate_voice_design(
         "http://127.0.0.1:8059",
         "ro",
-        "Salut",
+        "Bun\u0103 diminea\u021ba!",
         "Warm narrator.",
         {"top_k": 33},
+        supported_languages=["en", "it"],
+        timeout_seconds=90,
+    )
+    voiceweaver_runtime_service.generate_voice_design(
+        "http://127.0.0.1:8059",
+        "ro",
+        "Bun\u0103 diminea\u021ba!",
+        "Warm narrator.",
+        {"top_k": 33},
+        supported_languages=["en", "fr"],
         timeout_seconds=90,
     )
     voiceweaver_runtime_service.generate_voice_design(
@@ -272,7 +282,18 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
             "http://127.0.0.1:8059",
             "/voice/design",
             {
-                "text": "Salut",
+                "text": "Bun\u0103 diminea\u021ba!",
+                "language": "it",
+                "voice_description": "Warm narrator.",
+                "model_parameters": {"top_k": 33},
+            },
+            90,
+        ),
+        (
+            "http://127.0.0.1:8059",
+            "/voice/design",
+            {
+                "text": "Bun\u0103 diminea\u021ba!",
                 "voice_description": "Warm narrator.",
                 "model_parameters": {"top_k": 33},
             },
@@ -347,8 +368,8 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
     voiceweaver_runtime_service.create_voice_clone_prompt(
         "http://127.0.0.1:8059",
         b"sample-bytes",
-        "Reference transcript.",
-        "en",
+        "Aceasta este transcrierea mostrei de referin\u021b\u0103.",
+        "ro",
         {"temperature": 0.8},
         timeout_seconds=33,
     )
@@ -356,7 +377,7 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         "http://127.0.0.1:8059",
         {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
         "ro",
-        "Salut.",
+        "O voce rom\u00e2neasc\u0103.",
         {"top_k": 22},
         timeout_seconds=44,
     )
@@ -366,8 +387,8 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
             "POST",
             "http://127.0.0.1:8059/voice/clone-prompt",
             {
-                "sample_text": "Reference transcript.",
-                "language": "en",
+                "sample_text": "Aceasta este transcrierea mostrei de referin\u021b\u0103.",
+                "language": "it",
                 "model_parameters_json": '{"temperature": 0.8}',
             },
             "voice_sample",
@@ -382,7 +403,8 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
             "/voice/clone-from-prompt",
             {
                 "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
-                "text": "Salut.",
+                "text": "O voce rom\u00e2neasc\u0103.",
+                "language": "it",
                 "model_parameters": {"top_k": 22},
             },
             44,
@@ -532,9 +554,9 @@ def test_generated_wav_downloads_preserve_success_http_and_url_contracts(monkeyp
     assert url_error_info.value.__cause__ is url_failure
 
 
-def test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language(monkeypatch) -> None:
+def test_voiceweaver_runtime_service_direct_clone_uses_italian_hint_for_romanian(monkeypatch) -> None:
     """
-    @brief      Verify direct clone requests send an offered language and omit an unoffered one.
+    @brief      Verify direct cloning keeps the text and transcript while mapping the Romanian hint.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -589,7 +611,7 @@ def test_voiceweaver_runtime_service_direct_clone_omits_unoffered_language(monke
 
     assert observed_form_fields == [
         {"sample_text": "Reference transcript.", "language": "fr", "text": "Bonjour."},
-        {"sample_text": "Text de referinta.", "text": "Salut."},
+        {"sample_text": "Text de referinta.", "language": "it", "text": "Salut."},
     ]
 
 

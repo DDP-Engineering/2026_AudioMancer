@@ -232,7 +232,7 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
         _chat_json_factory([], {"profiles": []}),
     )
 
-    with pytest.raises(ValueError, match="exactly 2 profiles"):
+    with pytest.raises(ValueError, match="no usable profiles"):
         narrator_profile_generation_service.generate_narrator_profiles(
             project_root,
             {},
@@ -248,6 +248,107 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     assert state_payload is not None
     assert state_payload["status"] == "failed"
     assert state_payload["resume_checkpoint"]["completed_window_count"] == 1
+
+
+def test_narrator_profile_generation_keeps_usable_profiles_with_duplicate_names(
+    tmp_path, monkeypatch, mock_prompt_environment
+) -> None:
+    """@brief Retain valid suggestions and report a shortfall when one candidate is unusable."""
+    _write_narrator_prompts(mock_prompt_environment)
+    root = tmp_path / "project"
+    root.mkdir()
+    _write_chunks(root, "A reflective book with intimate narration and restrained tension.")
+    response = _profiles_payload(2)
+    first, second = response["profiles"]
+    second["display_name"] = first["display_name"]
+    response["profiles"].append({**first, "prompt_text": "Too short."})
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], response),
+    )
+
+    report = narrator_profile_generation_service.generate_narrator_profiles(root, {}, _MOCK_AI_PROFILE, 3, "en")
+
+    assert report["generated_profile_count"] == 2
+    assert report["warning_count"] == 1
+    assert "2 of 3" in report["warnings"][0]
+    profiles = narrator_definition_service.load_profiles(root)
+    assert [profile["display_name"] for profile in profiles] == [
+        first["display_name"], f"{first['display_name']} (2)",
+    ]
+
+
+def test_narrator_style_window_budget_counts_serialized_separators() -> None:
+    """@brief Keep the serialized block within its input budget at a two-unit boundary."""
+    units = [{"unit_id": f"unit-{index}", "sequence_index": index, "text": "x"} for index in (1, 2)]
+
+    windows = narrator_profile_generation_service._build_source_windows(
+        units, {"text_budget_tokens": 36, "style_window_size": 2}
+    )
+
+    assert windows == [[units[0]], [units[1]]]
+
+
+def test_narrator_style_shell_keeps_source_delimiters_at_the_budget_boundary() -> None:
+    """@brief Reject a unit when the shipped template's separators put it one token over budget."""
+    service = narrator_profile_generation_service
+    profile = {
+        **_MOCK_AI_PROFILE,
+        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+        "context_window": 4096,
+        "output_reserve_tokens": 2048,
+    }
+    system_prompt = service.prompt_template_service.render_prompt("narrator_profile_style_system", {})
+    instructions = "x" * 300
+    budget = service._build_budget_metadata(profile, system_prompt, instructions)
+    unit = {"unit_id": "chunk-0001", "sequence_index": 1, "text": "x" * 4833}
+    user_prompt = service._render_narrator_profile_prompt(
+        "narrator_profile_style_window_user",
+        {"units_block": service._build_units_block([unit]), "additional_profile_instructions": instructions},
+    )
+    input_limit = budget["context_window"] - budget["output_reserve_tokens"] - budget["safety_margin_tokens"]
+    assert service.ai_budget_service.estimate_text_tokens(f"{system_prompt}\n\n{user_prompt}") == input_limit + 1
+    with pytest.raises(ValueError, match="exceeds the available request input budget"):
+        service._build_source_windows([unit], budget)
+
+
+def test_online_narrator_style_windows_fit_remaining_rendered_input(
+    tmp_path, monkeypatch, mock_prompt_environment
+) -> None:
+    """@brief Bound online analysis by the remaining context even when the direct source cap is larger."""
+    _write_narrator_prompts(mock_prompt_environment)
+    root = tmp_path / "project"
+    root.mkdir()
+    _write_chunk_records(root, ["The narrator spoke. " * 110] * 2)
+    requests: list[tuple[str, str]] = []
+
+    def chat_json(_profile, system_prompt, user_prompt, **kwargs):
+        """@brief Capture the complete rendered style request while returning usable profiles."""
+        if kwargs["log_context"]["stage_label"] == "style_window":
+            requests.append((system_prompt, user_prompt))
+            return {"payload": {"tone": ["Measured"]}, "usage": _style_usage_payload()}
+        return {"payload": _profiles_payload(2), "usage": _generation_usage_payload()}
+
+    monkeypatch.setattr(narrator_profile_generation_service.llm_provider_service, "chat_json", chat_json)
+    profile = {
+        **_MOCK_AI_PROFILE,
+        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+        "context_window": 4096,
+        "output_reserve_tokens": 2048,
+    }
+    report = narrator_profile_generation_service.generate_narrator_profiles(
+        root, {}, profile, 2, "en", additional_profile_instructions="Style guidance. " * 185
+    )
+
+    budget = report["budget_metadata"]
+    limit = budget["context_window"] - budget["output_reserve_tokens"] - budget["safety_margin_tokens"]
+    assert budget["style_window_size"] == 0
+    assert len(requests) == 2
+    assert all(
+        narrator_profile_generation_service.ai_budget_service.estimate_text_tokens(f"{system}\n\n{user}") <= limit
+        for system, user in requests
+    )
 
 
 def test_narrator_profile_generation_substitutes_short_preview_text(
@@ -299,7 +400,7 @@ def test_narrator_profile_generation_rejects_invalid_prompt_text(
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify an unusable voice-designer prompt still fails the whole generation batch.
+    @brief      Verify a response containing only unusable voice-designer prompts fails.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
@@ -311,7 +412,8 @@ def test_narrator_profile_generation_rejects_invalid_prompt_text(
     project_root.mkdir()
     _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
     response_payload = _profiles_payload(2)
-    response_payload["profiles"][0]["prompt_text"] = "Too short."
+    for profile in response_payload["profiles"]:
+        profile["prompt_text"] = "Too short."
     monkeypatch.setattr(
         narrator_profile_generation_service.llm_provider_service,
         "chat_json",
@@ -400,7 +502,6 @@ def test_narrator_profile_generation_keeps_multi_line_preview_text() -> None:
     profiles, warnings = narrator_profile_generation_service._validated_generated_profiles(
         _profiles_payload(2, preview_text=preview_text),
         2,
-        {"male": 1, "female": 1, "random": 0, "random_gender": ""},
         "en",
     )
 
@@ -428,7 +529,6 @@ def test_narrator_profile_generation_preserves_latin_preview_budget_boundaries(
     profiles, warnings = narrator_profile_generation_service._validated_generated_profiles(
         _profiles_payload(2, preview_text=preview_text),
         2,
-        {"male": 1, "female": 1, "random": 0, "random_gender": ""},
         "en",
     )
 
@@ -831,7 +931,8 @@ def test_narrator_profile_generation_compacts_style_observations_for_final_promp
         [f"Style window {index} with irony, dialogue, manners, and restrained feeling." for index in range(1, 26)],
     )
     monkeypatch.setattr(narrator_profile_generation_service.config, "DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE", 1)
-    final_prompts: list[str] = []
+    final_prompts: list[tuple[str, str]] = []
+    oversized_term = "unbounded-model-term " * 5_000
 
     def _chat_json(_profile, _system_prompt, user_prompt, **kwargs):
         """
@@ -851,11 +952,11 @@ def test_narrator_profile_generation_compacts_style_observations_for_final_promp
                     "diction": ["Polished"],
                     "worldbuilding_cues": ["Regency society"],
                     "themes": ["Marriage and status", "Marriage and status"],
-                    "narration_risks": ["Overplaying irony"],
+                    "narration_risks": ["Overplaying irony", oversized_term],
                 },
                 "usage": _style_usage_payload(),
             }
-        final_prompts.append(user_prompt)
+        final_prompts.append((_system_prompt, user_prompt))
         return {"payload": _profiles_payload(2), "usage": _generation_usage_payload()}
 
     monkeypatch.setattr(
@@ -874,11 +975,18 @@ def test_narrator_profile_generation_compacts_style_observations_for_final_promp
     )
 
     assert len(final_prompts) == 1
-    assert '"summary_mode": "frequency_merge"' in final_prompts[0]
-    assert '"observation_count": 25' in final_prompts[0]
-    assert '"value": "Restrained irony"' in final_prompts[0]
-    assert '"count": 50' in final_prompts[0]
-    assert '"window_index"' not in final_prompts[0]
+    system_prompt, final_prompt = final_prompts[0]
+    assert '"summary_mode": "frequency_merge"' in final_prompt
+    assert '"observation_count": 25' in final_prompt
+    assert '"value": "Restrained irony"' in final_prompt
+    assert '"count": 50' in final_prompt
+    assert '"window_index"' not in final_prompt
+    assert "unbounded-model-term" not in final_prompt
+    budget = report_payload["budget_metadata"]
+    input_limit = budget["context_window"] - budget["output_reserve_tokens"] - budget["safety_margin_tokens"]
+    assert narrator_profile_generation_service.ai_budget_service.estimate_text_tokens(
+        f"{system_prompt}\n\n{final_prompt}"
+    ) <= input_limit
     assert report_payload["style_summary"]["observation_count"] == 25
     assert len(narrator_definition_service.load_profiles(project_root)) == 2
 

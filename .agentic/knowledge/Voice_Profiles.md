@@ -11,7 +11,8 @@ required before speech generation.
 
 - Own the strict Narrator Voice document and profile-owned WAV contract.
 - Persist Character Voices targets and target-specific sample metadata.
-- Generate resumable AI narrator suggestions without exposing partial profiles.
+- Generate resumable AI narrator suggestions and keep usable profiles from
+  a partially successful response.
 - Preserve the enabled narrator-generation AI profile across page refreshes and
   apply configured-default then first-enabled fallback when it becomes invalid
   (`REQ-UX-f6f92026`, `REQ-UX-850b356e`, `REQ-UX-cbed137b`).
@@ -56,21 +57,25 @@ It does not synthesize Speech Blocks or final TTS Audio Blocks.
 Profile/sample/selection mutations validate and atomically replace that
 document; language application compares the fully validated profile list and
 writes only when migration changes it. Exact prior-language canonical defaults
-localize, while authored previews and sample metadata remain intact. WAV writes
-are atomic and use immutable profile IDs. Sample deletion suppresses only WAV
-filesystem errors before performing the normal strict document update, and the
-controller releases preview playback plus its source before deleting a profile.
+localize, while authored previews and sample metadata remain intact. Narrator
+edits stay in a draft until Save. Cancel restores the saved fields. Changing only the name preserves the WAV and
+selection. A changed prompt, preview or language retires its sample and
+selection, then the controller invalidates the selected voice's dependent audio.
+Generated and imported WAVs publish with their transcript metadata through
+recoverable replacement. Explicit sample deletion remains best-effort for WAV
+filesystem errors. The controller releases playback before replacing or deleting a sample.
 `tts_budget_service.preview_word_bounds()` derives one accepted spoken-word range
 from the configured minimum and target preview durations, so narrator generation,
 character synthesis, the canonical defaults of both operations, and both editor
 gates cannot drift apart; `narrator_preview_word_bounds()` and
 `preview_text_range_error()` remain on `narrator_definition_service` as thin
 delegates. Only length is judged - line breaks are spoken as pauses and are
-accepted on both paths. AI generation stores compact checkpoints in the same document and
-appends profiles only after complete validation. A generated preview outside the
-range does not fail the run: that one profile keeps its generated voice prompt
-and takes the canonical default preview text, and the report's warning list
-names it, while an unusable `prompt_text` still rejects the whole response. The main window passes the page-owned
+accepted on both paths. AI generation stores compact checkpoints in the same
+document, estimates serialized style windows within remaining context for each
+backend, and drops ranked summary terms when
+the final request would exceed the estimated input budget. It appends usable
+profiles with unique names and reports a shortfall. A generated preview outside
+the range takes the canonical default and is reported. The main window passes the page-owned
 live narrator-generation AI selection back through the enabled-profile resolver.
 Character-voice services keep their independent target contract and resolve the
 selected narrator through the narrator service. `tts_runtime_ui_support`

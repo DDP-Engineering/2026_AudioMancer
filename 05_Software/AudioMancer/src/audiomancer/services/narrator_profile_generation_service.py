@@ -258,6 +258,7 @@ def generate_narrator_profiles(
             additional_profile_instructions=additional_profile_instructions,
         )
 
+    input_limit = _estimated_input_limit(budget_metadata)
     for window_index, window_units in enumerate(windows, start=1):
         if window_index <= completed_window_count:
             continue
@@ -274,6 +275,8 @@ def generate_narrator_profiles(
             },
         )
         try:
+            if ai_budget_service.estimate_text_tokens(f"{system_prompt}\n\n{user_prompt}") > input_limit:
+                raise ValueError("The rendered narrator analysis prompt exceeds the available input budget.")
             response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
                 system_prompt,
@@ -331,19 +334,20 @@ def generate_narrator_profiles(
         _write_interrupted_state("cancelled")
         raise
     style_summary = _build_style_observation_summary(observations)
-    user_prompt = _render_narrator_profile_prompt(
-        "narrator_profile_generation_user",
-        {
-            "voice_language": narrator_definition_service.narrator_language_label(normalized_voice_language),
-            "profile_count": requested_count,
-            "male_count": int(allocation["male"]),
-            "female_count": int(allocation["female"]),
-            "random_gender_count": int(allocation["random"]),
-            "style_observations": json.dumps(style_summary, indent=2, ensure_ascii=False),
-            "additional_profile_instructions": additional_profile_instructions,
-        },
-    )
     try:
+        user_prompt = _render_bounded_generation_prompt(
+            system_prompt,
+            {
+                "voice_language": narrator_definition_service.narrator_language_label(normalized_voice_language),
+                "profile_count": requested_count,
+                "male_count": int(allocation["male"]),
+                "female_count": int(allocation["female"]),
+                "random_gender_count": int(allocation["random"]),
+                "additional_profile_instructions": additional_profile_instructions,
+            },
+            style_summary,
+            budget_metadata,
+        )
         response_result = llm_provider_service.chat_json(
             ai_profile_payload,
             system_prompt,
@@ -372,7 +376,6 @@ def generate_narrator_profiles(
         validated_profiles, preview_warnings = _validated_generated_profiles(
             response_payload,
             requested_count,
-            allocation,
             normalized_voice_language,
         )
     except Exception:
@@ -384,6 +387,9 @@ def generate_narrator_profiles(
         persist=False,
     )
     generated_profile_ids = [str(profile.get("profile_id", "")) for profile in created_profiles]
+    warnings = list(preview_warnings)
+    if len(generated_profile_ids) < requested_count:
+        warnings.append(f"The AI returned {len(generated_profile_ids)} of {requested_count} requested usable profiles.")
     report_payload = {
         "narrator_profile_generation_mode": NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
         "ai_profile_id": profile_id,
@@ -398,8 +404,9 @@ def generate_narrator_profiles(
         "style_brief": str(response_payload.get("style_brief", "")).strip(),
         "style_summary": style_summary,
         "budget_metadata": budget_metadata,
-        "warning_count": len(preview_warnings),
-        "warnings": list(preview_warnings),
+        "warning_count": len(warnings),
+        "preview_warning_count": len(preview_warnings),
+        "warnings": warnings,
         "token_usage": token_usage,
         "additional_profile_instructions": additional_profile_instructions,
         "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
@@ -610,7 +617,8 @@ def _build_budget_metadata(
     style_prompt_shell = _render_narrator_profile_prompt(
         "narrator_profile_style_window_user",
         {
-            "units_block": "",
+            # Keep the real source delimiters and reserve the estimator's rounding allowance.
+            "units_block": "(source)",
             "additional_profile_instructions": additional_profile_instructions,
         },
     )
@@ -626,27 +634,28 @@ def _build_budget_metadata(
             "additional_profile_instructions": additional_profile_instructions,
         },
     )
+    online_profile = ai_budget_service.uses_online_text_budget(ai_profile_payload)
+    text_context_fraction = (
+        config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION
+        if online_profile
+        else config.DEFAULT_NARRATOR_PROFILE_TEXT_CONTEXT_FRACTION
+    )
     style_budget = ai_budget_service.context_budget_metadata(
         ai_profile_payload,
         f"{system_prompt}\n\n{style_prompt_shell}",
         config.DEFAULT_NARRATOR_PROFILE_MIN_SAFETY_MARGIN_TOKENS,
         config.DEFAULT_NARRATOR_PROFILE_SAFETY_MARGIN_CONTEXT_FRACTION,
-        config.DEFAULT_NARRATOR_PROFILE_TEXT_CONTEXT_FRACTION,
+        text_context_fraction,
         config.DEFAULT_NARRATOR_PROFILE_MIN_TEXT_BUDGET_TOKENS,
         "AI narrator profile generation cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for style input",
-        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
     generation_prompt_budget_tokens = ai_budget_service.estimate_text_tokens(
         f"{system_prompt}\n\n{generation_prompt_shell}"
     )
     return {
         **style_budget,
-        "style_window_size": (
-            0
-            if ai_budget_service.uses_online_text_budget(ai_profile_payload)
-            else config.DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE
-        ),
+        "style_window_size": 0 if online_profile else config.DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE,
         "generation_prompt_budget_tokens": generation_prompt_budget_tokens,
     }
 
@@ -759,27 +768,27 @@ def _build_source_windows(
         max_window_units = len(source_units)
     text_budget_tokens = int(budget_metadata["text_budget_tokens"])
     windows: list[list[SourceUnitPayload]] = []
-    start_index = 0
-    while start_index < len(source_units):
-        end_index = start_index - 1
-        current_tokens = 0
-        current_count = 0
-        while end_index + 1 < len(source_units) and current_count < max_window_units:
-            candidate = source_units[end_index + 1]
-            candidate_tokens = ai_budget_service.estimate_text_tokens(_build_units_block([candidate]))
-            if candidate_tokens > text_budget_tokens:
-                raise ValueError(
-                    "AI narrator profile generation cannot run because source unit "
-                    f"{candidate.get('unit_id', '')} exceeds the available request input budget "
-                    f"({candidate_tokens} estimated tokens, {text_budget_tokens} available)."
-                )
-            if current_count > 0 and current_tokens + candidate_tokens > text_budget_tokens:
-                break
-            current_tokens += candidate_tokens
-            current_count += 1
-            end_index += 1
-        windows.append(source_units[start_index : end_index + 1])
-        start_index = end_index + 1
+    current_window: list[SourceUnitPayload] = []
+    rendered_window = ""
+    for unit in source_units:
+        rendered_unit = _build_units_block([unit])
+        unit_tokens = ai_budget_service.estimate_text_tokens(rendered_unit)
+        if unit_tokens > text_budget_tokens:
+            raise ValueError(
+                "AI narrator profile generation cannot run because source unit "
+                f"{unit.get('unit_id', '')} exceeds the available request input budget "
+                f"({unit_tokens} estimated tokens, {text_budget_tokens} available)."
+            )
+        combined = f"{rendered_window}\n\n{rendered_unit}" if current_window else rendered_unit
+        combined_tokens = ai_budget_service.estimate_text_tokens(combined)
+        if len(current_window) == max_window_units or combined_tokens > text_budget_tokens:
+            windows.append(current_window)
+            current_window = []
+            combined = rendered_unit
+        current_window.append(unit)
+        rendered_window = combined
+    if current_window:
+        windows.append(current_window)
     return windows
 
 
@@ -844,6 +853,50 @@ def _build_style_observation_summary(observations: list[dict[str, object]]) -> d
     }
 
 
+def _estimated_input_limit(budget_metadata: dict[str, int]) -> int:
+    """@brief Return the available input after reserving output and safety capacity."""
+    return (
+        budget_metadata["context_window"]
+        - budget_metadata["output_reserve_tokens"]
+        - budget_metadata["safety_margin_tokens"]
+    )
+
+
+def _render_bounded_generation_prompt(
+    system_prompt: str,
+    variables: dict[str, object],
+    style_summary: dict[str, object],
+    budget_metadata: dict[str, int],
+) -> str:
+    """
+    @brief         Render the final request, dropping expensive summary terms only when needed.
+    @param[in]     system_prompt System instructions used in the request.
+    @param[in]     variables Final prompt values other than style observations.
+    @param[in,out] style_summary Ranked term summary, updated to reflect the sent request.
+    @param[in]     budget_metadata Context, output reserve and safety margin.
+    @return        Final user prompt within the estimated input budget.
+    @exception     ValueError Raised when the prompt cannot fit even without style terms.
+    """
+    input_limit = _estimated_input_limit(budget_metadata)
+    fields = style_summary["fields"]
+    omitted_counts = style_summary["omitted_term_counts"]
+    while True:
+        user_prompt = _render_narrator_profile_prompt(
+            "narrator_profile_generation_user",
+            {**variables, "style_observations": json.dumps(style_summary, indent=2, ensure_ascii=False)},
+        )
+        if ai_budget_service.estimate_text_tokens(f"{system_prompt}\n\n{user_prompt}") <= input_limit:
+            return user_prompt
+        populated_fields = [name for name, terms in fields.items() if terms]
+        if not populated_fields:
+            raise ValueError(
+                "The narrator profile prompt does not fit. Shorten the instructions or use a larger context."
+            )
+        field_name = max(populated_fields, key=lambda name: len(str(fields[name][-1]["value"])))
+        fields[field_name].pop()
+        omitted_counts[field_name] += 1
+
+
 def _rank_style_terms(observations: list[dict[str, object]], field_name: str) -> list[dict[str, object]]:
     """
     @brief      Count and rank normalized style terms for one observation field.
@@ -890,49 +943,43 @@ def _normalized_style_term(term: object) -> str:
 def _validated_generated_profiles(
     response_payload: dict[str, object],
     requested_count: int,
-    allocation: dict[str, object],
     voice_language: str,
-) -> list[dict[str, object]]:
+) -> tuple[list[dict[str, object]], list[str]]:
     """
     @brief      Validate generated narrator profiles before persistence.
     @param[in]  response_payload Raw generation response payload.
     @param[in]  requested_count Requested narrator profile count.
-    @param[in]  allocation Required gender allocation payload.
     @param[in]  voice_language Selected audiobook voice language code.
     @details    Preview text whose length the accepted bounds refuse is replaced by the canonical
                 default for the selected language rather than failing the batch, because it is an
-                interchangeable sample script; an unusable prompt_text still rejects the whole
-                response. Line breaks are spoken as pauses and are accepted.
+                interchangeable sample script. Unusable voice prompts are skipped and display
+                names are made unique by the persistence service.
     @return     Tuple of validated generated profile payloads and preview-substitution warnings.
-    @exception  ValueError Raised when the AI response does not satisfy the contract.
+    @exception  ValueError Raised when the response contains no usable profiles.
     """
     raw_profiles = response_payload.get("profiles", [])
-    if not isinstance(raw_profiles, list) or len(raw_profiles) != requested_count:
-        raise ValueError(f"AI narrator generation must return exactly {requested_count} profiles.")
+    if not isinstance(raw_profiles, list) or not raw_profiles:
+        raise ValueError("AI narrator generation returned no usable profiles.")
     profiles: list[dict[str, object]] = []
     warnings: list[str] = []
-    names: set[str] = set()
-    gender_counts = {"male": 0, "female": 0}
+    invalid_reason = "AI narrator generation returned no usable profiles."
     min_preview_units = _minimum_preview_budget_units()
     max_preview_units = _maximum_preview_budget_units()
     for index, raw_profile in enumerate(raw_profiles, start=1):
         if not isinstance(raw_profile, dict):
-            raise ValueError(f"Generated narrator profile #{index} is not an object.")
-        display_name = str(raw_profile.get("display_name", "")).strip()
+            continue
+        display_name = str(raw_profile.get("display_name") or "").strip() or f"AI Narrator {index}"
         gender = str(raw_profile.get("gender", "")).strip().casefold()
         style_label = str(raw_profile.get("style_label", "")).strip()
-        prompt_text = str(raw_profile.get("prompt_text", "")).strip()
+        raw_prompt = raw_profile.get("prompt_text")
+        prompt_text = raw_prompt.strip() if isinstance(raw_prompt, str) else ""
         preview_text = str(raw_profile.get("preview_text", "")).strip()
-        if not display_name:
-            raise ValueError(f"Generated narrator profile #{index} is missing a display_name.")
-        if display_name.casefold() in names:
-            raise ValueError(f"Generated narrator profile name is duplicated: {display_name}.")
-        if gender not in gender_counts:
-            raise ValueError(f"Generated narrator profile #{index} has unsupported gender '{gender}'.")
         if not prompt_text or len(prompt_text.split()) < 12:
-            raise ValueError(f"Generated narrator profile '{display_name}' has an invalid prompt_text.")
+            invalid_reason = f"Generated narrator profile '{display_name}' has an invalid prompt_text."
+            continue
         if _contains_audio_generation_request(prompt_text):
-            raise ValueError(f"Generated narrator profile '{display_name}' prompt_text asks for audio generation.")
+            invalid_reason = f"Generated narrator profile '{display_name}' prompt_text asks for audio generation."
+            continue
         preview_budget_units = tts_budget_service.estimate_budget_units(preview_text)
         unusable_preview_reason = ""
         if preview_budget_units < min_preview_units:
@@ -951,8 +998,6 @@ def _validated_generated_profiles(
                 f"Generated preview text for '{display_name}' {unusable_preview_reason}; "
                 f"the default preview text for this language was used instead."
             )
-        names.add(display_name.casefold())
-        gender_counts[gender] += 1
         profiles.append(
             {
                 "display_name": display_name,
@@ -963,8 +1008,10 @@ def _validated_generated_profiles(
                 "preview_text": preview_text,
             }
         )
-    if gender_counts["male"] != int(allocation["male"]) or gender_counts["female"] != int(allocation["female"]):
-        raise ValueError("AI narrator generation returned profiles with the wrong male/female allocation.")
+        if len(profiles) == requested_count:
+            break
+    if not profiles:
+        raise ValueError(invalid_reason)
     return profiles, warnings
 
 

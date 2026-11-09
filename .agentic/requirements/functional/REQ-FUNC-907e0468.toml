@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-907e0468"
+title = "Keep usable narrator profile suggestions from partial responses"
+status = "active"
+requirement = "Narrator profile generation shall append usable suggestions up to the requested count with unique display names, report a shortfall, and preserve the existing inventory when no suggestion is usable."
+verification = "Return duplicate names and fewer usable suggestions than requested, verify the suffix and shortfall, and check an all-invalid response still fails."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_keeps_usable_profiles_with_duplicate_names", "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged", "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_reports_profile_shortfall_separately_from_preview_defaults"]
+created = 2026-11-09
+updated = 2026-11-09

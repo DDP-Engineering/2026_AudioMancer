@@ -35,9 +35,6 @@ _endpoint_url = join_endpoint_url
 # @brief Generation modes the current VoiceWeaver REST contract defines.
 SUPPORTED_GENERATION_MODES = ("voice_design", "clone", "sound_prompt")
 
-# @brief Voice language AudioMancer offers that no VoiceWeaver backend can synthesize.
-_LANGUAGE_NEVER_OFFERED_BY_RUNTIME = "ro"
-
 VoiceWeaverModelPayload = dict[str, object]
 VoiceWeaverCapabilityMatrix = dict[str, object]
 VoiceWeaverProbeResult = dict[str, object]
@@ -105,25 +102,26 @@ def _add_tts_language_field(
     supported_languages: list[str] | None = None,
 ) -> None:
     """
-    @brief      Add the VoiceWeaver TTS language field when the runtime offers the selected language.
+    @brief      Add the VoiceWeaver TTS language hint when the runtime offers it.
+    @details    Romanian content uses the Italian hint at this request boundary. Text and
+                project or sample language metadata retain their original values.
     @param[in]  payload Mutable outbound TTS request payload.
-    @param[in]  language Selected synthesis language code.
+    @param[in]  language Selected project or reference-sample language code.
     @param[in]  supported_languages Optional language codes the active model reports as supported.
     @return     None.
     @exception  None
     """
     normalized_language = str(language).strip()
+    runtime_language = "it" if normalized_language == "ro" else normalized_language
     normalized_supported_languages = (
         {str(item).strip() for item in supported_languages if str(item).strip()}
         if supported_languages is not None
         else None
     )
-    if normalized_language == _LANGUAGE_NEVER_OFFERED_BY_RUNTIME:
+    if normalized_supported_languages is not None and runtime_language not in normalized_supported_languages:
         return
-    if normalized_supported_languages is not None and normalized_language not in normalized_supported_languages:
-        return
-    if normalized_language:
-        payload["language"] = normalized_language
+    if runtime_language:
+        payload["language"] = runtime_language
 
 
 def _send_multipart_request(

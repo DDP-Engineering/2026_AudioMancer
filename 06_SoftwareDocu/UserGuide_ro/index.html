@@ -131,7 +131,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Limbile tinta pentru traducere sunt engleza, romana, germana, franceza, rusa, portugheza, spaniola
                     si italiana. Limba vorbita urmeaza limba traducerii salvata pe pagina Acasa, deci VoiceWeaver are
-                    nevoie de voci care o sustin.
+                    nevoie de voci care o sustin. Pentru romana, AudioMancer pastreaza textul si transcrierea
+                    mostrei in romana si trimite catre VoiceWeaver codul de limba pentru italiana la proiectarea
+                    si clonarea vocilor.
                 </p>
                 <div class="warning">
                     AudioMancer construieste definitii si mostre de voce pentru naratorul si personajele acestui
@@ -872,11 +874,18 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li><strong>Creeaza</strong> cere un nume afisat, apoi deschide un profil gol pentru editare.</li>
                     <li><strong>Genereaza Naratori</strong> cere profilului AI selectat sugestii editabile. Confirma intai &mdash; analiza poate dura mult si poate consuma tokeni platiti &mdash; apoi intreaba cate profiluri sa genereze (de la 1 la 20), apoi deschide <strong>Instructiuni Profil Narator</strong> pentru reguli suplimentare optionale. Acestea sunt doar sugestii de text; nu se produce audio.</li>
-                    <li><strong>Editeaza</strong> deblocheaza promptul si textul de previzualizare. Avertizeaza ca a continua sterge mostra curenta si, cand editezi naratorul selectat si exista deja audio, ca audio generat al naratorului si Asamblarea Audio vor fi resetate.</li>
+                    <li><strong>Editeaza</strong> deschide o ciorna. <strong>Anuleaza</strong> restaureaza campurile salvate.
+                    <strong>Salveaza</strong> cere confirmare daca
+                    schimbarea promptului, a textului de previzualizare sau a limbii va retrage mostra ori va reseta
+                    naratorul selectat si fisierele audio dependente. Redenumirea pastreaza mostra si selectia.</li>
                     <li><strong>Salveaza</strong> confirma modificarea. <strong>Sterge</strong> elimina un profil personalizat dupa confirmare.</li>
                 </ul>
+                <p>Aplicatia pastreaza sugestiile utilizabile si anunta daca modelul a returnat mai putine profiluri
+                    decat ai cerut. Numele duplicate primesc un sufix.</p>
                 <h3>Mostre</h3>
                 <ul>
+                    <li>La generare si import, fisierul WAV si transcrierea se salveaza impreuna. Daca inlocuirea
+                    esueaza, aplicatia restaureaza perechea anterioara sau indica folderul de recuperare.</li>
                     <li><strong>Genereaza Mostra</strong> confirma intai &mdash; AudioMancer contacteaza runtimeul TTS, iar conexiunea trebuie testata in prealabil in Setari TTS &mdash; apoi produce fisierul WAV. Daca exista o mostra, ea este inlocuita.</li>
                     <li><strong>Importa Mostra</strong> deschide un selector de fisiere WAV, valideaza fisierul, apoi cere textul exact rostit in el. Acel text este obligatoriu: el este ceea ce modelul de voce potriveste.</li>
                     <li><strong>Reda</strong> reda mostra si devine <strong>Opreste</strong> in timpul redarii, deci o poti opri chiar si cand pagina este altfel ocupata.</li>

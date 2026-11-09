@@ -19,6 +19,7 @@
 from contextlib import suppress
 import json
 from pathlib import Path
+import tempfile
 from uuid import uuid4
 
 from audiomancer import config
@@ -30,7 +31,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
-from audiomancer.services.persistence_service import write_bytes_atomic, write_json_atomic
+from audiomancer.services.persistence_service import replace_project_files, write_bytes_atomic, write_json_atomic
 
 # CONSTANTS
 
@@ -566,62 +567,76 @@ def append_ai_generated_profiles(
     return created_profiles
 
 
+def profile_voice_changed(before: dict[str, object], draft: dict[str, object]) -> bool:
+    """
+    @brief      Decide whether saving the draft changes inputs used to generate the sample.
+    @param[in]  before Persisted narrator profile.
+    @param[in]  draft Edited profile, with omitted fields inherited from the saved profile.
+    @return     True when the effective prompt, preview text, or language changes.
+    """
+    previous_language = narrator_language_code(before.get("language"))
+    return narrator_language_code(draft.get("language"), previous_language) != previous_language or any(
+        str(draft.get(field, before.get(field, ""))).strip() != str(before.get(field, "")).strip()
+        for field in ("prompt_text", "preview_text")
+    )
+
+
 def update_custom_profile(
     project_root: str | Path,
     profile_payload: dict[str, object],
 ) -> dict[str, object]:
     """
-    @brief      Update and persist one existing narrator profile.
+    @brief      Save one narrator draft and retire its sample only when voice inputs change.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_payload Updated narrator-profile payload.
     @return     The persisted updated narrator-profile payload.
-    @exception  ValueError Raised when the profile is missing.
+    @exception  ValueError Raised when the profile is missing or the project changed.
+    @exception  OSError Raised when the new profile and sample state cannot be published.
     """
+    root = Path(project_root).resolve()
     profile_id = str(profile_payload.get("profile_id", "")).strip()
-    document = load_narrator_voice_document(project_root)
-    profiles = list(document["profiles"])
+    document_path = ensure_narrator_voice_document(root)
+    original_document = document_path.read_bytes()
+    document = load_narrator_voice_document(root)
+    profiles = document["profiles"]
     validate_profile_name(profiles, profile_payload.get("display_name"), profile_id)
-    updated_profile = None
-    normalized_profiles: list[dict[str, object]] = []
-    for profile in profiles:
-        if str(profile.get("profile_id", "")).strip() != profile_id:
-            normalized_profiles.append(profile)
+    for index, profile in enumerate(profiles):
+        if profile["profile_id"] != profile_id:
             continue
         updated_profile = _normalize_profile(
             {
-                **dict(profile),
+                **profile,
                 "display_name": profile_payload.get("display_name"),
-                "language": narrator_language_code(profile_payload.get("language"), str(profile.get("language", ""))),
-                "prompt_text": profile_payload.get("prompt_text"),
-                "preview_text": profile_payload.get("preview_text"),
+                "language": narrator_language_code(profile_payload.get("language"), str(profile["language"])),
+                "prompt_text": profile_payload.get("prompt_text", profile["prompt_text"]),
+                "preview_text": profile_payload.get("preview_text", profile["preview_text"]),
             }
         )
-        normalized_profiles.append(updated_profile)
-    if updated_profile is None:
-        raise ValueError("missing_profile")
-    document["profiles"] = normalized_profiles
-    write_narrator_voice_document(project_root, document)
-    _NARRATOR_DEFINITION_LOGGER.info("Updated narrator profile profile_id=%s", profile_id)
-    return updated_profile
+        profiles[index] = updated_profile
+        if profile_voice_changed(profile, updated_profile):
+            updated_profile["sample"] = None
+            if document["selected_profile_id"] == profile_id:
+                document["selected_profile_id"] = None
+            _publish_profile_with_sample(root, document, original_document, profile_id, audio_bytes=None)
+        elif updated_profile != profile:
+            write_narrator_voice_document(root, document)
+        _NARRATOR_DEFINITION_LOGGER.info("Updated narrator profile profile_id=%s", profile_id)
+        return updated_profile
+    raise ValueError("missing_profile")
 
 
 def begin_profile_edit(project_root: str | Path, profile_id: str) -> dict[str, object]:
     """
-    @brief      Prepare one narrator profile for editing by clearing sample and selection state.
+    @brief      Read one narrator profile for a draft without changing persisted state.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
-    @return     Updated target profile payload.
+    @return     Target profile payload.
     @exception  ValueError Raised when the profile is missing.
     """
     target_profile = profile_by_id(project_root, profile_id)
     if target_profile is None:
         raise ValueError("missing_profile")
-
-    delete_profile_sample(project_root, profile_id)
-    selected_state = load_selected_profile_state(project_root)
-    if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
-        clear_narrator_selection(project_root)
-    return profile_by_id(project_root, profile_id) or target_profile
+    return target_profile
 
 
 def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, object]]:
@@ -813,9 +828,7 @@ def store_profile_sample(
     @return     Persisted sample metadata payload.
     @exception  None
     """
-    ensure_narrator_definition_files(project_root)
     profile_id = str(profile.get("profile_id", "")).strip()
-    audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
         "source_kind": NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
         "preview_text": str(preview_text).strip(),
@@ -827,12 +840,7 @@ def store_profile_sample(
         ),
     }
     _ = runtime_result_summary
-    write_bytes_atomic(audio_path, audio_bytes)
-    _update_profile_sample_metadata(
-        project_root,
-        profile_id,
-        metadata_payload=metadata_payload,
-    )
+    _publish_new_profile_sample(project_root, profile_id, metadata_payload, audio_bytes)
     return metadata_payload
 
 
@@ -851,14 +859,12 @@ def import_profile_sample(
     @return     Persisted imported-sample metadata payload.
     @exception  ValueError Raised when the sample path or transcript is invalid.
     """
-    ensure_narrator_definition_files(project_root)
     normalized_preview_text = str(preview_text or "").strip()
     if not normalized_preview_text:
         raise ValueError("empty_preview_text")
     source_path = Path(source_audio_path)
     voice_sample_import_service.validate_imported_wav_sample(source_path)
     profile_id = str(profile.get("profile_id", "")).strip()
-    audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
         "source_kind": NARRATOR_SAMPLE_SOURCE_IMPORTED,
         "preview_text": normalized_preview_text,
@@ -866,12 +872,7 @@ def import_profile_sample(
         "source_model_id": None,
         "source_file_name": source_path.name,
     }
-    write_bytes_atomic(audio_path, source_path.read_bytes())
-    _update_profile_sample_metadata(
-        project_root,
-        profile_id,
-        metadata_payload=metadata_payload,
-    )
+    _publish_new_profile_sample(project_root, profile_id, metadata_payload, source_path.read_bytes())
     return metadata_payload
 
 
@@ -1057,6 +1058,63 @@ def _unique_display_name(display_name: object, existing_names: set[str]) -> str:
         candidate_name = f"{base_name} ({suffix_index})"
         suffix_index += 1
     return candidate_name
+
+
+def _publish_new_profile_sample(
+    project_root: str | Path, profile_id: str, metadata_payload: dict[str, object], audio_bytes: bytes
+) -> None:
+    """
+    @brief      Update one profile's sample metadata and publish the corresponding WAV.
+    @param[in]  project_root Active project root folder.
+    @param[in]  profile_id Target narrator-profile identifier.
+    @param[in]  metadata_payload Metadata matching the new WAV.
+    @param[in]  audio_bytes Complete sample WAV.
+    @return     None.
+    @exception  ValueError Raised when the target profile is missing.
+    """
+    root = Path(project_root).resolve()
+    original_document = ensure_narrator_voice_document(root).read_bytes()
+    document = load_narrator_voice_document(root)
+    profile = next((item for item in document["profiles"] if item["profile_id"] == profile_id), None)
+    if profile is None:
+        raise ValueError("missing_profile")
+    profile["sample"] = metadata_payload
+    _publish_profile_with_sample(root, document, original_document, profile_id, audio_bytes)
+
+
+def _publish_profile_with_sample(
+    root: Path,
+    document: dict[str, object],
+    original_document: bytes,
+    profile_id: str,
+    audio_bytes: bytes | None,
+) -> None:
+    """
+    @brief      Publish narrator JSON and the corresponding WAV as one recoverable replacement.
+    @param[in]  root Resolved project folder.
+    @param[in]  document New narrator document.
+    @param[in]  original_document Bytes used to prepare the new document.
+    @param[in]  profile_id Owner of the sample being replaced or retired.
+    @param[in]  audio_bytes Replacement WAV, or None to retire the current sample.
+    @return     None.
+    @exception  OSError Raised when publication fails.
+    """
+    document_path = _document_path(root)
+    audio_path = _current_profile_sample_audio_path(root, profile_id)
+    with tempfile.TemporaryDirectory(prefix=".narrator-voice-stage-", dir=root) as directory:
+        stage = Path(directory)
+        staged_document = write_narrator_voice_document(stage, document)
+        staged_audio = None
+        if audio_bytes is not None:
+            staged_audio = stage / audio_path.name
+            write_bytes_atomic(staged_audio, audio_bytes)
+        replace_project_files(
+            root,
+            {Path(audio_path.name): staged_audio, Path(document_path.name): staged_document},
+            document_path,
+            original_document,
+            "Narrator Voice",
+        )
 
 
 def _update_profile_sample_metadata(

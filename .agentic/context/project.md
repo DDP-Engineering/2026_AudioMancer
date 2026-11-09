@@ -42,6 +42,13 @@ AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
 context budgeting and token-usage normalization. Workflow services own their
 prompts, semantic response validation and project-local artifacts.
 
+Narrator Voice keeps edits in a draft, publishes the WAV with its transcript,
+and retains usable AI profile suggestions.
+
+VoiceWeaver receives the Italian synthesis hint for Romanian voice design and
+cloning. Project languages, speech text, and reference transcripts retain their
+Romanian values.
+
 ## Supported operation
 
 The LLM backend options are LM Studio, Ollama, OpenAI-compatible endpoints and

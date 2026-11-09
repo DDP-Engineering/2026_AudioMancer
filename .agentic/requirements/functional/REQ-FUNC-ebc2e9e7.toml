@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-ebc2e9e7"
+title = "Bound the rendered narrator analysis and synthesis requests"
+status = "active"
+requirement = "Narrator profile generation shall budget the serialized analysis windows and final style summary as sent, dropping summary terms when necessary to fit the available input budget."
+verification = "Check a separator-sensitive boundary, online windows constrained by prompt overhead, and a huge style term, then assert the rendered final request fits."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_style_shell_keeps_source_delimiters_at_the_budget_boundary", "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_online_narrator_style_windows_fit_remaining_rendered_input", "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_style_window_budget_counts_serialized_separators", "05_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_compacts_style_observations_for_final_prompt"]
+created = 2026-11-09
+updated = 2026-11-09

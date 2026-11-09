@@ -72,9 +72,12 @@ def test_narator_voice_create_profile_does_not_change_selected_narrator(monkeypa
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
 
 
-def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeypatch, qtbot, tmp_path) -> None:
+@pytest.mark.parametrize("action", ["draft", "rename", "change_voice"])
+def test_narator_voice_edit_preserves_sample_until_a_voice_change_is_saved(
+    monkeypatch, qtbot, tmp_path, action
+) -> None:
     """
-    @brief      Verify editing a selected profile clears its sample and manifest selection summary.
+    @brief      Verify a draft or rename preserves audio and a changed voice invalidates only after Save.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -115,12 +118,37 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
 
+    resets = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_for_voice_targets",
+        lambda *_args, **_kwargs: resets.append(True),
+    )
     narator_voice_ui_controller.handle_edit_profile_requested(window, profile["profile_id"])
 
-    assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is False
-    assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
-    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] is None
-    assert window._narator_voice_page.is_edit_mode() is True
+    assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"])
+    selected_state = narrator_definition_service.load_selected_profile_state(project_root)
+    assert selected_state["selected_profile_id"] == profile["profile_id"]
+    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == "Edit Narrator"
+    assert window._narator_voice_page.is_edit_mode()
+    assert not resets
+    if action == "draft":
+        return
+
+    draft = window._narator_voice_page.current_editor_payload()
+    if action == "rename":
+        draft["display_name"] = "Renamed Narrator"
+    else:
+        draft["prompt_text"] = "A new prompt."
+    narator_voice_ui_controller.handle_save_profile_requested(window, draft)
+
+    changed_voice = action == "change_voice"
+    assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is not changed_voice
+    selected = narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
+    assert selected == (None if changed_voice else profile["profile_id"])
+    expected_name = None if changed_voice else "Renamed Narrator"
+    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == expected_name
+    assert bool(resets) is changed_voice
 
 
 def test_narator_voice_edit_missing_profile_shows_localized_profile_error(monkeypatch, qtbot, tmp_path) -> None:
@@ -1118,6 +1146,28 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     sample_metadata = narrator_definition_service.load_profile_sample_metadata(project_root, profile["profile_id"])
     assert sample_metadata is not None
     assert sample_metadata["preview_text"] == "Previous sample text."
+
+
+def test_narator_voice_reports_profile_shortfall_separately_from_preview_defaults(monkeypatch) -> None:
+    """@brief Report fewer usable suggestions without treating the shortfall as a preview replacement."""
+    messages = []
+    window = SimpleNamespace(_settings_payload={"language": "en"}, _current_project_root=None)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda _window, message: messages.append(message),
+    )
+    narator_voice_ui_controller._handle_generate_profiles_success(  # noqa: SLF001
+        window,
+        {
+            "generated_profile_ids": ["profile-1"],
+            "requested_count": 2,
+            "warning_count": 1,
+            "preview_warning_count": 0,
+        },
+    )
+
+    assert messages == ["Generated 1 narrator voice profiles. The request was for 2 profiles."]
 
 
 def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker(

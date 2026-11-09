@@ -59,9 +59,9 @@ def test_narrator_service_rejects_torn_authoritative_document_without_replacing_
     assert document_path.read_text(encoding="utf-8") == "["
 
 
-def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_path) -> None:
+def test_narrator_service_preserves_draft_and_rename_then_invalidates_changed_voice(tmp_path) -> None:
     """
-    @brief      Verify editing a selected profile deletes its sample and clears the selected state.
+    @brief      Verify draft and rename preserve the sample, then saving a new prompt retires it.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -89,8 +89,20 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
     )
     narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
 
-    updated_profile = narrator_definition_service.begin_profile_edit(project_root, profile["profile_id"])
+    draft = narrator_definition_service.begin_profile_edit(project_root, profile["profile_id"])
+    assert draft["sample"] is not None
+    selected_state = narrator_definition_service.load_selected_profile_state(project_root)
+    assert selected_state["selected_profile_id"] == profile["profile_id"]
 
+    renamed = narrator_definition_service.update_custom_profile(
+        project_root, {**draft, "display_name": "Renamed Voice"}
+    )
+    assert renamed["sample"] == draft["sample"]
+    assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"])
+
+    updated_profile = narrator_definition_service.update_custom_profile(
+        project_root, {**renamed, "prompt_text": "Changed prompt."}
+    )
     assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is False
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
     assert "is_selected" not in updated_profile
@@ -242,9 +254,43 @@ def test_narrator_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) ->
         b"RIFF-narrator",
     )
 
-    assert observed_writes == [
-        (project_root / f"audio_narator_{profile['profile_id']}.wav", b"RIFF-narrator")
-    ]
+    assert len(observed_writes) == 1
+    staged_path, written = observed_writes[0]
+    assert staged_path.parent.parent == project_root
+    assert staged_path.name == f"audio_narator_{profile['profile_id']}.wav"
+    assert written == (project_root / staged_path.name).read_bytes() == b"RIFF-narrator"
+
+
+@pytest.mark.parametrize("sample_kind", ["generated", "imported"])
+def test_narrator_sample_replacement_restores_wav_and_transcript_on_failure(monkeypatch, tmp_path, sample_kind) -> None:
+    """@brief Recover the previous pair when publication of the narrator document fails after WAV replacement."""
+    root, _manifest = project_workspace_service.create_project("NarratorSampleRecovery", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(root, "Voice", "ro", "Warm prompt.", "Preview.")
+    request = {"language": "ro", "source_model_id": "qwen"}
+    narrator_definition_service.store_profile_sample(root, profile, "Old transcript", request, "", b"old WAV")
+    audio_path, document_path = narrator_definition_service.profile_sample_paths(root, profile["profile_id"])
+    old_document = document_path.read_bytes()
+    source = tmp_path / "new.wav"
+    _write_import_test_wav(source)
+    new_audio = b"new WAV" if sample_kind == "generated" else source.read_bytes()
+    replace_path = Path.replace
+
+    def fail_narrator_document_publish(path, target):
+        """@brief Fail after the new WAV is live while allowing restoration from backup."""
+        if Path(target) == document_path and path.parent.name.startswith(".narrator-voice-stage-"):
+            assert audio_path.read_bytes() == new_audio
+            raise OSError("Narrator document publication failed")
+        return replace_path(path, target)
+
+    monkeypatch.setattr(Path, "replace", fail_narrator_document_publish)
+    with pytest.raises(OSError, match="Narrator document publication failed"):
+        if sample_kind == "generated":
+            narrator_definition_service.store_profile_sample(root, profile, "New transcript", request, "", new_audio)
+        else:
+            narrator_definition_service.import_profile_sample(root, profile, "New transcript", source)
+
+    assert audio_path.read_bytes() == b"old WAV"
+    assert document_path.read_bytes() == old_document
 
 
 def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp_path) -> None:

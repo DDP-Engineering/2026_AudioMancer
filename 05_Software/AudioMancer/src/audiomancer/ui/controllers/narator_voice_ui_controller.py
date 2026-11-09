@@ -32,6 +32,7 @@ from audiomancer.services import (
     ui_state_service,
     voice_sample_import_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import (
     audio_blocks_ui_controller,
     misc_ui_controller,
@@ -115,66 +116,27 @@ def handle_create_profile_requested(
 
 def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None:
     """
-    @brief      Confirm narrator-profile edit mode and clear the old sample before editing.
+    @brief      Open a draft for the requested narrator profile.
     @param[in]  window Main application window.
     @param[in]  profile_id Selected narrator-profile identifier.
     @return     None.
-    @exception  None
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    selected_profile_id = _selected_profile_id(window)
-    if selected_profile_id == profile_id and not audio_blocks_ui_controller.confirm_narrator_voice_invalidation(
-        window,
-        current_language,
-    ):
-        return
-    if not _confirm_profile_edit(window, current_language):
-        return
-    _stop_preview_playback(window)
-    progress_callback = _start_narator_voice_change_progress(
-        window,
-        current_language,
-        selected_profile_id == profile_id,
-        "narator_voice.edit_profile",
-    )
     try:
-        _update_narator_voice_change_progress(progress_callback, 30, "progress.narator_voice_change_profile")
         narrator_definition_service.begin_profile_edit(window._current_project_root, profile_id)
-        window._narator_voice_inspected_profile_id = profile_id
-        selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
-        _sync_manifest_summary(
-            window,
-            str(selected_state.get("selected_profile_id", "") or "").strip() or None,
-            str(selected_state.get("selected_language", "") or "").strip(),
-        )
-        if selected_profile_id == profile_id:
-            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-                window,
-                (character_voices_service.TARGET_ID_NARRATOR,),
-                collect_preserved_paths=False,
-                progress_callback=progress_callback,
-            )
-        window._narator_voice_inspected_profile_id = profile_id
-        window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-        _update_narator_voice_change_progress(progress_callback, 95, "progress.narator_voice_change_refresh")
-        window._refresh_narator_voice_page_state(  # noqa: SLF001
-            window._current_project_root,
-            window._current_manifest,
-            current_language,
-        )
-        window._narator_voice_page.begin_edit_mode()
     except ValueError:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("narator_voice.error_profile", current_language),
+        _show_profile_error(
+            window, current_language, ui_state_service.translate("narator_voice.error_profile", current_language)
         )
         return
-    finally:
-        if progress_callback is not None:
-            _finish_narator_voice_change_progress(window)
+    window._narator_voice_inspected_profile_id = profile_id
+    if window._narator_voice_page.current_profile_id() != profile_id:
+        window._refresh_narator_voice_page_state(  # noqa: SLF001
+            window._current_project_root, window._current_manifest, current_language
+        )
+    window._narator_voice_page.begin_edit_mode()
 
 
 def handle_save_profile_requested(
@@ -191,8 +153,15 @@ def handle_save_profile_requested(
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    selected_profile_id = _selected_profile_id(window)
+    profile_id = str(profile_payload.get("profile_id", "")).strip()
+    is_selected = _selected_profile_id(window) == profile_id
     existing_profiles = narrator_definition_service.load_profiles(window._current_project_root)
+    existing_profile = next((profile for profile in existing_profiles if profile["profile_id"] == profile_id), None)
+    if existing_profile is None:
+        _show_profile_error(
+            window, current_language, ui_state_service.translate("narator_voice.error_profile", current_language)
+        )
+        return
     try:
         normalized_name = narrator_definition_service.validate_profile_name(
             existing_profiles,
@@ -204,10 +173,16 @@ def handle_save_profile_requested(
         return
     if not _accepted_preview_text_range(window, current_language, profile_payload.get("preview_text", "")):
         return
+    voice_changed = narrator_definition_service.profile_voice_changed(existing_profile, profile_payload)
+    if voice_changed and (is_selected or existing_profile["sample"] is not None):
+        if not _confirm_profile_edit(window, current_language):
+            return
+        _stop_preview_playback(window)
+    reset_audio = voice_changed and is_selected
     progress_callback = _start_narator_voice_change_progress(
         window,
         current_language,
-        selected_profile_id == str(profile_payload.get("profile_id", "")).strip(),
+        reset_audio,
         "narator_voice.save_profile",
     )
     try:
@@ -221,11 +196,19 @@ def handle_save_profile_requested(
         )
         window._narator_voice_inspected_profile_id = str(updated_profile.get("profile_id", "")).strip()
         _update_narator_voice_change_progress(progress_callback, 45, "progress.narator_voice_change_refresh")
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        if selected_profile_id == str(updated_profile.get("profile_id", "")).strip():
+        if is_selected:
+            _sync_manifest_summary(
+                window,
+                None if voice_changed else profile_id,
+                str(updated_profile["language"]),
+                preserve_stage=not voice_changed,
+            )
+        else:
+            window.show_project_state(
+                window._current_project_root,
+                project_workspace_service.load_manifest(window._current_project_root),
+            )
+        if reset_audio:
             audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
                 window,
                 (character_voices_service.TARGET_ID_NARRATOR,),
@@ -236,6 +219,8 @@ def handle_save_profile_requested(
             window,
             ui_state_service.translate("status.narator_voice_profile_saved", current_language),
         )
+    except (OSError, ValueError) as error:
+        _show_profile_error(window, current_language, str(error))
     finally:
         if progress_callback is not None:
             _finish_narator_voice_change_progress(window)
@@ -514,6 +499,9 @@ def handle_import_sample_requested(window: "MainWindow", profile_id: str) -> Non
     except ValueError as error:
         _show_voice_sample_import_error(window, error, current_language)
         return
+    except OSError as error:
+        _show_profile_error(window, current_language, str(error))
+        return
     _handle_import_sample_success(window, profile_id, invalidate_audio_blocks, current_language)
 
 
@@ -611,19 +599,23 @@ def _handle_generate_profiles_success(window: "MainWindow", result_payload: obje
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
         )
-    warning_count = int(report_payload.get("warning_count", 0) or 0)
+    preview_warning_count = int(report_payload.get("preview_warning_count", 0) or 0)
+    generated_count = len(generated_profile_ids)
+    requested_count = int(report_payload.get("requested_count", generated_count))
     message_key = (
         "status.narator_voice_profiles_generated_with_defaults"
-        if warning_count
+        if preview_warning_count
         else "status.narator_voice_profiles_generated"
     )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(message_key, current_language).format(
-            generated_count=len(generated_profile_ids),
-            warning_count=warning_count,
-        ),
+    message = ui_state_service.translate(message_key, current_language).format(
+        generated_count=generated_count,
+        warning_count=preview_warning_count,
     )
+    if generated_count < requested_count:
+        message += " " + ui_state_service.translate(
+            "status.narator_voice_profiles_shortfall", current_language
+        ).format(requested_count=requested_count)
+    misc_ui_controller.show_message(window, message)
 
 
 def _handle_generate_profiles_failure(window: "MainWindow", error: Exception, current_language: str) -> None:
@@ -791,7 +783,7 @@ def _handle_generate_sample_failure(window: "MainWindow", error: Exception, curr
     @exception  None
     """
     window._settings_payload = settings_service.load_settings()
-    if window._current_project_root is not None:
+    if window._current_project_root is not None and not isinstance(error, ProjectFileRecoveryError):
         window.show_project_state(
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
@@ -1053,12 +1045,15 @@ def _sync_manifest_summary(
     window: "MainWindow",
     profile_id: str | None,
     selected_language: str,
+    *,
+    preserve_stage: bool = False,
 ) -> None:
     """
     @brief      Synchronize manifest narrator summary fields with the authoritative voice document.
     @param[in]  window Main application window.
     @param[in]  profile_id Explicitly selected narrator-profile identifier or `None`.
     @param[in]  selected_language Selected narrator language label.
+    @param[in]  preserve_stage Keep the active stage for a label-only update.
     @return     None.
     @exception  None
     """
@@ -1072,7 +1067,6 @@ def _sync_manifest_summary(
         updated_manifest["operations"]["narrator_definition"] = (
             project_workspace_service.project_manifest_operation_summary("narrator_definition")
         )
-        narrator_definition_service.clear_narrator_selection(window._current_project_root)
     else:
         updated_manifest["narrator_profile_name"] = (
             narrator_definition_service.display_profile_name(profile_payload) or None
@@ -1090,7 +1084,8 @@ def _sync_manifest_summary(
                 },
             )
         )
-    updated_manifest["current_stage"] = "narrator_definition_ready"
+    if not preserve_stage:
+        updated_manifest["current_stage"] = "narrator_definition_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
@@ -1286,6 +1281,11 @@ def _profile_generation_count_default(operation_state: dict[str, object]) -> int
     if not 1 <= requested_count <= config.MAX_NARRATOR_PROFILE_GENERATION_COUNT:
         return fallback
     return requested_count
+
+
+def _show_profile_error(window: "MainWindow", language: str, message: str) -> None:
+    """@brief Display a Narrator Voice error while leaving the current draft available."""
+    QMessageBox.warning(window, ui_state_service.translate("dialog.project_error_title", language), message)
 
 
 def _show_name_validation_error(window: "MainWindow", language: str, error_code: str) -> None:

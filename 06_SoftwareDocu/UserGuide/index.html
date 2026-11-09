@@ -128,7 +128,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Translation targets are English, Romanian, German, French, Russian, Portuguese, Spanish, and
                     Italian. The spoken language follows the translation language you lock on the Home page, so
-                    VoiceWeaver needs voices that support it.
+                    VoiceWeaver needs voices that support it. For Romanian, AudioMancer keeps the text
+                    and sample transcript in Romanian and sends the Italian language hint to VoiceWeaver
+                    for voice design and cloning.
                 </p>
                 <div class="warning">
                     AudioMancer builds voice definitions and samples for the specific narrator and characters of the
@@ -848,13 +850,17 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li><strong>Create</strong> asks for a display name, then opens an empty profile for editing.</li>
                     <li><strong>Generate Narrators</strong> asks the selected AI profile for editable suggestions. It confirms first &mdash; the analysis can take a long time and may consume paid tokens &mdash; then asks how many profiles to generate (1 to 20), then opens <strong>Narrator Profile Instructions</strong> for optional extra rules. These are text suggestions only; no audio is produced.</li>
-                    <li><strong>Edit</strong> unlocks the prompt and preview text. It warns that continuing deletes the current sample, and, when you are editing the selected narrator and audio already exists, that the generated narrator audio and Audio Assembly will be reset.</li>
+                    <li><strong>Edit</strong> opens a draft. <strong>Cancel</strong> restores the saved fields. <strong>Save</strong> asks for confirmation if a change to
+                    the prompt, preview or language will retire the sample or reset the selected narrator and its audio.
+                    Changing the name keeps the sample and selection.</li>
                     <li><strong>Save</strong> commits the edit. <strong>Delete</strong> removes a custom profile after confirming.</li>
                 </ul>
                 <h3>Samples</h3>
                 <ul>
                     <li><strong>Generate Sample</strong> confirms first &mdash; AudioMancer contacts the TTS runtime, and the connection must have been tested in TTS Settings &mdash; then produces the WAV. If a sample exists it is replaced.</li>
                     <li><strong>Import Sample</strong> opens a WAV file picker, validates the file, then asks for the exact text spoken in it. That text is required: it is what the voice model matches against.</li>
+                    <li>When generating or importing a sample, the WAV and transcript are saved together. If
+                    replacement fails, the application restores the previous pair or reports the recovery folder.</li>
                     <li><strong>Play</strong> plays the sample and turns into <strong>Stop</strong> while it is playing, so you can stop it even while the page is otherwise busy.</li>
                     <li><strong>Select</strong> makes the inspected profile the project narrator used by Speech Blocks and Audio Blocks. It confirms first, because the change resets narrator audio and Audio Assembly.</li>
                 </ul>
@@ -877,7 +883,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     When you press <strong>Generate Narrators</strong>, the AI is asked for preview text in that same
                     range. If it returns a preview that is unusable anyway, only that narrator's preview text is
                     replaced with the standard text for the language &mdash; the rest of the narrators are kept, and the
-                    message at the end tells you how many were replaced.
+                    message at the end tells you how many were replaced. The app keeps usable suggestions and
+                    reports when the model returns fewer usable profiles than requested. Duplicate names get a suffix.
                 </p>
                 <p>
                     When the project voice language changes, AudioMancer updates each profile's language but keeps

@@ -1,26 +1,21 @@
 schema = 1
 id = "REQ-FUNC-666a26b5"
-title = "The Narrator Voice controller shall keep selection and editor state"
+title = "Keep Narrator Voice selection and editor state explicit"
 status = "active"
 
 requirement = """
-The Narrator Voice controller shall keep selection and editor state explicit: create without changing selection, clear sample and selection on edit, and refresh delete state on selection change.
+The Narrator Voice controller shall create without changing selection, let the operator edit or discard a draft without mutating the project, apply matching audio invalidation after a successful voice-changing save, and refresh delete state on selection change.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Exercise create, edit without Save, discard, rename and save a voice change through the controller."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py",
 ]
-linked_tests = [
-  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_create_profile_does_not_change_selected_narrator",
-  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_selected_profile_clears_sample_and_selection",
-  "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state",
-]
+linked_tests = ["05_Software/AudioMancer/tests/test_narator_voice_page.py::test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes", "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_create_profile_does_not_change_selected_narrator", "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_edit_preserves_sample_until_a_voice_change_is_saved", "05_Software/AudioMancer/tests/test_narator_voice_ui_controller.py::test_narator_voice_ui_controller_selection_change_refreshes_delete_state"]
 
 priority = "high"
-rationale = """
-Editor and selection state must remain explicit and consistent.
-"""
+rationale = "Operators may correct a draft without losing a reviewed sample."
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-09

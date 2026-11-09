@@ -1,24 +1,20 @@
 schema = 1
 id = "REQ-FUNC-3fc66fe1"
-title = "The narrator definition service shall clear the sample and selection"
+title = "Save narrator draft changes before invalidating the sample"
 status = "active"
 
 requirement = """
-The narrator definition service shall clear the sample and selection when a profile edit begins.
+Narrator Voice shall keep profile, sample and selection intact while a draft is open and retire the sample and its selection only on saving changed voice inputs.
 """
 
-verification = "Automated: 1 linked pytest selector(s)."
+verification = "Begin an edit, rename the selected narrator, then save a changed prompt and verify the sample is retired only after the voice change."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
 ]
-linked_tests = [
-  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_begin_profile_edit_clears_sample_and_selection",
-]
+linked_tests = ["05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_preserves_draft_and_rename_then_invalidates_changed_voice"]
 
 priority = "high"
-rationale = """
-Editing a profile must invalidate its now-stale sample and selection.
-"""
+rationale = "Operators may correct a draft without losing a reviewed sample."
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-11-09

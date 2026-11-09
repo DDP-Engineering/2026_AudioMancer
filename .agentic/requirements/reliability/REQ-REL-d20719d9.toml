@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-d20719d9"
+title = "Publish narrator WAV with its transcript recoverably"
+status = "active"
+requirement = "Narrator Voice shall publish a generated or imported sample WAV with its corresponding transcript metadata and recover the previous pair if replacement fails."
+verification = "Inject a document publication failure after replacing the sample and compare both original artifacts byte for byte."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_sample_replacement_restores_wav_and_transcript_on_failure"]
+created = 2026-11-09
+updated = 2026-11-09

@@ -112,7 +112,7 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_kee
 
 def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
     """
-    @brief      Verify edit mode disables the profile list and enables Save immediately.
+    @brief      Verify edit mode enables the draft fields and Cancel restores the original profile.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -156,6 +156,18 @@ def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_chang
     assert page._profile_name_edit.isReadOnly() is False
     assert page._designer_prompt.isReadOnly() is False
     assert page._save_profile_button.isEnabled() is True
+    assert not page._profile_name_edit.isHidden()
+    page._profile_name_edit.setText("Temporary name")
+    page._designer_prompt.setPlainText("Temporary prompt")
+    assert page.is_dirty()
+
+    page._cancel_edit_button.click()
+
+    assert not page.is_edit_mode()
+    assert not page.is_dirty()
+    assert page._profile_name_edit.text() == "Custom One"
+    assert page._designer_prompt.toPlainText() == "Custom prompt."
+    assert page._profile_list.isEnabled()
 
 
 def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(qtbot) -> None:
