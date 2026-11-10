@@ -1,18 +1,17 @@
 schema = 1
 id = "REQ-FUNC-39994b8e"
-title = "Audio-block generation shall generate only approved blocks, skip TTS"
+title = "Audio Blocks synthesizes approved audio rows and validates complete WAVs"
 status = "active"
 
 requirement = """
-Audio-block generation shall generate only approved blocks, skip TTS for metadata-only blocks, and reject invalid generated WAV bytes.
+Audio Blocks shall synthesize only approved blocks that need audio, skip synthesis for metadata-only rows, and require a readable nonempty WAV containing its declared frames before publication or split part reuse.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Generate approved and metadata-only blocks, and confirm that invalid and truncated WAVs are rejected."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py"]
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_rejects_truncated_wav_with_readable_header",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_only_approved_speech_blocks",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_rejects_invalid_generated_wav_bytes",
@@ -23,4 +22,4 @@ rationale = """
 Only valid approved work may be synthesized.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-09

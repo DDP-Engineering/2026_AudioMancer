@@ -68,6 +68,16 @@ def test_audio_blocks_artifact_wav_validation_and_stitching(tmp_path) -> None:
         assert wav_file.getnframes() == 20
 
 
+def test_audio_blocks_rejects_truncated_wav_with_readable_header(tmp_path) -> None:
+    """@brief Reject downloaded and resumed WAVs with missing declared frames."""
+    path = tmp_path / "truncated.wav"
+    _write_wav(path, 16)
+    path.write_bytes(path.read_bytes()[:-2])
+    assert not audio_blocks_artifact_service.is_valid_wav_path(path)
+    with pytest.raises(RuntimeError, match="invalid WAV audio"):
+        audio_blocks_artifact_service.validate_wav_bytes(path.read_bytes())
+
+
 def _write_wav(path: Path, frame_count: int) -> None:
     """
     @brief      Write one small mono PCM WAV test file.

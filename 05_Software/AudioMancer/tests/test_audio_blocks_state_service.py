@@ -363,8 +363,8 @@ def test_build_audio_blocks_state_disables_start_after_completed_generation(tmp_
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedStartDisabled")
     audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / "0001-000001.wav").write_bytes(b"RIFF-1")
-    (audio_root / "0002-000001.wav").write_bytes(b"RIFF-2")
+    _write_wav(audio_root / "0001-000001.wav", 1)
+    _write_wav(audio_root / "0002-000001.wav", 2)
     audio_blocks_service.write_audio_blocks_document(
         project_root,
         {

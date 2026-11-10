@@ -80,6 +80,14 @@ project artifacts belong to workflow services.
 
 ## Implementation orientation
 
+Audio Blocks publishes generated WAVs with review state and the compact
+project summary. Split resume uses the saved Speech Block ID, synthesis
+fingerprint and contiguous valid parts. The generation service renders
+candidates while the Audio Blocks service owns publication and review.
+The page recomputes markers for available configured synthesis inputs. Exact
+resume also checks the effective runtime budget. Split cleanup stays within
+the canonical project directory.
+
 Source is under `05_Software/AudioMancer/src/audiomancer/`; tests are under
 `05_Software/AudioMancer/tests/`. AI settings use a PySide6 page/controller;
 provider operations live in service modules.

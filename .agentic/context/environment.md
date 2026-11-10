@@ -70,6 +70,10 @@ Focused Speech Blocks checks use the service, normalization, text split,
 document contract and offscreen Qt tests. Resume and ambience tests use
 controlled provider responses.
 
+Focused Audio Blocks checks use the service, WAV artifact, document, state,
+page and selected offscreen controller tests. They simulate VoiceWeaver and
+inject file replacement errors. Listening uses an installed local runtime.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

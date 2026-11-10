@@ -1,0 +1,31 @@
+schema = 1
+
+id = "REQ-REL-3a5d2962"
+
+title = "Audio Blocks preserves the previous WAV and review if replacement fails"
+
+status = "active"
+
+requirement = """
+When an Audio Block replacement fails or is cancelled, Audio Blocks shall preserve the previously published WAV and its review metadata.
+After successful publication, split cleanup shall skip a redirected parts directory.
+"""
+
+verification = "Inject provider and publication errors during regeneration and compare the old WAV and document bytes. Verify split cleanup preserves files in a redirected directory."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_generation_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py", "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_removes_only_local_published_parts",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_does_not_publish_when_cancelled_during_last_download",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_regeneration_preserves_previous_wav_and_review",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-10

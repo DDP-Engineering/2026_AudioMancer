@@ -193,6 +193,11 @@ local filesystem; the component does not call a network service.
 
 ## Public interface
 
+Operations that stage a recoverable publication can use
+`manifest_with_operation_summary` to build the same compact summary and
+monotonic stage update as `sync_manifest_operation_summary`. Audio Blocks
+stages that manifest alongside the WAV, review document and clone cache.
+
 Inputs include operator-selected project and source paths, project names,
 language and voice-mode selections, the active manifest, operation artifacts,
 and export or snapshot destinations.

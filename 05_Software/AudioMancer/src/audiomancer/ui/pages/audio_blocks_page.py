@@ -755,6 +755,8 @@ def _format_audio_block_list_item(audio_block: dict[str, object], language: str)
         else "audio_blocks.marker_pending",
         language,
     )
+    if audio_block.get("audio_stale"):
+        approval_label += ", " + ui_state_service.translate("audio_blocks.marker_stale", language)
     duration_label = _format_duration_label(audio_block.get("audio_duration_seconds"), language)
     audio_file_name = str(audio_block.get("audio_file_name", "")).strip()
     file_label = (

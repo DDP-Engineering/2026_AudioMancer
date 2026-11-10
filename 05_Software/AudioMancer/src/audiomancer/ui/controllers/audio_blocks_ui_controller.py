@@ -32,10 +32,10 @@ from audiomancer.services import (
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
-    tts_budget_service,
     ui_state_service,
     workflow_impact_service,
 )
+from audiomancer.services.persistence_service import ProjectFileRecoveryError
 from audiomancer.ui.controllers import (
     misc_ui_controller,
     operation_runner_controller,
@@ -71,10 +71,10 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
     try:
         speech_blocks_service.load_speech_blocks_document(window._current_project_root)
         audio_blocks_service.load_audio_blocks_document(window._current_project_root)
-        report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
-        fully_generated = _has_fully_generated_run(
+        pending = audio_blocks_service.pending_speech_blocks(
             window._current_project_root,
-            report,
+            speech_blocks_service.load_speech_blocks(window._current_project_root),
+            audio_blocks_service.load_audio_blocks(window._current_project_root),
             scene_ambience_audio_enabled,
         )
     except (speech_blocks_service.SpeechBlocksDocumentError, audio_blocks_service.AudioBlocksDocumentError) as error:
@@ -84,18 +84,21 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
             str(error),
         )
         return
-    if fully_generated:
+    if not pending:
         return
-
-    probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
-    if not bool(probe_result.get("success", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(probe_result.get("message", "")),
-        )
-        return
-    runtime_settings = _runtime_settings(window, probe_result, scene_ambience_audio_enabled)
+    probe_result: dict[str, object] = {}
+    if audio_blocks_service.requires_runtime(pending):
+        probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
+        if not bool(probe_result.get("success", False)):
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(probe_result.get("message", "")),
+            )
+            return
+    runtime_settings = audio_blocks_state_service.generation_settings(
+        window._settings_payload, probe_result, scene_ambience_audio_enabled,
+    )
     if not _confirm_generation(window, current_language):
         return
     if scene_ambience_audio_enabled and not _confirm_scene_ambience_audio_blocks(window, current_language):
@@ -225,7 +228,9 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
         )
         return
     scene_ambience_audio_enabled = window._audio_blocks_page.scene_ambience_audio_enabled()
-    runtime_settings = _runtime_settings(window, probe_result, scene_ambience_audio_enabled)
+    runtime_settings = audio_blocks_state_service.generation_settings(
+        window._settings_payload, probe_result, scene_ambience_audio_enabled,
+    )
     speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
@@ -601,9 +606,10 @@ def _handle_audio_blocks_failure(
     @return     None.
     @exception  None
     """
-    _sync_manifest_from_disk(window)
-    _restore_audio_blocks_selection(window, preserved_block_id)
-    _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
+    if not isinstance(error, ProjectFileRecoveryError):
+        _sync_manifest_from_disk(window)
+        _restore_audio_blocks_selection(window, preserved_block_id)
+        _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     QMessageBox.warning(
         window,
         ui_state_service.translate(
@@ -824,91 +830,6 @@ def _confirm_question(window: "MainWindow", language: str, title_key: str, messa
     @exception  None
     """
     return misc_ui_controller.confirm_question(window, language, title_key, message_key)
-
-
-def _runtime_settings(
-    window: "MainWindow",
-    probe_result: dict[str, object],
-    scene_ambience_audio_enabled: bool = False,
-) -> dict[str, object]:
-    """
-    @brief      Build the runtime-settings payload required by the Audio Blocks service.
-    @param[in]  window Active main window instance.
-    @param[in]  probe_result Normalized VoiceWeaver probe result.
-    @return     Audio Blocks runtime-settings payload.
-    @exception  None
-    """
-    timeout_value = window._settings_payload.get(
-        "tts_audio_generation_timeout_seconds",
-        config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
-    )
-    timeout_seconds = timeout_value if isinstance(timeout_value, int) and timeout_value > 0 else 300
-    scene_ambience_seed = window._settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
-    return {
-        "base_url": str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
-        "timeout_seconds": timeout_seconds,
-        "discovered_models": list(probe_result.get("discovered_models", [])),
-        "speech_block_max_generation_tokens": tts_budget_service.resolve_generation_token_limit(
-            window._settings_payload
-        ),
-        "clone_model_parameters": tts_budget_service.resolve_clone_sampling_parameters(window._settings_payload),
-        "generate_scene_ambience_audio": bool(scene_ambience_audio_enabled),
-        "scene_ambience_duration_seconds": float(
-            window._settings_payload.get(
-                "scene_ambience_duration_seconds",
-                config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
-            )
-        ),
-        "scene_ambience_guidance_scale": float(
-            window._settings_payload.get(
-                "scene_ambience_guidance_scale",
-                config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
-            )
-        ),
-        "scene_ambience_num_inference_steps": int(
-            window._settings_payload.get(
-                "scene_ambience_num_inference_steps",
-                config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
-            )
-        ),
-        "scene_ambience_seed": scene_ambience_seed if isinstance(scene_ambience_seed, int) else None,
-    }
-
-
-def _has_fully_generated_run(
-    project_root: str | Path,
-    report: dict[str, object] | None,
-    scene_ambience_audio_enabled: bool = False,
-) -> bool:
-    """
-    @brief      Return whether Audio Blocks already generated every speech-block WAV for the current inputs.
-    @param[in]  project_root Active project root folder.
-    @param[in]  report Persisted Audio Blocks report or `None`.
-    @return     `True` when generation is fully complete even if approvals are pending.
-    @exception  None
-    """
-    if not isinstance(report, dict):
-        return False
-    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
-    audio_by_speech_block_id = {
-        str(block.get("speech_block_id", "")).strip(): block
-        for block in audio_blocks_service.load_audio_blocks(project_root)
-    }
-    approved_block_ids = [
-        str(block.get("speech_block_id", "")).strip()
-        for block in speech_blocks
-        if bool(block.get("approved", False))
-        and str(block.get("speech_block_id", "")).strip()
-        and (
-            scene_ambience_audio_enabled
-            or str(block.get("content_kind", "")).strip() != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-        )
-    ]
-    if not approved_block_ids:
-        return False
-    return all(
-        audio_blocks_service.is_generated(audio_by_speech_block_id.get(block_id, {})) for block_id in approved_block_ids
-    )
 
 
 def _confirm_generation(window: "MainWindow", language: str) -> bool:

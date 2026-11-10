@@ -65,13 +65,13 @@ blocks              array  ordered Audio Block entries
 run_token                str        operation start timestamp
 current_phase            str        prepare_prompts | generate_blocks
 current_block_id         str | null speech_block_id being generated
-next_speech_block_index  int        >= 0, resume position in generation order
+next_speech_block_index  int        >= 0, last recorded position in generation order
 next_split_part_index    int        >= 0, resume position inside a split block
 ```
 
 ### Block contract
 
-Every entry carries exactly these seven fields:
+Every entry carries these seven base fields:
 
 ```text
 speech_block_id         str          primary key, also derives the audio path
@@ -80,7 +80,7 @@ generated               bool         audio (or metadata-only handling) exists
 approved                bool         operator approved this block
 audio_can_play          bool         cached playability, avoids per-WAV probing
 audio_duration_seconds  float | null measured duration, null when unmeasured
-generation_fingerprint  str | null   invalidation hash for this block
+generation_fingerprint  str | null   hash of the inputs that produced this audio
 ```
 
 Two further fields are emitted **only** when the block was actually split, that
@@ -91,7 +91,24 @@ split_part_count        int          planned total number of WAV parts
 split_plan_fingerprint  str | null   guards reuse of existing part files
 ```
 
-For a cancelled split block, `next_split_part_index` is the completed-prefix
+An entry can carry `audio_stale: true` when a live clone comparison finds
+a difference that the configured fingerprint alone cannot establish. Review
+compares the available configured inputs on each refresh. Restoring the
+original configuration clears a marker based on those inputs.
+A synthesized spoken row also stores `configured_fingerprint`. It identifies
+the comparable configured inputs, including the operator token limit. The
+exact `generation_fingerprint` additionally uses the effective runtime budget
+and guards split resume. Local review compares configured inputs to avoid
+treating a cached default budget as a live budget. The fingerprint and
+the review state still describe the existing WAV. A successful regeneration
+publishes its replacement WAV, review document, clone cache and project summary
+together. Failed or cancelled regeneration leaves the prior state available.
+Cleanup after publication removes split parts only from the project's
+canonical split directory. A redirected directory is left alone.
+
+Resume finds the active split block using `current_block_id` and confirms the
+synthesis fingerprint. A change in generation order alone preserves the saved
+prefix. For a cancelled split block, `next_split_part_index` is the completed-prefix
 length for the current split plan. Resume validates part files from index zero
 up to that value and reuses only the valid contiguous prefix. An invalid index,
 planned-count mismatch, fingerprint mismatch, missing file, corrupt WAV, or

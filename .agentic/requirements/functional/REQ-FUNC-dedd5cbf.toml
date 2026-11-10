@@ -1,0 +1,32 @@
+schema = 1
+
+id = "REQ-FUNC-dedd5cbf"
+
+title = "Audio Blocks validates only prerequisites for requested audio"
+
+status = "active"
+
+requirement = """
+When generating audio, Audio Blocks shall require only the models and voice references used by the requested work.
+"""
+
+verification = "Generate metadata-only rows without VoiceWeaver and regenerate a selected voice despite a missing unrelated sample."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_generation_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_checks_completed_wavs_with_cached_inputs",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_approve_and_regenerate_selected_block",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_can_publish_pauses_without_a_runtime",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

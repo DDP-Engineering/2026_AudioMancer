@@ -593,7 +593,31 @@ def sync_manifest_operation_summary(
                 every later open. Invalidating downstream work belongs to the explicit
                 reset path, which clears artifacts and summaries together.
     """
-    manifest = load_manifest(project_root)
+    manifest = manifest_with_operation_summary(
+        load_manifest(project_root), operation_kind, operation_payload, current_stage, extra_fields,
+    )
+    save_manifest(manifest, project_root)
+    return load_manifest(project_root)
+
+
+def manifest_with_operation_summary(
+    manifest: ProjectManifestPayload,
+    operation_kind: str,
+    operation_payload: object | None,
+    current_stage: str | None = None,
+    extra_fields: dict[str, object] | None = None,
+) -> ProjectManifestPayload:
+    """
+    @brief      Build a manifest with an updated summary, for immediate or staged publication.
+    @param[in]  manifest Current project manifest.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  operation_payload Candidate operation-state payload.
+    @param[in]  current_stage Optional milestone that can only promote the current stage.
+    @param[in]  extra_fields Optional additional manifest fields.
+    @return     Updated manifest without changing the input.
+    @exception  ValueError Raised when the operation kind or stage is unsupported.
+    """
+    manifest = dict(manifest)
     operations = _normalize_operations(manifest.get("operations"))
     if operation_kind not in operations:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -609,8 +633,7 @@ def sync_manifest_operation_summary(
     if isinstance(extra_fields, dict):
         for field_name, field_value in extra_fields.items():
             manifest[str(field_name)] = field_value
-    save_manifest(manifest, project_root)
-    return load_manifest(project_root)
+    return manifest
 
 
 def _build_extraction_reset_result(

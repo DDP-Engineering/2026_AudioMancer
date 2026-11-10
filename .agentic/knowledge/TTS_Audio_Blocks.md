@@ -1,11 +1,16 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # TTS Audio Blocks
 
-## 1. Purpose
+## Routing
+
+For WAV generation, regeneration, retry, clone prompt reuse and listening, start
+with `audio_blocks_service.py` and `tests/test_audio_blocks_service.py`. For text
+and speaker assignment use Speech Blocks. For combining ordered WAVs use Audio
+Assembly.
+
+## Purpose and boundaries
 
 Generates and manages ordered WAV artifacts from approved speech blocks using the configured VoiceWeaver runtime.
-
-## 2. Responsibilities
 
 - Discover, probe and configure VoiceWeaver runtime capabilities and TTS settings.
 - Canonicalize discovered VoiceWeaver models once for runtime use and settings persistence.
@@ -13,16 +18,17 @@ Generates and manages ordered WAV artifacts from approved speech blocks using th
 - Project generation/playback state and expose settings, progress, cancellation, and playback actions through UI controllers/pages.
 - It does not author speech text or compose final assembled audio.
 
-## 3. Implementation Overview
+The generation service renders one candidate from VoiceWeaver responses.
+Artifact helpers derive paths and inspect WAVs. The main service owns batch
+order, resource selection, checkpoints, review and recoverable publication.
 
-Artifact helpers own safe names/paths and WAV inspection. The main service coordinates ordered synthesis, retry/resume, clone prompts, persistence and runtime invocation; state/budget helpers derive UI-ready limits and progress. Runtime services probe VoiceWeaver process/capabilities. Audio-block and settings controllers/pages expose deliberate configuration and generated-artifact review.
+## Public interface
 
-## 4. Dependencies
-
-- Internal: approved Speech Blocks and Voice Profiles, project/operation persistence, TTS budget, audio artifact helpers, UI operation runner and playback support.
-- External: installed VoiceWeaver runtime/model resources and local WAV files.
-
-## 5. Inputs And Outputs
+Call `start_or_continue_generation` for eligible missing audio,
+`regenerate_audio_block` for a selected row, and `load_audio_blocks_report` or
+`load_operation_state` for projections. The page and controller use
+`pending_speech_blocks` to resolve eligible work from current Speech Blocks
+and WAV availability.
 
 - Inputs: project root, approved blocks/voice plan, runtime/settings/capability data, generation selection and cancellation request.
 - Outputs: ordered deterministic WAV artifacts, one authoritative
@@ -32,7 +38,7 @@ Artifact helpers own safe names/paths and WAV inspection. The main service coord
   rows are metadata-only timing entries, while scene-ambience rows use the
   runtime sound-prompt path.
 
-## 6. Data Contracts
+## Invariants
 
 Chunk-source readiness is derived through the shared strict Chunking document
 reader.
@@ -54,18 +60,21 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Generated audio paths are a pure function of `speech_block_id`
   (`audio_blocks/<speech_block_id>.wav`, parts under `audio_blocks/parts/`).
   The name depends only on the block's stable primary key. WAV format/metadata
-  must pass validation before downstream assembly. Complete single-block,
-  split-part, and Scene Ambience payloads publish through the shared atomic byte
-  writer so a failed replacement cannot expose a truncated WAV
-  (`REQ-REL-ee8f9ed0`).
+  must include its declared frames. Part writes use the atomic byte writer.
+  Final candidates publish together with the review document, clone cache and
+  project summary through the recoverable file publisher. A failed or cancelled
+  regeneration preserves the prior WAV and approval
+  (`REQ-REL-ee8f9ed0`, `REQ-REL-3a5d2962`).
 - Runtime progress is persisted in `document.checkpoint` (`run_token`,
   `current_phase`, `current_block_id`, `next_speech_block_index`,
   `next_split_part_index`) for truthful resume rather than inferred from a
   partially generated plan. For a split block, the next-part index is the
-  completed-prefix length: resume reuses only contiguous valid WAVs belonging
-  to the same split fingerprint and planned total, starts at the first missing
-  or corrupt part, and removes temporary part WAVs after the ordered final WAV
-  is stitched (`REQ-FUNC-9e6c2465`).
+  completed-prefix length. Resume finds the active row by ID, verifies its
+  synthesis fingerprint, split plan and contiguous valid WAVs, then starts at
+  the first missing part. Cancel during model loading and review of other rows
+  preserve the cursor. Part files are removed from the canonical project
+  directory after successful publication. A redirected directory is skipped
+  (`REQ-FUNC-e9a6688e`, `REQ-FUNC-9e6c2465`).
 - The shared VoiceWeaver client is the only simplified REST-contract boundary.
   It probes `GET /models` and `GET /status`, loads with `POST /models/load` and
   `device_mode=auto`, unloads with `POST /models/unload`, and accepts only the
@@ -78,7 +87,8 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 - Audio Block identity is its `speech_block_id`; each persisted entry carries
   only that id, `voice_target_id`, boolean `generated` and `approved` flags,
   cached `audio_can_play`, measured `audio_duration_seconds`, and a
-  `generation_fingerprint`, plus `split_part_count` and
+  `generation_fingerprint`, optional `configured_fingerprint` and `audio_stale`,
+  and `split_part_count` and
   `split_plan_fingerprint` when the block was actually split. Source text,
   speaker, prompts and per-run budgets are not duplicated here; they are read
   from the Speech Blocks document or recomputed from settings. Approval changes
@@ -209,17 +219,41 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   from `runtime_effective`, which a runtime-reported budget made unreachable, so
   every run reloaded an already-loaded model (`REQ-NFR-5bda19fd`).
 
-## 7. Workflow Integration
+## Change map
+
+| Change requested | Start with | Focused verification |
+|---|---|---|
+| Replacement or split resume | `start_or_continue_generation`, `regenerate_audio_block` | `test_audio_blocks_service.py` |
+| Candidate and WAV integrity | `audio_blocks_generation_service.py`, `audio_blocks_artifact_service.py` | `test_audio_blocks_artifact_service.py` |
+| Work eligibility and review | `pending_speech_blocks`, `audio_blocks_state_service.py` | State, page and controller tests |
+
+## Key behaviors
+
+- `REQ-FUNC-168e8717`. Playable audio retains its actual synthesis fingerprint.
+  The page and generation compare available synthesis inputs and mark changed
+  rows for review. The page uses cached model descriptions and local references.
+  The configured fingerprint excludes the live effective budget. Resume uses
+  the exact generation fingerprint with the effective budget and split plan.
+  Configured mismatches are recomputed for review. A confirmed difference
+  in live synthesis that cannot be derived from configuration can persist.
+- `REQ-FUNC-880f7fda`. Clone prompt reuse requires the same sample bytes,
+  transcript, sample language and clone model.
+- `REQ-UX-1e583d8c`. A missing or unreadable WAV is eligible for Start.
+- `REQ-FUNC-dedd5cbf`. Metadata-only work runs locally. Only selected or
+  pending spoken audio needs a loaded clone model and readable references.
+  An unavailable optional reference only limits comparison of existing audio.
+
+### Workflow integration
 
 TTS Audio Blocks follows approved Speech Blocks and Voice Profiles, and supplies validated ordered WAVs to Audio Assembly. Changing TTS settings or invalidating source blocks can reset only incompatible generated artifacts.
 Start and single-block regeneration require any translated Speech Blocks source
 to match the current approved translation. Existing audio can still be reviewed.
 
-## 8. Usage
+### Usage
 
 Probe the runtime in TTS Settings, choose supported settings, then open Audio Blocks to generate/resume approved blocks. Monitor progress, cancel cooperatively when needed, review/play generated files, and proceed only when the ordered block set is complete.
 
-## 9. Validation And Tests
+### Verification
 
 Primary automated coverage:
 
@@ -242,7 +276,7 @@ Minimum validation after a change: run the focused modules above with
 changed files. Manual listening and an installed compatible runtime remain
 required.
 
-## 10. Limitations And Future Work
+### Verification limits
 
 Tests cannot prove voice naturalness, pronunciation, timing, clone fidelity, GPU/runtime compatibility or audible artifact quality. Providers/models and local hardware materially affect results; an operator must audition generated audio before assembly.
 
@@ -251,6 +285,7 @@ Tests cannot prove voice naturalness, pronunciation, timing, clone fidelity, GPU
 From the adopted component map:
 
 - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_generation_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py`

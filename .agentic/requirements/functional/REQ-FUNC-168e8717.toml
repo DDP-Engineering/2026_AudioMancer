@@ -1,18 +1,18 @@
 schema = 1
 id = "REQ-FUNC-168e8717"
-title = "Audio-block generation shall preserve existing audio on fingerprint"
+title = "Audio Blocks retains the actual synthesis identity of a playable WAV"
 status = "active"
 
 requirement = """
-Audio-block generation shall preserve existing audio on fingerprint change, start fresh on input-fingerprint mismatch, and skip later existing audio after an insert.
+When a playable completed WAV has changed synthesis inputs, Audio Blocks shall retain its original generation fingerprint and show the existing audio as stale for operator review when the current inputs can be resolved.
 """
 
-verification = "Automated: 3 linked pytest selector(s)."
+verification = "Change a block input and verify the prior file, approval and fingerprint plus the stale indicator. Verify different cached and effective token budgets alone do not produce a stale badge, and restoring configured inputs clears their marker."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py", "05_Software/AudioMancer/src/audiomancer/ui/pages/audio_blocks_page.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_checks_completed_wavs_with_cached_inputs",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_changes",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run",
@@ -23,4 +23,4 @@ rationale = """
 Completed audio must be reused when still valid.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-10

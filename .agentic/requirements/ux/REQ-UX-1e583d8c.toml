@@ -1,0 +1,29 @@
+schema = 1
+
+id = "REQ-UX-1e583d8c"
+
+title = "Audio Blocks can retry a missing or unreadable generated WAV"
+
+status = "active"
+
+requirement = """
+When an approved Speech Block has a generated row but lacks valid audio, the page shall allow retrying its audio generation.
+"""
+
+verification = "Remove a generated WAV and verify Start and the service can recover it."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_disables_start_after_completed_generation",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_missing_generated_wav_enables_start",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-09
+updated = 2026-11-09

@@ -17,6 +17,7 @@
 # IMPORTS
 
 import json
+import wave
 
 from PySide6.QtWidgets import QMessageBox
 import pytest
@@ -862,8 +863,10 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
     (audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
-    (generated_root / "0001-000001.wav").write_bytes(b"RIFF-1")
-    (generated_root / "0001-000002.wav").write_bytes(b"RIFF-2")
+    for name in ("0001-000001.wav", "0001-000002.wav"):
+        with wave.open(str(generated_root / name), "wb") as audio:
+            audio.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
+            audio.writeframes(bytes(160))
     audio_blocks_service.write_audio_blocks_document(
         project_root,
         {

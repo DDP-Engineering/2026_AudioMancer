@@ -18,6 +18,9 @@
 
 import io
 import json
+import os
+from pathlib import Path
+import subprocess
 import wave
 
 import pytest
@@ -25,7 +28,9 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
+    audio_blocks_generation_service,
     audio_blocks_service,
+    audio_blocks_state_service,
     character_voices_service,
     narrator_definition_service,
     operation_runtime_service,
@@ -34,12 +39,14 @@ from audiomancer.services import (
 )
 
 
-def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("live_budget", [None, 128])
+def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypatch, tmp_path, live_budget) -> None:
     """
     @brief      Verify a fresh Audio Blocks run creates reusable clone prompts
                 and generated WAV files in speech-block order.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  live_budget Optional effective token limit reported by the active runtime.
     @return     None.
     @exception  None
     """
@@ -71,10 +78,21 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     observed_generate_requests: list[tuple[str, str, str]] = []
     observed_manifest_progress: list[tuple[int, int, str]] = []
     audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
+    active_model = None
+    if live_budget is not None:
+        wait_payloads.pop(0)
+        active_model = {
+            "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+            "effective_model_parameters": {"max_new_tokens": live_budget},
+        }
+    settings = {
+        "tts_runtime_base_url": _runtime_settings()["base_url"],
+        "tts_runtime_discovered_models": _runtime_settings()["discovered_models"],
+    }
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
-        lambda *_args, **_kwargs: {"active_model": None, "operation": {"status": "idle"}},
+        lambda *_args, **_kwargs: {"active_model": active_model, "operation": {"status": "idle"}},
     )
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
@@ -117,7 +135,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     report = audio_blocks_service.start_or_continue_generation(
         project_root,
         manifest,
-        _runtime_settings(),
+        audio_blocks_state_service.generation_settings(settings, {}),
         progress_callback=lambda *_args: observed_manifest_progress.append(
             (
                 int(
@@ -168,6 +186,10 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     assert second_audio_path.name == "0001-000002.wav"
     assert first_audio_path.read_bytes() == _wav_bytes("narrator")
     assert second_audio_path.read_bytes() == _wav_bytes("alice")
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en", settings)
+    assert all(not block["audio_stale"] for block in state["speech_blocks"])
+
 
 
 def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters(monkeypatch, tmp_path) -> None:
@@ -707,9 +729,194 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
     assert audio_blocks_service.is_generated(merged_blocks[0]) is True
     assert audio_blocks_service.is_approved(merged_blocks[0]) is True
     assert audio_blocks_service.audio_can_play(merged_blocks[0]) is True
-    assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
+    assert merged_blocks[0]["generation_fingerprint"] == "stale-fingerprint"
+    assert merged_blocks[0]["audio_stale"] is True
     assert audio_path.exists()
     assert audio_path.read_bytes() == _wav_bytes("stale")
+
+
+def test_audio_blocks_clone_prompt_matches_the_exact_reference_transcript() -> None:
+    """@brief A changed transcript requires a new clone prompt even when reference bytes are identical."""
+    target = {
+        "voice_target_id": "narrator", "sample_fingerprint": "same-bytes", "sample_text": "Corrected text.",
+        "sample_metadata": {"voice_language": "en"},
+    }
+    clone = {
+        "voice_target_id": "narrator", "source_sample_fingerprint": "same-bytes",
+        "voice_language": "en", "clone_model_id": "clone", "sample_text": "Prior text.",
+        "voice_clone_prompt": {"format": "probe"},
+    }
+    context = {"clone_model_id": "clone"}
+    assert not audio_blocks_service._clone_profile_matches(clone, target, context)  # noqa: SLF001
+    clone["sample_text"] = target["sample_text"]
+    assert audio_blocks_service._clone_profile_matches(clone, target, context)  # noqa: SLF001
+
+
+def test_audio_blocks_approval_preserves_another_blocks_split_checkpoint(tmp_path) -> None:
+    """@brief Review of another WAV preserves the active block and next part."""
+    root, _ = _create_audio_blocks_project(tmp_path, "AudioApprovalWithActiveSplit")
+    _seed_generated_audio_blocks(root)
+    document = audio_blocks_service.load_audio_blocks_document(root)
+    document["checkpoint"].update(current_block_id="0001-000002", next_split_part_index=2)
+    document["blocks"][1].update(generated=False, split_part_count=4, split_plan_fingerprint="pending-plan")
+    audio_blocks_service.write_audio_blocks_document(root, document)
+
+    audio_blocks_service.approve_audio_block(root, "0001-000001")
+
+    checkpoint = audio_blocks_service.load_audio_blocks_document(root)["checkpoint"]
+    assert checkpoint["current_block_id"] == "0001-000002"
+    assert checkpoint["next_split_part_index"] == 2
+
+
+def test_audio_blocks_missing_generated_wav_enables_start(tmp_path) -> None:
+    """
+    @brief      Allow a missing WAV to be restored even when its row was marked generated.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_audio_blocks_project(tmp_path, "MissingGeneratedAudio")
+    _seed_generated_audio_blocks(root)
+    assert not audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en")["can_start_or_continue"]
+    (root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").unlink()
+    assert audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en")["can_start_or_continue"]
+
+
+def test_audio_blocks_checks_completed_wavs_with_cached_inputs(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Review existing WAVs against cached settings even when no speech needs synthesis.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_audio_blocks_project(tmp_path, "CachedAudioInputs")
+    settings = {
+        "tts_runtime_discovered_models": _runtime_settings()["discovered_models"],
+        "tts_runtime_base_url": _runtime_settings()["base_url"],
+    }
+    _seed_generated_audio_blocks(root, audio_blocks_state_service.generation_settings(settings, {}))
+    original_document = (root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).read_bytes()
+    state = audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en", settings)
+    assert not state["can_start_or_continue"]
+    assert all(not row["audio_stale"] for row in state["speech_blocks"])
+
+    settings["speech_block_clone_temperature"] = 0.1
+    state = audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en", settings)
+    assert all(row["audio_stale"] and row["can_play"] for row in state["speech_blocks"])
+    assert not state["can_start_or_continue"]
+    assert (root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME).read_bytes() == original_document
+
+    speech = speech_blocks_service.load_speech_blocks(root)
+    pause = {**speech[0], "speech_block_id": "0001-000003", "sequence_index": 3, "content_kind": "pause", "text": "1 s"}
+    _write_speech_blocks_fixture_document(root, [*speech, pause])
+
+    def unexpected_runtime(*_args, **_kwargs):
+        """@brief Fail if the metadata-only continuation loads the available clone model."""
+        raise AssertionError("Unexpected model loading")
+
+    monkeypatch.setattr(audio_blocks_service, "_ensure_clone_model_loaded", unexpected_runtime)
+    audio_blocks_service.start_or_continue_generation(
+        root, manifest, audio_blocks_state_service.generation_settings(settings, {}),
+    )
+    state = audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en", settings)
+    assert [row["audio_stale"] for row in state["speech_blocks"]] == [True, True, False]
+    del settings["speech_block_clone_temperature"]
+    state = audio_blocks_state_service.build_audio_blocks_state(root, manifest, "en", settings)
+    assert all(not row["audio_stale"] for row in state["speech_blocks"])
+
+
+@pytest.mark.parametrize("redirected", [False, True])
+def test_audio_blocks_removes_only_local_published_parts(tmp_path, redirected) -> None:
+    """
+    @brief      Remove only the published block's split files from its project.
+    @param[in]  tmp_path Temporary project and external location.
+    @param[in]  redirected True to point the split directory outside the project.
+    """
+    root = tmp_path / "project"
+    parts = root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "parts"
+    parts.parent.mkdir(parents=True)
+    if redirected:
+        external = tmp_path / "external"
+        external.mkdir()
+        if os.name == "nt":
+            subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(parts), str(external)], check=True, capture_output=True,
+            )
+        else:
+            parts.symlink_to(external, target_is_directory=True)
+    else:
+        parts.mkdir()
+
+    completed_part = parts / "0001-000001_part001.wav"
+    other_part = parts / "0001-000002_part001.wav"
+    completed_part.write_bytes(b"completed part")
+    other_part.write_bytes(b"other block")
+
+    audio_blocks_service._remove_published_parts(root, {"speech_block_id": "0001-000001"})  # noqa: SLF001
+
+    assert completed_part.exists() is redirected
+    assert other_part.read_bytes() == b"other block"
+
+
+def test_audio_blocks_does_not_publish_when_cancelled_during_last_download(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Honour Stop before publishing a candidate returned by the final provider download.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_audio_blocks_project(tmp_path, "CancelFinalAudioDownload")
+    _seed_generated_audio_blocks(root)
+    output = root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav"
+    output.unlink()
+    cancelled = False
+    monkeypatch.setattr(audio_blocks_service, "_ensure_clone_model_loaded", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        audio_blocks_service, "_prepare_clone_profile",
+        lambda *_args, **_kwargs: ([{"voice_target_id": "narrator", "voice_clone_prompt": {"format": "probe"}}], True),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service, "generate_voice_clone_from_prompt",
+        lambda *_args, **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service, "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {"operation": {"status": "completed"}, "result": {"available": True}},
+    )
+
+    def download(*_args, **_kwargs):
+        """@brief Model a stop request during the blocking WAV download."""
+        nonlocal cancelled
+        cancelled = True
+        return _wav_bytes("candidate")
+
+    monkeypatch.setattr(audio_blocks_service.voiceweaver_runtime_service, "download_generated_audio", download)
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        audio_blocks_service.start_or_continue_generation(
+            root, manifest, _runtime_settings(), cancel_requested=lambda: cancelled,
+        )
+
+    assert not output.exists()
+    document = audio_blocks_service.load_audio_blocks_document(root)
+    assert document["status"] == "cancelled"
+    assert document["checkpoint"]["current_block_id"] == "0001-000001"
+    assert document["blocks"][1]["generated"] is True
+
+
+def test_audio_blocks_can_publish_pauses_without_a_runtime(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Publish metadata-only work without contacting VoiceWeaver.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_audio_blocks_project(tmp_path, "LocalAudioBlocks")
+    speech = speech_blocks_service.load_speech_blocks(root)[0]
+    _write_speech_blocks_fixture_document(root, [{**speech, "content_kind": "pause", "text": "1500 ms"}])
+
+    def unexpected_runtime(*_args, **_kwargs):
+        """@brief Fail if metadata-only work starts the clone runtime."""
+        raise AssertionError("Unexpected runtime operation.")
+
+    monkeypatch.setattr(audio_blocks_service.voiceweaver_runtime_service, "read_status", unexpected_runtime)
+    report = audio_blocks_service.start_or_continue_generation(root, manifest, {})
+    assert report["generated_block_count"] == report["approved_block_count"] == 1
+    assert not list((root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).glob("*.wav"))
 
 
 def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
@@ -748,9 +955,10 @@ def test_audio_blocks_generation_checkpoints_a_split_block_without_error(monkeyp
         @return     None.
         """
         atomic_write_paths.append(target_path)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(payload)
 
-    monkeypatch.setattr(audio_blocks_service, "write_bytes_atomic", _capture_atomic_write)
+    monkeypatch.setattr(audio_blocks_generation_service, "write_bytes_atomic", _capture_atomic_write)
 
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
@@ -894,12 +1102,13 @@ def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_
 
     monkeypatch.setattr(audio_blocks_service, "_plan_audio_block_splits", _capture_split_plan)
 
+    third_part = audio_blocks_service._audio_part_artifact_path(project_root, "0001-000001", 2)  # noqa: SLF001
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         audio_blocks_service.start_or_continue_generation(
             project_root,
             manifest,
             _runtime_settings(),
-            cancel_requested=lambda: len(generated_texts) >= 3,
+            cancel_requested=third_part.is_file,
         )
 
     cancelled_document = audio_blocks_service.load_audio_blocks_document(project_root)
@@ -917,6 +1126,22 @@ def test_audio_blocks_service_split_resume_reuses_completed_prefix_and_finishes_
     assert all(path.is_file() for path in part_paths[:3])
     assert all(not path.exists() for path in part_paths[3:])
 
+    with monkeypatch.context() as load_patch:
+        def cancel_loading(*_args, **_kwargs):
+            """@brief Cancel a second attempt while the model is loading."""
+            raise operation_runtime_service.OperationCancelledError("cancelled model load")
+
+        load_patch.setattr(audio_blocks_service, "_ensure_clone_model_loaded", cancel_loading)
+        with pytest.raises(operation_runtime_service.OperationCancelledError):
+            audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    second_checkpoint = audio_blocks_service.load_audio_blocks_document(project_root)["checkpoint"]
+    assert second_checkpoint["current_block_id"] == "0001-000001"
+    assert second_checkpoint["next_split_part_index"] == 3
+
+    updated_document = audio_blocks_service.load_audio_blocks_document(project_root)
+    updated_document["checkpoint"]["next_speech_block_index"] = 99
+    audio_blocks_service.write_audio_blocks_document(project_root, updated_document)
     report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
 
     completed_document = audio_blocks_service.load_audio_blocks_document(project_root)
@@ -1383,6 +1608,65 @@ def test_audio_blocks_service_removes_audio_for_exact_speech_block_only(tmp_path
     assert second_audio_path.exists()
 
 
+@pytest.mark.parametrize("failure", ["provider", "cancelled", "publication", "manifest"])
+def test_audio_blocks_regeneration_preserves_previous_wav_and_review(monkeypatch, tmp_path, failure) -> None:
+    """
+    @brief      Preserve the previous WAV and approval on cancellation or failed replacement.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  failure Injected failure boundary.
+    """
+    root, manifest = _create_audio_blocks_project(tmp_path, "RecoverableAudioBlock")
+    _seed_generated_audio_blocks(root)
+    block_id = "0001-000001"
+    audio_blocks_service.approve_audio_block(root, block_id)
+    document_path = root / config.AUDIO_BLOCKS_DOCUMENT_FILE_NAME
+    audio_path = root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / f"{block_id}.wav"
+    previous_wav = audio_path.read_bytes()
+    previous_document = document_path.read_bytes()
+    manifest_path = root / config.PROJECT_MANIFEST_FILE_NAME
+    previous_manifest = manifest_path.read_bytes()
+    new_wav = _wav_bytes("replacement")
+    monkeypatch.setattr(audio_blocks_service, "_ensure_clone_model_loaded", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        audio_blocks_service, "_prepare_clone_profile",
+        lambda *_args, **_kwargs: ([{"voice_target_id": "narrator", "voice_clone_prompt": {"format": "probe"}}], True),
+    )
+
+    def generate(*_args, **_kwargs):
+        """@brief Interrupt the provider request or allow a valid candidate to be returned."""
+        if failure == "provider":
+            raise RuntimeError("synthesis failed")
+        if failure == "cancelled":
+            raise operation_runtime_service.OperationCancelledError("synthesis cancelled")
+
+    monkeypatch.setattr(audio_blocks_service.voiceweaver_runtime_service, "generate_voice_clone_from_prompt", generate)
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service, "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {"operation": {"status": "completed"}, "result": {"available": True}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service, "download_generated_audio", lambda *_args, **_kwargs: new_wav,
+    )
+    replace = Path.replace
+
+    def fail_staged_replacement(path, destination):
+        """@brief Fail a metadata replacement after the candidate WAV was installed."""
+        fail_path = {"publication": document_path, "manifest": manifest_path}.get(failure)
+        if Path(destination) == fail_path and "-stage-" in path.parent.name:
+            assert audio_path.read_bytes() == new_wav
+            raise OSError("publication failed")
+        return replace(path, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_staged_replacement)
+    with pytest.raises((RuntimeError, OSError), match="synthesis|publication"):
+        audio_blocks_service.regenerate_audio_block(root, manifest, block_id, _runtime_settings())
+
+    assert audio_path.read_bytes() == previous_wav
+    assert document_path.read_bytes() == previous_document
+    assert manifest_path.read_bytes() == previous_manifest
+
+
 def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify approving and re-generating one Audio Blocks entry updates only the targeted record.
@@ -1456,6 +1740,8 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
         lambda *_args, **_kwargs: generated_audio.pop(0),
     )
 
+    unrelated_sample, _ = character_voices_service.target_sample_paths(project_root, "character_alice")
+    unrelated_sample.unlink()
     regen_report = audio_blocks_service.regenerate_audio_block(
         project_root,
         manifest,
@@ -1734,12 +2020,13 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         lambda *_args, **_kwargs: audio_payloads.pop(0),
     )
 
+    first_wav = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav"
     try:
         audio_blocks_service.start_or_continue_generation(
             project_root,
             manifest,
             _runtime_settings(),
-            cancel_requested=lambda: len(observed_generate_requests) >= 1,
+            cancel_requested=first_wav.is_file,
         )
     except operation_runtime_service.OperationCancelledError:
         pass
@@ -1769,17 +2056,25 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
     ]
 
 
-def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("changed_input", ["source", "effective_budget"])
+def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(
+    monkeypatch, tmp_path, changed_input,
+) -> None:
     """
     @brief      Verify continuation generates only missing Audio Blocks and does not regenerate later existing WAVs.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  changed_input Source text or effective runtime budget change.
     @return     None.
     @exception  None
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceContinueMissingOnly")
     _seed_generated_audio_blocks(project_root)
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    original_text = speech_blocks[0]["text"]
+    if changed_input == "source":
+        speech_blocks[0]["text"] = "Edited narration."
+    effective_budget = 128 if changed_input == "effective_budget" else 512
     speech_blocks[1]["sequence_index"] = 3
     speech_blocks.insert(
         1,
@@ -1812,13 +2107,6 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
             },
             "result": {},
         },
-        {
-            "operation": {
-                "status": "completed",
-                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"}},
-            },
-            "result": {},
-        },
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Inserted ready."}},
     ]
     observed_generate_requests: list[str] = []
@@ -1828,7 +2116,7 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
         lambda *_args, **_kwargs: {
             "active_model": {
                 "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
-                "effective_model_parameters": {"max_new_tokens": 512},
+                "effective_model_parameters": {"max_new_tokens": effective_budget},
             },
             "operation": {"status": "idle"},
         },
@@ -1862,11 +2150,33 @@ def test_audio_blocks_service_continuation_skips_later_existing_audio_after_inse
         lambda *_args, **_kwargs: _wav_bytes("inserted"),
     )
 
+    optional_sample, _ = character_voices_service.target_sample_paths(project_root, "character_alice")
+    original_read = Path.read_bytes
+
+    def read_bytes(path):
+        """@brief Deny reads of the optional reference for a voice with completed audio."""
+        if path == optional_sample:
+            raise PermissionError("reference unavailable")
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
     report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
 
     updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert report["generated_block_count"] == 3
     assert observed_generate_requests == ["Inserted narration."]
+    assert updated_blocks[0]["generation_fingerprint"] == original_blocks[0]["generation_fingerprint"]
+    assert updated_blocks[0]["audio_stale"] is (changed_input == "effective_budget")
+    reviewed = audio_blocks_service.audio_blocks_for_review(
+        project_root, manifest, speech_blocks, updated_blocks, _runtime_settings(),
+    )
+    assert reviewed[0]["audio_stale"]
+    if changed_input == "source":
+        speech_blocks[0]["text"] = original_text
+        reviewed = audio_blocks_service.audio_blocks_for_review(
+            project_root, manifest, speech_blocks, updated_blocks, _runtime_settings(),
+        )
+        assert not reviewed[0]["audio_stale"]
     assert (project_root / str(updated_blocks[0]["audio_relative_path"])).read_bytes() == original_audio_by_id[
         "0001-000001"
     ]
@@ -2325,9 +2635,10 @@ def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks
         @return     None.
         """
         atomic_write_paths.append(target_path)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(payload)
 
-    monkeypatch.setattr(audio_blocks_service, "write_bytes_atomic", _capture_atomic_write)
+    monkeypatch.setattr(audio_blocks_generation_service, "write_bytes_atomic", _capture_atomic_write)
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -2499,11 +2810,15 @@ def test_audio_blocks_service_projects_only_real_scene_ambience_wav_ownership(tm
     assert enabled_by_id["0001-000004"]["audio_can_play"] is True
 
 
-def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("duration_override", [None, 11])
+def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard(
+    monkeypatch, tmp_path, duration_override,
+) -> None:
     """
     @brief      Verify selected Scene Ambience regeneration bypasses stale TTS run fingerprint checks.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  duration_override Optional duration override.
     @return     None.
     @exception  None.
     """
@@ -2530,6 +2845,14 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
         }
     )
     _write_speech_blocks_fixture_document(project_root, speech_blocks)
+    audio_folder = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_folder.mkdir(exist_ok=True)
+    prior_wavs = {
+        audio_folder / f"{block_id}.wav": _wav_bytes(block_id)
+        for block_id in ("0001-000001", "0001-000002")
+    }
+    for path, contents in prior_wavs.items():
+        path.write_bytes(contents)
     audio_blocks_service.write_audio_blocks_document(
         project_root,
         {
@@ -2562,7 +2885,8 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     )
     runtime_settings = _runtime_settings()
     runtime_settings["scene_ambience_guidance_scale"] = 8.5
-    runtime_settings["scene_ambience_duration_seconds"] = 11
+    if duration_override is not None:
+        runtime_settings["scene_ambience_duration_seconds"] = duration_override
     runtime_settings["scene_ambience_num_inference_steps"] = 75
     runtime_settings["scene_ambience_seed"] = 321
     runtime_settings["discovered_models"].append(
@@ -2612,16 +2936,26 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
 
     regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     ambience_block = regenerated_blocks[-1]
-    assert report["generated_block_count"] == 1
+    assert report["generated_block_count"] == 3
+    assert all(path.read_bytes() == contents for path, contents in prior_wavs.items())
     assert sound_requests
     assert sound_requests[0][0][1] == "distant rain on metal trench covers"
     assert sound_requests[0][1]["negative_prompt"] == "voice, speech"
-    assert sound_requests[0][1]["duration_seconds"] == 11.0
+    effective_duration = 6.0 if duration_override is None else float(duration_override)
+    assert sound_requests[0][1]["duration_seconds"] == effective_duration
     assert sound_requests[0][1]["guidance_scale"] == 8.5
     assert sound_requests[0][1]["num_inference_steps"] == 75
     assert sound_requests[0][1]["seed"] == 321
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
     assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")
+    compared_blocks = audio_blocks_service.audio_blocks_for_review(
+        project_root,
+        manifest,
+        speech_blocks,
+        regenerated_blocks,
+        {**runtime_settings, "scene_ambience_duration_seconds": effective_duration},
+    )
+    assert not compared_blocks[-1]["audio_stale"]
 
 
 @pytest.mark.parametrize(
@@ -2869,10 +3203,11 @@ def _create_audio_blocks_project(tmp_path, name: str):
     return project_root, project_workspace_service.load_manifest(project_root)
 
 
-def _seed_generated_audio_blocks(project_root) -> None:
+def _seed_generated_audio_blocks(project_root, runtime_settings=None) -> None:
     """
     @brief      Write one generated Audio Blocks document plus its clone-profile cache.
     @param[in]  project_root Active project root folder.
+    @param[in]  runtime_settings Optional generation settings to fingerprint.
     @return     None.
     @exception  None
     """
@@ -2880,7 +3215,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
     generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
         project_root,
         project_workspace_service.load_manifest(project_root),
-        _runtime_settings(),
+        runtime_settings or _runtime_settings(),
     )
     audio_root = (
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -2910,6 +3245,9 @@ def _seed_generated_audio_blocks(project_root) -> None:
                 "approved": False,
                 "audio_can_play": True,
                 "audio_duration_seconds": 1.0,
+                "configured_fingerprint": audio_blocks_service._build_audio_block_fingerprint(  # noqa: SLF001
+                    fingerprint_block, generation_context, configured_only=True,
+                ),
                 "generation_fingerprint": audio_blocks_service._build_audio_block_fingerprint(  # noqa: SLF001
                     fingerprint_block,
                     generation_context,

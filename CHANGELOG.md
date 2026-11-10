@@ -21,6 +21,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Blocks keeps the previous WAV and its approval if regeneration fails or
+  is cancelled. Interrupted generation finds the block by ID and reuses valid
+  parts from the saved checkpoint. Start can retry missing or unreadable WAVs.
+- Existing audio keeps the synthesis identity that produced it, and clone
+  prompts are refreshed when the sample transcript changes. Audio generation
+  requires only the models and references used by the requested blocks.
+
 - Interrupted Speech Blocks continue from the saved source position even when
   the AI request budget changes. Ambience failures keep the generated speech.
 - AI-generated narration uses the narrator voice. Long dialogue keeps its

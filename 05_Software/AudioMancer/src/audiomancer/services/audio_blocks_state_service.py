@@ -33,6 +33,58 @@ from audiomancer.services import (
 )
 
 
+def generation_settings(
+    settings_payload: dict[str, object],
+    probe_result: dict[str, object],
+    scene_ambience_audio_enabled: bool = False,
+) -> dict[str, object]:
+    """
+    @brief      Build the runtime-settings payload required by the Audio Blocks service.
+    @param[in]  settings_payload Persisted application settings.
+    @param[in]  probe_result Fresh model discovery result or an empty dictionary.
+    @param[in]  scene_ambience_audio_enabled Whether the generation batch includes sound cues.
+    @return     Audio Blocks runtime-settings payload.
+    @exception  None
+    """
+    timeout_value = settings_payload.get(
+        "tts_audio_generation_timeout_seconds",
+        config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
+    )
+    timeout_seconds = timeout_value if isinstance(timeout_value, int) and timeout_value > 0 else 300
+    scene_ambience_seed = settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
+    return {
+        "base_url": str(settings_payload.get("tts_runtime_base_url", "")).strip(),
+        "timeout_seconds": timeout_seconds,
+        "discovered_models": list(
+            probe_result.get("discovered_models", settings_payload.get("tts_runtime_discovered_models", []))
+        ),
+        "speech_block_max_generation_tokens": tts_budget_service.resolve_generation_token_limit(
+            settings_payload
+        ),
+        "clone_model_parameters": tts_budget_service.resolve_clone_sampling_parameters(settings_payload),
+        "generate_scene_ambience_audio": bool(scene_ambience_audio_enabled),
+        "scene_ambience_duration_seconds": float(
+            settings_payload.get(
+                "scene_ambience_duration_seconds",
+                config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
+            )
+        ),
+        "scene_ambience_guidance_scale": float(
+            settings_payload.get(
+                "scene_ambience_guidance_scale",
+                config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
+            )
+        ),
+        "scene_ambience_num_inference_steps": int(
+            settings_payload.get(
+                "scene_ambience_num_inference_steps",
+                config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
+            )
+        ),
+        "scene_ambience_seed": scene_ambience_seed if isinstance(scene_ambience_seed, int) else None,
+    }
+
+
 def build_audio_blocks_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
@@ -66,8 +118,12 @@ def build_audio_blocks_state(
     operation_metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
     if not isinstance(operation_metadata, dict):
         operation_metadata = {}
-    merged_blocks = _merge_audio_block_state(project_root, speech_blocks, audio_blocks, operation_state)
     scene_ambience_audio_enabled = _scene_ambience_audio_enabled(settings_payload)
+    review_blocks = audio_blocks_service.audio_blocks_for_review(
+        project_root, manifest, speech_blocks, audio_blocks,
+        generation_settings(settings_payload or {}, {}, scene_ambience_audio_enabled),
+    )
+    merged_blocks = _merge_audio_block_state(project_root, speech_blocks, review_blocks, operation_state)
     current_block = _resolve_current_block(merged_blocks)
     current_block_id = None if current_block is None else str(current_block.get("speech_block_id", "")).strip()
     generated_count = sum(1 for block in merged_blocks if audio_blocks_service.is_generated(block))
@@ -123,11 +179,9 @@ def build_audio_blocks_state(
         "prompt_count": prompt_count,
         "invalidation_reason": invalidation_reason,
         "stage_status": resolved_stage_status,
-        "can_start_or_continue": _can_start_or_continue_generation(
-            speech_blocks,
-            merged_blocks,
-            scene_ambience_audio_enabled,
-        ),
+        "can_start_or_continue": bool(audio_blocks_service.pending_speech_blocks(
+            project_root, speech_blocks, audio_blocks, scene_ambience_audio_enabled,
+        )),
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
         "can_approve_all": any(
             audio_blocks_service.is_generated(block) and not audio_blocks_service.is_approved(block)
@@ -139,41 +193,6 @@ def build_audio_blocks_state(
         "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
         "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
     }
-
-
-def _can_start_or_continue_generation(
-    speech_blocks: list[dict[str, object]],
-    audio_blocks: list[dict[str, object]],
-    scene_ambience_audio_enabled: bool = False,
-) -> bool:
-    """
-    @brief      Return whether Audio Blocks generation still has approved source work to process.
-    @param[in]  speech_blocks Current Speech Blocks payload list.
-    @param[in]  audio_blocks Current merged Audio Blocks display payload list.
-    @return     True when at least one approved Speech Block still lacks generated audio.
-    @exception  None
-    """
-    generated_by_speech_block_id = {
-        str(block.get("speech_block_id", "")).strip(): audio_blocks_service.is_generated(block)
-        for block in audio_blocks
-    }
-    for speech_block in speech_blocks:
-        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
-        if (
-            not scene_ambience_audio_enabled
-            and str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-        ):
-            continue
-        if (
-            speech_block_id
-            and bool(speech_block.get("approved", False))
-            and not generated_by_speech_block_id.get(
-                speech_block_id,
-                False,
-            )
-        ):
-            return True
-    return False
 
 
 def _scene_ambience_audio_enabled(settings_payload: dict[str, object] | None) -> bool:
@@ -430,6 +449,7 @@ def _merge_audio_block_state(
                 "text": str(speech_block.get("text", "")),
                 "generated": audio_blocks_service.is_generated(persisted_audio_block),
                 "approved": audio_blocks_service.is_approved(persisted_audio_block),
+                "audio_stale": bool(persisted_audio_block.get("audio_stale", False)),
                 "metadata_only": metadata_only,
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_file_name": audio_file_name,

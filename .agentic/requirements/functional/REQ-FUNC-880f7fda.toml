@@ -1,18 +1,17 @@
 schema = 1
 id = "REQ-FUNC-880f7fda"
-title = "Audio-block clone prompts shall match and create using the reference"
+title = "Audio Blocks keys clone prompts to the exact reference"
 status = "active"
 
 requirement = """
-Audio-block clone prompts shall match and create using the reference sample language.
+When preparing a clone prompt, Audio Blocks shall reuse it only if the reference WAV fingerprint, transcript, language and clone model match the requested target.
 """
 
-verification = "Automated: 2 linked pytest selector(s)."
+verification = "Change only the transcript on a saved clone and verify it is recreated."
 
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py"]
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_clone_prompt_matches_the_exact_reference_transcript",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_clone_prompt_matching_uses_sample_language_for_romanian_output",
   "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_language",
 ]
@@ -22,4 +21,4 @@ rationale = """
 Clone prompts must use the correct sample language.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-09

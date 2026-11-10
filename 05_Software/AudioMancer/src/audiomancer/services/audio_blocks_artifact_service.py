@@ -88,6 +88,19 @@ def normalize_speaker_name(value: str) -> str:
     return cleaned_value or "speaker"
 
 
+def _has_complete_frames(audio_file: wave.Wave_read) -> bool:
+    """
+    @brief      Check the WAV has a positive frame count and its declared last frame.
+    @param[in]  audio_file Open PCM WAV reader.
+    @return     Whether its data reaches the final frame declared in the header.
+    """
+    frame_size = audio_file.getnchannels() * audio_file.getsampwidth()
+    if frame_size <= 0 or audio_file.getframerate() <= 0 or audio_file.getnframes() <= 0:
+        return False
+    audio_file.setpos(audio_file.getnframes() - 1)
+    return len(audio_file.readframes(1)) == frame_size
+
+
 def validate_wav_bytes(audio_bytes: bytes) -> None:
     """
     @brief      Validate downloaded Audio Blocks WAV bytes before persistence.
@@ -97,11 +110,9 @@ def validate_wav_bytes(audio_bytes: bytes) -> None:
     """
     try:
         with wave.open(io.BytesIO(audio_bytes), "rb") as audio_file:
-            if audio_file.getnchannels() <= 0 or audio_file.getsampwidth() <= 0:
+            if not _has_complete_frames(audio_file):
                 raise RuntimeError
-            if audio_file.getframerate() <= 0 or audio_file.getnframes() <= 0:
-                raise RuntimeError
-    except (EOFError, OSError, RuntimeError, wave.Error) as exc:
+    except (EOFError, OSError, RuntimeError, ValueError, wave.Error) as exc:
         raise RuntimeError("VoiceWeaver returned invalid WAV audio for Audio Blocks generation.") from exc
 
 
@@ -114,13 +125,8 @@ def is_valid_wav_path(audio_path: Path) -> bool:
     """
     try:
         with wave.open(str(audio_path), "rb") as audio_file:
-            return (
-                audio_file.getnchannels() > 0
-                and audio_file.getsampwidth() > 0
-                and audio_file.getframerate() > 0
-                and audio_file.getnframes() > 0
-            )
-    except (EOFError, OSError, wave.Error):
+            return _has_complete_frames(audio_file)
+    except (EOFError, OSError, ValueError, wave.Error):
         return False
 
 
