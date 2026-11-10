@@ -109,7 +109,6 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
         lambda _settings: {
             "success": True,
             "discovered_models": discovered_models,
-            "capability_matrix": {"minimum_qwen_ready": True},
         },
     )
     monkeypatch.setattr(
@@ -157,7 +156,6 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
             "load_model": "Loading",
             "generate": "Generating",
             "download": "Downloading",
-            "qwen_capabilities_missing": "Missing: {missing_capabilities}",
             "generation_missing_audio": "No audio",
         },
         lambda models: {
@@ -165,7 +163,7 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
             "model_id": "voice-designer",
             "language": "en",
             "model_parameters": {"temperature": 0.4},
-            "supported_languages": ["en", "ro"],
+            "runtime_language": "ro",
         },
         "Warm, grounded voice.",
         _IN_RANGE_PREVIEW_TEXT,
@@ -179,18 +177,17 @@ def test_voice_design_generation_runs_shared_success_flow(monkeypatch) -> None:
             "model_id": "voice-designer",
             "language": "en",
             "model_parameters": {"temperature": 0.4},
-            "supported_languages": ["en", "ro"],
+            "runtime_language": "ro",
         },
         "result_summary": "Sample ready.",
         "audio_bytes": b"RIFF-shared",
     }
     assert generated_arguments == [
         (
-            ("http://runtime", "en", _IN_RANGE_PREVIEW_TEXT, "Warm, grounded voice."),
+            ("http://runtime", "ro", _IN_RANGE_PREVIEW_TEXT, "Warm, grounded voice."),
             {
                 "model_parameters": {"temperature": 0.4},
                 "timeout_seconds": 45,
-                "supported_languages": ["en", "ro"],
             },
         )
     ]
@@ -211,7 +208,6 @@ def test_voice_design_generation_stops_after_probe_when_cancelled(monkeypatch) -
         lambda _settings: {
             "success": True,
             "discovered_models": [],
-            "capability_matrix": {"minimum_qwen_ready": True},
         },
     )
 
@@ -224,7 +220,6 @@ def test_voice_design_generation_stops_after_probe_when_cancelled(monkeypatch) -
                 "load_model": "Loading",
                 "generate": "Generating",
                 "download": "Downloading",
-                "qwen_capabilities_missing": "Missing: {missing_capabilities}",
                 "generation_missing_audio": "No audio",
             },
             lambda _models: pytest.fail("Request construction ran after cancellation."),
@@ -248,7 +243,6 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
         "load_model": "Loading",
         "generate": "Generating",
         "download": "Downloading",
-        "qwen_capabilities_missing": "Missing runtime capabilities: {missing_capabilities}",
         "generation_missing_audio": "No audio",
     }
     monkeypatch.setattr(
@@ -267,15 +261,13 @@ def test_voice_design_generation_preserves_probe_and_capability_errors(monkeypat
         lambda _settings: {
             "success": True,
             "discovered_models": [],
-            "capability_matrix": {
-                "minimum_qwen_ready": False,
-                "missing_qwen_capabilities": ["clone", "voice_design"],
-            },
         },
     )
-    with pytest.raises(RuntimeError, match=r"^Missing runtime capabilities: clone, voice_design$"):
+    with pytest.raises(RuntimeError, match=r"^No compatible voice design model.$"):
         tts_runtime_ui_support.run_voice_design_generation(
-            {}, progress_messages, lambda _models: {}, "Prompt", _IN_RANGE_PREVIEW_TEXT, None, lambda: False
+            {}, progress_messages,
+            lambda _models: {"unavailable_reason": "No compatible voice design model."},
+            "Prompt", _IN_RANGE_PREVIEW_TEXT, None, lambda: False,
         )
 
 
@@ -292,7 +284,6 @@ def test_voice_design_generation_maps_terminal_runtime_failure(monkeypatch) -> N
         lambda _settings: {
             "success": True,
             "discovered_models": [],
-            "capability_matrix": {"minimum_qwen_ready": True},
         },
     )
     monkeypatch.setattr(
@@ -330,7 +321,6 @@ def test_voice_design_generation_maps_terminal_runtime_failure(monkeypatch) -> N
                 "load_model": "Loading",
                 "generate": "Generating",
                 "download": "Downloading",
-                "qwen_capabilities_missing": "Missing: {missing_capabilities}",
                 "generation_missing_audio": "No audio",
             },
             lambda _models: {"can_generate": True, "model_id": "voice-designer", "language": "en"},

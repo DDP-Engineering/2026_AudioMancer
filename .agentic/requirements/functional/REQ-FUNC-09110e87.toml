@@ -1,24 +1,16 @@
 schema = 1
 id = "REQ-FUNC-09110e87"
-title = "Narrator state status lines shall show counts and Qwen readiness"
+title = "Show narrator profile counts and voice-design readiness"
 status = "active"
 
-requirement = """
-Narrator state status lines shall show counts and Qwen readiness.
-"""
-
-verification = "Automated: 1 linked pytest selector(s)."
-
+requirement = "When displaying narrator status, AudioMancer shall report profile counts and the availability of voice design for the selected language."
+verification = "Open narrator state with a sample and a design-only runtime, and assert the counts and design readiness."
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
 ]
 linked_tests = [
-  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_qwen_readiness",
+  "05_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_status_lines_show_counts_and_design_readiness",
 ]
-
-priority = "high"
-rationale = """
-Operators need visible profile counts and runtime readiness.
-"""
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-11-10

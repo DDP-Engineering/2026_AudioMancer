@@ -1,0 +1,25 @@
+schema = 1
+id = "REQ-FUNC-295f2eb9"
+title = "Choose a healthy VoiceWeaver model by operation and language"
+status = "active"
+
+requirement = "When selecting a model for voice design, cloning or scene sounds, AudioMancer shall prefer a healthy model that declares the operation and requested language, with a Qwen Italian fallback for Romanian and no speech-language constraint for scene sounds."
+verification = "Probe inventories with separate operations, unhealthy and incompatible models, and native Romanian alongside Qwen, then assert the selected model IDs the Qwen-only fallback, and the generation fingerprint after a model changes from the Italian hint to native Romanian."
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_generation_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/tts_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py",
+]
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_fingerprints_distinguish_native_romanian_from_fallback",
+  "05_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_resolve_tts_model_prefers_operation_and_native_language",
+  "05_Software/AudioMancer/tests/test_tts_budget_service.py::test_tts_budget_uses_selected_clone_model_for_romanian",
+  "05_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_use_native_direct_clone_for_batch_and_regeneration",
+]
+created = 2026-11-10
+updated = 2026-11-10

@@ -10,8 +10,8 @@
 @file voiceweaver_runtime_service.py
 @brief VoiceWeaver runtime probe helpers for AudioMancer.
 @details Probes the local VoiceWeaver REST runtime, normalizes discovered
-         models and current status data, and derives one capability matrix used
-         by the TTS Settings dialog and Narrator workflow.
+         models and current status, and selects compatible models for speech
+         and sound generation.
 """
 
 # IMPORTS
@@ -94,34 +94,6 @@ def _send_json_request(
     if not response_body.strip():
         return None
     return json.loads(response_body)
-
-
-def _add_tts_language_field(
-    payload: dict[str, object],
-    language: str,
-    supported_languages: list[str] | None = None,
-) -> None:
-    """
-    @brief      Add the VoiceWeaver TTS language hint when the runtime offers it.
-    @details    Romanian content uses the Italian hint at this request boundary. Text and
-                project or sample language metadata retain their original values.
-    @param[in]  payload Mutable outbound TTS request payload.
-    @param[in]  language Selected project or reference-sample language code.
-    @param[in]  supported_languages Optional language codes the active model reports as supported.
-    @return     None.
-    @exception  None
-    """
-    normalized_language = str(language).strip()
-    runtime_language = "it" if normalized_language == "ro" else normalized_language
-    normalized_supported_languages = (
-        {str(item).strip() for item in supported_languages if str(item).strip()}
-        if supported_languages is not None
-        else None
-    )
-    if normalized_supported_languages is not None and runtime_language not in normalized_supported_languages:
-        return
-    if runtime_language:
-        payload["language"] = runtime_language
 
 
 def _send_multipart_request(
@@ -358,7 +330,9 @@ def normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
         "backend_name": str(candidate_model.get("backend_name", "")).strip(),
         "status": str(candidate_model.get("status", "unhealthy")).strip().lower() or "unhealthy",
         "supported_generation_modes": supported_generation_modes,
-        "supported_languages": _normalize_string_list(candidate_model.get("supported_languages")),
+        "supported_languages": [code.casefold() for code in _normalize_string_list(
+            candidate_model.get("supported_languages")
+        )],
         "default_model_parameters": _normalize_model_parameters(candidate_model.get("default_model_parameters")),
         "generation_parameter_ranges": _normalize_generation_parameter_ranges(
             candidate_model.get("generation_parameter_ranges")
@@ -366,6 +340,56 @@ def normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
         "device_mode": str(candidate_model.get("device_mode", "")).strip(),
         "issues": copy.deepcopy(issues) if isinstance(issues, list) else None,
     }
+
+
+def tts_language_for_model(language: str, model: VoiceWeaverModelPayload) -> str | None:
+    """
+    @brief      Resolve the language hint accepted by a selected VoiceWeaver model.
+    @param[in]  language Canonical project or reference-sample language.
+    @param[in]  model Normalized runtime model descriptor.
+    @return     Requested or fallback language, or None for a known incompatibility.
+    """
+    requested = str(language).strip().casefold()
+    supported = model.get("supported_languages", [])
+    if requested in supported:
+        return requested
+    if requested == "ro" and is_qwen_model(model) and (not supported or "it" in supported):
+        return "it"
+    return requested if not supported else None
+
+
+def resolve_tts_model(
+    models: list[object],
+    operation: str,
+    language: str = "",
+) -> VoiceWeaverModelPayload | None:
+    """
+    @brief      Choose a healthy model for one operation and language.
+    @param[in]  models Discovered runtime model descriptors in discovery order.
+    @param[in]  operation Required generation mode.
+    @param[in]  language Desired speech language, ignored for sound generation.
+    @return     Best compatible descriptor, or None when unavailable.
+    """
+    requested = str(language).strip().casefold()
+    candidates = []
+    for candidate in models:
+        model = normalize_model(candidate)
+        if model is None or model["status"] not in {"healthy", "ready"}:
+            continue
+        if operation not in model["supported_generation_modes"]:
+            continue
+        rank = 0
+        if operation != "sound_prompt" and requested:
+            effective = tts_language_for_model(requested, model)
+            if effective is None:
+                continue
+            if requested not in model["supported_languages"]:
+                rank = 1 if effective != requested else 2
+        preferred = operation == "clone" and model["model_id"] == "Qwen3-TTS-12Hz-1.7B-Base"
+        candidates.append(((rank, not preferred), model))
+    if not candidates:
+        return None
+    return min(candidates, key=lambda candidate: candidate[0])[1]
 
 
 def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) -> VoiceWeaverCapabilityMatrix:
@@ -396,22 +420,11 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         for model in healthy_models
         if "sound_prompt" in _normalize_generation_modes(model.get("supported_generation_modes"))
     ]
-    qwen_voice_design_models = [model for model in voice_design_models if _is_qwen_model(model)]
-    qwen_clone_models = [model for model in clone_models if _is_qwen_model(model)]
-    missing_qwen_capabilities: list[str] = []
-    if not qwen_clone_models:
-        missing_qwen_capabilities.append("clone")
-    if not qwen_voice_design_models:
-        missing_qwen_capabilities.append("voice_design")
     return {
         "voice_design_models": voice_design_models,
         "clone_models": clone_models,
-        "qwen_voice_design_models": qwen_voice_design_models,
-        "qwen_clone_models": qwen_clone_models,
         "sound_prompt_models": sound_prompt_models,
         "sound_prompt_available": bool(sound_prompt_models),
-        "minimum_qwen_ready": not missing_qwen_capabilities,
-        "missing_qwen_capabilities": missing_qwen_capabilities,
         "generate_and_clone_available": bool(voice_design_models and clone_models),
     }
 
@@ -569,7 +582,6 @@ def generate_voice_design(
     text: str,
     voice_description: str,
     model_parameters: dict[str, object] | None = None,
-    supported_languages: list[str] | None = None,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
@@ -579,7 +591,6 @@ def generate_voice_design(
     @param[in]  text Preview text to synthesize.
     @param[in]  voice_description Voice Designer prompt text.
     @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
-    @param[in]  supported_languages Optional language codes the active Voice Designer model reports as supported.
     @param[in]  timeout_seconds Request timeout in seconds.
     @return     Runtime operation payload returned by `/voice/design`.
     @exception  RuntimeError Raised when the runtime request fails.
@@ -588,7 +599,7 @@ def generate_voice_design(
         "text": str(text).strip(),
         "voice_description": str(voice_description).strip(),
     }
-    _add_tts_language_field(payload, language, supported_languages)
+    payload["language"] = str(language).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters
@@ -613,7 +624,7 @@ def generate_voice_clone(
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
-    @brief      Start one direct Qwen3 voice-clone request from a WAV sample.
+    @brief      Start one direct voice-clone request from a WAV sample.
     @param[in]  base_url Operator-configured runtime base URL.
     @param[in]  sample_audio_bytes WAV reference audio bytes uploaded for cloning.
     @param[in]  sample_text Transcript matching the reference audio sample.
@@ -629,7 +640,7 @@ def generate_voice_clone(
         "sample_text": str(sample_text).strip(),
         "text": str(text).strip(),
     }
-    _add_tts_language_field(form_fields, language)
+    form_fields["language"] = str(language).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
@@ -680,7 +691,7 @@ def create_voice_clone_prompt(
     form_fields: dict[str, object] = {
         "sample_text": str(sample_text).strip(),
     }
-    _add_tts_language_field(form_fields, language)
+    form_fields["language"] = str(language).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
@@ -731,7 +742,7 @@ def generate_voice_clone_from_prompt(
         "voice_clone_prompt": voice_clone_prompt,
         "text": str(text).strip(),
     }
-    _add_tts_language_field(payload, language)
+    payload["language"] = str(language).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters
@@ -1130,20 +1141,18 @@ def _runtime_error_message(http_exception: error.HTTPError) -> str:
     return f"Connection failed: HTTP {http_exception.code}."
 
 
-def _is_qwen_model(model_payload: VoiceWeaverModelPayload) -> bool:
+def is_qwen_model(model_payload: VoiceWeaverModelPayload) -> bool:
     """
     @brief      Return whether one normalized runtime model belongs to the Qwen TTS family.
     @param[in]  model_payload Normalized discovered-model payload.
-    @return     True when the model id or backend name indicates Qwen support.
+    @return     True for a declared Qwen backend or a legacy Qwen model ID without backend metadata.
     @exception  None
     """
-    search_blob = " ".join(
-        (
-            str(model_payload.get("model_id", "")).strip(),
-            str(model_payload.get("backend_name", "")).strip(),
-        )
-    ).casefold()
-    return "qwen" in search_blob
+    backend = str(model_payload.get("backend_name") or "").strip().casefold()
+    if backend:
+        return backend.startswith("qwen")
+    return "qwen" in str(model_payload.get("model_id") or "").casefold()
+
 
 
 # END OF FILE

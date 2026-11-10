@@ -67,7 +67,6 @@ AUDIO_BLOCKS_STAGE_COMPLETED = "completed"
 _PROFILE_PHASE = "prepare_prompts"
 _GENERATE_PHASE = "generate_blocks"
 _MODE = "tts_generation"
-_PREFERRED_QWEN_CLONE_MODEL_ID = "Qwen3-TTS-12Hz-1.7B-Base"
 _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN = config.DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN
 _SPLIT_SAFETY_FACTOR = config.DEFAULT_TTS_SPLIT_SAFETY_FACTOR
 _WORDS_PER_AUDIO_SECOND = config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND
@@ -545,7 +544,8 @@ def start_or_continue_generation(
             str(blocks[block_index]["voice_target_id"]) for _, block_index in pending
             if blocks[block_index]["content_kind"] != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
         }
-        for voice_target in context["voice_targets"]:
+        voice_targets = {str(target["voice_target_id"]): target for target in context["voice_targets"]}
+        for voice_target in voice_targets.values() if context["uses_clone_prompt"] else ():
             if str(voice_target["voice_target_id"]) not in targets_needed:
                 continue
             raise_if_cancelled(cancel_requested)
@@ -604,14 +604,15 @@ def start_or_continue_generation(
                             progress_callback, total, _generated_count(blocks), cancel_requested=cancel_requested,
                         )
                         active_model_id = clone_model_id
-                    clone_profile = clones_by_id.get(str(current["voice_target_id"]))
-                    if clone_profile is None:
-                        raise RuntimeError(f"Missing clone profile for voice target '{current['voice_target_id']}'.")
+                    target_id = str(current["voice_target_id"])
+                    clone_profile = clones_by_id.get(target_id) if context["uses_clone_prompt"] else None
+                    if context["uses_clone_prompt"] and clone_profile is None:
+                        raise RuntimeError(f"Missing clone profile for voice target '{target_id}'.")
                     generated = _generate_audio_block(
                         resolved_project_root, current, clone_profile, context, runtime_settings,
                         cancel_requested=cancel_requested, checkpoint_callback=save_part,
                         next_split_part_index=checkpoint_part if block_id == checkpoint_id else 0,
-                        output_path=candidate,
+                        voice_target=voice_targets[target_id], output_path=candidate,
                     )
                 raise_if_cancelled(cancel_requested)
                 blocks[block_index] = generated
@@ -983,23 +984,18 @@ def regenerate_audio_block(
     if voice_target is None:
         raise ValueError("The selected block does not reference one valid voice target.")
 
-    clone_profiles, _prompt_reused = _prepare_clone_profile(
-        generation_context,
-        voice_target,
-        load_voice_clone_profiles(resolved_project_root),
-        runtime_settings,
-        cancel_requested=cancel_requested,
-    )
-    clone_profile = next(
-        (
-            dict(profile)
-            for profile in clone_profiles
-            if str(profile.get("voice_target_id", "")).strip() == voice_target_id
-        ),
-        None,
-    )
-    if clone_profile is None:
-        raise RuntimeError("Failed to prepare the required reusable clone prompt for the selected audio block.")
+    clone_profiles = load_voice_clone_profiles(resolved_project_root)
+    clone_profile = None
+    if generation_context["uses_clone_prompt"]:
+        clone_profiles, _prompt_reused = _prepare_clone_profile(
+            generation_context, voice_target, clone_profiles, runtime_settings,
+            cancel_requested=cancel_requested,
+        )
+        clone_profile = next(
+            (profile for profile in clone_profiles if profile["voice_target_id"] == voice_target_id), None,
+        )
+        if clone_profile is None:
+            raise RuntimeError("Failed to prepare the required reusable clone prompt for the selected audio block.")
     raise_if_cancelled(cancel_requested)
     old_block = audio_blocks[target_index]
     audio_path = _audio_artifact_path(resolved_project_root, target_block_id)
@@ -1007,7 +1003,7 @@ def regenerate_audio_block(
         candidate = Path(stage) / audio_path.name
         audio_blocks[target_index] = _generate_audio_block(
             resolved_project_root, old_block, clone_profile, generation_context, runtime_settings,
-            cancel_requested=cancel_requested, force_restart=True, output_path=candidate,
+            cancel_requested=cancel_requested, force_restart=True, voice_target=voice_target, output_path=candidate,
         )
         raise_if_cancelled(cancel_requested)
         report = _persist_report_update(
@@ -1198,21 +1194,21 @@ def _build_generation_context(
     if (needed_voices or needs_sound) and timeout_seconds <= 0:
         raise ValueError("Audio Blocks generation requires a valid runtime timeout configuration.")
     models = list(runtime_settings.get("discovered_models", []))
-    capabilities = voiceweaver_runtime_service.build_capability_matrix(models)
-    clone_model = _first_model(
-        capabilities.get("qwen_clone_models", []), preferred_model_id=_PREFERRED_QWEN_CLONE_MODEL_ID,
+    voice_language = character_voices_service.load_selected_voice_language(
+        project_root, narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
+    clone_model = voiceweaver_runtime_service.resolve_tts_model(models, "clone", voice_language)
     if needed_voices and clone_model is None:
-        raise ValueError("Cannot generate Audio Blocks because the required Qwen3 TTS base clone model is missing.")
-    sound_model = _first_model(capabilities.get("sound_prompt_models", []))
+        raise ValueError(
+            f"Cannot generate Audio Blocks. No healthy VoiceWeaver clone model is available for {voice_language}."
+        )
+    sound_model = voiceweaver_runtime_service.resolve_tts_model(models, "sound_prompt")
     if needs_sound and sound_model is None:
         raise ValueError(
             "Scene Ambience Audio was requested, but VoiceWeaver has no healthy sound_prompt model available."
         )
+    uses_clone_prompt = clone_model is not None and voiceweaver_runtime_service.is_qwen_model(clone_model)
 
-    voice_language = character_voices_service.load_selected_voice_language(
-        project_root, narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-    )
     operator_token_maximum = tts_budget_service.resolve_generation_token_limit(runtime_settings)
     model_budget = {}
     if clone_model is not None:
@@ -1232,6 +1228,8 @@ def _build_generation_context(
         "operator_token_maximum": operator_token_maximum,
         "voice_targets": voice_targets,
         "voice_language": voice_language,
+        "runtime_language": voiceweaver_runtime_service.tts_language_for_model(voice_language, clone_model or {}),
+        "uses_clone_prompt": uses_clone_prompt,
         "clone_model_id": clone_model_id,
         "needs_clone": bool(needed_voices),
         "clone_model_payload": clone_model or {},
@@ -1244,7 +1242,7 @@ def _build_generation_context(
         "scene_ambience_seed": runtime_settings.get("scene_ambience_seed"),
         "voice_assignment_mode": voice_assignment_mode,
         "original_language": str(manifest.get("original_language", "")).strip(),
-        "clone_model_parameters": _clone_model_parameters(runtime_settings),
+        "clone_model_parameters": _clone_model_parameters(runtime_settings) if uses_clone_prompt else {},
         "base_url": base_url,
         "timeout_seconds": timeout_seconds,
     }
@@ -1341,7 +1339,7 @@ def _build_input_fingerprint(
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  voice_targets Current voice-target input list.
     @param[in]  voice_language Selected character-voices voice language.
-    @param[in]  clone_model_id Active Qwen3 clone/base model identifier.
+    @param[in]  clone_model_id Selected clone model identifier.
     @param[in]  manifest Active manifest payload.
     @param[in]  model_budget Resolved clone-model generation budget.
     @return     Hex-encoded fingerprint string.
@@ -1385,6 +1383,9 @@ def _build_input_fingerprint(
             for target in voice_targets
         ],
     }
+    # Romanian previously always used the Italian hint. Keep that fingerprint stable.
+    if voice_language == "ro" and model_budget.get("runtime_language") == "ro":
+        fingerprint_payload["runtime_language"] = "ro"
     return hashlib.sha1(  # noqa: S324
         json.dumps(fingerprint_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()
@@ -1411,12 +1412,16 @@ def _resolve_model_budget(
     reported_hard_maximum = tts_budget_service.model_hard_token_maximum(clone_model_payload)
     seconds_per_token = reported_seconds_per_token or _DEFAULT_APPROX_AUDIO_SECONDS_PER_TOKEN
     operator_token_maximum = max(0, int(max_generation_tokens))
-    budget_source_candidates = (
+    budget_source_candidates = [
         ("range_recommended_maximum", {"max_new_tokens": recommended_tokens or 0}),
         ("runtime_effective", _status_effective_model_parameters(status_payload)),
         ("default_model_parameters", dict(clone_model_payload).get("default_model_parameters")),
         ("range_default", _parameter_range_default(dict(clone_model_payload).get("generation_parameter_ranges"))),
-    )
+    ]
+    if clone_model_payload and not voiceweaver_runtime_service.is_qwen_model(clone_model_payload):
+        budget_source_candidates.append((
+            "config_default", {"max_new_tokens": config.DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET},
+        ))
     for budget_source, parameters in budget_source_candidates:
         token_budget = _positive_int_from_mapping(parameters, "max_new_tokens")
         if token_budget is None:
@@ -1556,7 +1561,7 @@ def _ensure_clone_model_loaded(
     cancel_requested=None,
 ) -> dict[str, object]:
     """
-    @brief      Ensure the required Qwen3 base/clone model is active before clone or generation requests.
+    @brief      Ensure the selected clone model is active before generation requests.
     @param[in]  runtime_settings Runtime connection plus discovered-model settings.
     @param[in]  clone_model_id Active clone/base model identifier.
     @param[in]  clone_model_payload Discovered model payload used for fallback budget resolution.
@@ -1584,12 +1589,11 @@ def _ensure_clone_model_loaded(
             "then start Audio Blocks again."
         )
     operator_token_maximum = tts_budget_service.resolve_generation_token_limit(runtime_settings)
-    initial_budget = _resolve_model_budget(initial_status, clone_model_payload, operator_token_maximum)
     # The live active-model identity is the whole question here. Gating on which source supplied
     # the token budget made this unreachable as soon as a runtime-reported budget outranked
     # `runtime_effective`, and every run then reloaded an already-loaded model.
     if active_model_id == clone_model_id:
-        return initial_budget
+        return _resolve_model_budget(initial_status, clone_model_payload, operator_token_maximum)
     _ensure_model_active(
         runtime_settings,
         clone_model_id,
@@ -1693,6 +1697,9 @@ def _prepare_clone_profile(
             f"Audio Blocks could not find the required reference sample for voice target '{normalized_target_id}'."
         )
     sample_language = _voice_target_sample_language(voice_target)
+    runtime_language = voiceweaver_runtime_service.tts_language_for_model(
+        sample_language, generation_context["clone_model_payload"],
+    ) or sample_language
 
     base_url = str(runtime_settings.get("base_url", "")).strip()
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
@@ -1701,7 +1708,7 @@ def _prepare_clone_profile(
         base_url,
         sample_audio_path.read_bytes(),
         sample_text,
-        sample_language,
+        runtime_language,
         timeout_seconds=timeout_seconds,
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
@@ -1736,7 +1743,7 @@ def _prepare_clone_profile(
 def _generate_audio_block(
     project_root: Path,
     audio_block: AudioBlockPayload,
-    clone_profile: VoiceCloneProfilePayload,
+    clone_profile: VoiceCloneProfilePayload | None,
     generation_context: dict[str, object],
     runtime_settings: dict[str, object],
     cancel_requested=None,
@@ -1745,12 +1752,14 @@ def _generate_audio_block(
     force_restart: bool = False,
     *,
     output_path: Path,
+    voice_target: dict[str, object] | None = None,
 ) -> AudioBlockPayload:
     """
     @brief      Generate one WAV and canonical Audio Blocks metadata for the selected speech block.
     @param[in]  project_root Active project root folder.
     @param[in]  audio_block Persisted Audio Blocks entry to regenerate.
-    @param[in]  clone_profile Persisted reusable clone-prompt payload.
+    @param[in]  clone_profile Reusable clone-prompt payload when the adapter uses it.
+    @param[in]  voice_target Reference WAV and transcript for direct cloning.
     @param[in]  generation_context Validated generation-context payload.
     @param[in]  runtime_settings Runtime connection plus discovered-model settings.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
@@ -1764,9 +1773,17 @@ def _generate_audio_block(
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
-    voice_clone_prompt = clone_profile.get("voice_clone_prompt")
-    if voice_clone_prompt in (None, ""):
+    voice_clone_prompt = (clone_profile or {}).get("voice_clone_prompt")
+    reference_audio = None
+    reference_text = ""
+    if clone_profile is not None and voice_clone_prompt in (None, ""):
         raise RuntimeError("Audio Blocks could not resolve the required reusable clone prompt for generation.")
+    if clone_profile is None:
+        if voice_target is None:
+            raise RuntimeError("Audio Blocks could not resolve the required voice reference.")
+        reference_audio = Path(voice_target["sample_audio_path"]).read_bytes()
+        reference_text = str(voice_target["sample_text"])
+    runtime_language = str(generation_context.get("runtime_language") or generation_context.get("voice_language", ""))
     split_plan = _plan_audio_block_splits(str(audio_block.get("text", "")), generation_context)
     block_id = str(audio_block["speech_block_id"])
     parts_root = output_path.parent if force_restart else project_root
@@ -1776,15 +1793,16 @@ def _generate_audio_block(
     fingerprint = _build_audio_block_fingerprint(audio_block, generation_context)
 
     def submit_part(part_text: str) -> object:
-        """
-        @brief      Submit one spoken part using the selected clone prompt and budget.
-        @param[in]  part_text Planned spoken text.
-        @return     VoiceWeaver request result.
-        """
+        """@brief Synthesize one spoken part from a direct reference or reusable prompt."""
+        if reference_audio is not None:
+            return voiceweaver_runtime_service.generate_voice_clone(
+                base_url, reference_audio, reference_text, runtime_language,
+                part_text, timeout_seconds=timeout_seconds,
+            )
         return voiceweaver_runtime_service.generate_voice_clone_from_prompt(
             base_url,
             voice_clone_prompt,
-            str(generation_context.get("voice_language", "")),
+            runtime_language,
             part_text,
             model_parameters={
                 **_clone_model_parameters(generation_context),
@@ -1835,7 +1853,7 @@ def _generate_audio_block(
         "audio_stale": False,
         "audio_duration_seconds": audio_duration_seconds,
         "voice_language": str(generation_context.get("voice_language", "")).strip(),
-        "prompt_format": _optional_string(clone_profile.get("prompt_format")),
+        "prompt_format": _optional_string((clone_profile or {}).get("prompt_format")),
         "split_part_count": len(split_plan["parts"]),
         "model_token_budget": int(generation_context.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
@@ -2228,6 +2246,8 @@ def _build_audio_block_fingerprint(
             "sample_language": _voice_target_sample_language(target),
             "clone_model_parameters": _clone_model_parameters(generation_context),
         })
+        if generation_context.get("voice_language") == "ro" and generation_context.get("runtime_language") == "ro":
+            fingerprint_payload["runtime_language"] = "ro"
         if configured_only:
             fingerprint_payload["operator_token_maximum"] = generation_context.get("operator_token_maximum")
         else:
@@ -3419,26 +3439,6 @@ def _optional_float(value: object) -> float | None:
         return None
     return normalized_value if normalized_value >= 0.0 else None
 
-
-def _first_model(
-    model_entries: list[dict[str, object]],
-    preferred_model_id: str | None = None,
-) -> dict[str, object] | None:
-    """
-    @brief      Return the preferred normalized runtime model entry when available.
-    @param[in]  model_entries Current runtime model payload list.
-    @param[in]  preferred_model_id Optional exact model identifier to prefer first.
-    @return     Preferred runtime model payload or the first fallback entry, or `None`.
-    @exception  None
-    """
-    if not model_entries:
-        return None
-    normalized_preferred_id = str(preferred_model_id or "").strip()
-    if normalized_preferred_id:
-        for model_entry in model_entries:
-            if str(dict(model_entry).get("model_id", "")).strip() == normalized_preferred_id:
-                return dict(model_entry)
-    return dict(model_entries[0])
 
 
 # END OF FILE

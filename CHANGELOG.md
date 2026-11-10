@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Voice samples and Audio Blocks choose a VoiceWeaver model for the operation
+  and spoken language. Romanian-capable models take priority, with the Italian
+  hint available as a Qwen fallback. Audio Blocks can use a clone-only runtime
+  with imported voice samples and transcripts.
+
 - AI Settings keeps Context Window, Temperature and the model’s available
   Reasoning Levels as the model controls. The context field is capped at the
   server’s loaded context when reported, or at the model’s maximum.

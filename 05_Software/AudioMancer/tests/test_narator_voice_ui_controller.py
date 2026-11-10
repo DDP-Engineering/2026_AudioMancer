@@ -845,7 +845,7 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
         "resolve_cached_tts_budget",
-        lambda _models: {},
+        lambda _models, **_options: {},
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
@@ -936,7 +936,7 @@ def test_narator_voice_shared_runtime_keeps_profile_persistence_and_refresh(monk
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
         "resolve_cached_tts_budget",
-        lambda _models: {},
+        lambda _models, **_options: {},
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
@@ -1093,7 +1093,7 @@ def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeyp
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
         "resolve_cached_tts_budget",
-        lambda _models: {},
+        lambda _models, **_options: {},
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.tts_budget_service,
@@ -1977,7 +1977,6 @@ def _sample_progress_messages() -> dict[str, str]:
     """
     return {
         "prepare": "Preparing narator sample generation...",
-        "qwen_capabilities_missing": "Missing capabilities: {missing_capabilities}",
         "preview_text_over_budget": "Preview text has {word_count} budget units; safe limit is {safe_word_count}.",
         "load_model": "Loading voice generation model...",
         "generate": "Generating narator voice sample...",

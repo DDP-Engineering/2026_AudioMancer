@@ -162,7 +162,9 @@ def build_speech_blocks_state(
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
-        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(
+            settings_payload, selected_source_language,
+        ),
     }
 
 

@@ -40,6 +40,9 @@ batch generation, and preview signals.
 
 ## Key behaviors
 
+Character sample generation resolves a design model for the project voice
+language independently of clone availability.
+
 - `REQ-FUNC-973449a5` — first activation cannot complete or promote Character
   Voices until a non-empty persisted plan and required sample evidence exist.
 - `REQ-REL-f42cecc0` — filesystem failures during sample import remain inside the

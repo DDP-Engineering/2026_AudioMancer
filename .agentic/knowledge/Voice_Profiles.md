@@ -1,7 +1,13 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Voice Profiles
 
-## 1. Purpose
+## Routing
+
+For sample-model selection use narrator_definition_service and
+tts_runtime_ui_support. For sample persistence and profile editing use the
+narrator and character voice services.
+
+## Purpose and boundaries
 
 Maintains reviewed narrator and character voice definitions, canonical sample
 audio, language/assignment choices, and resumable AI narrator suggestions
@@ -40,6 +46,8 @@ required before speech generation.
   updates strict (`REQ-REL-870d0b6a`).
 - Resolve explicit narrator selection for Character Voices and Audio Blocks.
 - Drive the existing narrator and character review/edit/generate/import flows.
+- Preview generation requires a compatible design model for the selected language.
+  Imported reference WAVs with transcripts can be cloned using a clone-only runtime.
 - Run narrator and character voice-design samples through one shared
   unauthenticated simplified-VoiceWeaver probe, model-load, `voice_design`
   generation, validation, cancellation, and `/audio` download sequence

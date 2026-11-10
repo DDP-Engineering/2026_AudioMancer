@@ -19,6 +19,20 @@ from audiomancer import config
 from audiomancer.services import tts_budget_service
 
 
+def test_tts_budget_uses_selected_clone_model_for_romanian() -> None:
+    """@brief A design model or an earlier Qwen fallback cannot supply the native clone budget."""
+    models = [
+        {"model_id": "design", "status": "ready", "supported_generation_modes": ["voice_design"],
+         "supported_languages": ["ro"], "default_model_parameters": {"max_new_tokens": 900}},
+        {"model_id": "qwen-base", "status": "ready", "supported_generation_modes": ["clone"],
+         "supported_languages": ["it"], "default_model_parameters": {"max_new_tokens": 700}},
+        {"model_id": "romanian-clone", "status": "ready", "supported_generation_modes": ["clone"],
+         "supported_languages": ["ro"], "default_model_parameters": {"max_new_tokens": 600}},
+    ]
+    budget = tts_budget_service.resolve_cached_tts_budget(models, voice_language="ro")
+    assert budget["model_token_budget"] == 600
+
+
 def test_fallback_budget_matches_the_voiceweaver_clone_cap() -> None:
     """
     @brief      Verify an unprobed runtime is never planned beyond the clone token cap.
@@ -272,3 +286,6 @@ def test_hard_token_maximum_falls_back_to_the_uncapped_model_budget() -> None:
 
     assert budget["model_token_budget"] == 1024
     assert budget["hard_token_maximum"] == 2048
+
+
+# END OF FILE

@@ -697,23 +697,27 @@ class TtsSettingsPage(QWidget):
         @brief      Apply the planning state.
         @return     None.
         """
-        minimum_qwen_ready = bool(self._capability_matrix.get("minimum_qwen_ready", False))
         self._planning_group.setEnabled(True)
         if not self._probe_succeeded:
             self._planning_status_label.setText(
                 ui_state_service.translate("tts_settings.plan_probe_required", self._current_language)
             )
             return
-        if not minimum_qwen_ready:
+        missing = [
+            mode for mode in ("voice_design", "clone")
+            if not self._capability_matrix.get(mode + "_models")
+        ]
+        if missing:
             self._planning_status_label.setText(
-                ui_state_service.translate("tts_settings.plan_missing_qwen", self._current_language).format(
-                    missing_capabilities=", ".join(self._capability_matrix.get("missing_qwen_capabilities", [])),
+                ui_state_service.translate("tts_settings.plan_missing_models", self._current_language).format(
+                    missing_capabilities=", ".join(missing),
                 )
             )
             return
         self._planning_status_label.setText(
-            ui_state_service.translate("tts_settings.plan_ready", self._current_language)
+            ui_state_service.translate("tts_settings.plan_ready", self._current_language),
         )
+
 
 
 # END OF FILE

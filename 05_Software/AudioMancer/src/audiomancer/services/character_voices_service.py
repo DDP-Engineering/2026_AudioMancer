@@ -16,7 +16,6 @@
 
 # IMPORTS
 
-from copy import deepcopy
 import json
 from pathlib import Path
 import re
@@ -426,7 +425,6 @@ def voice_target_generation_request(
     @return     Generation-request payload with availability flags and model ids.
     @exception  None
     """
-    capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     normalized_language = narrator_definition_service.narrator_language_code(voice_language)
     prompt_text = str(target_payload.get("prompt_text", "")).strip()
     if str(target_payload.get("target_kind", "")).strip() != TARGET_KIND_CHARACTER:
@@ -437,25 +435,14 @@ def voice_target_generation_request(
             normalized_language,
             prompt_text,
         )
-    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        missing_capabilities = list(capability_matrix.get("missing_qwen_capabilities", []))
-        return _build_generation_request(
-            False,
-            False,
-            (
-                "Cannot generate a sample because Qwen3 TTS minimum capabilities are missing: "
-                + ", ".join(missing_capabilities)
-                + "."
-            ),
-            normalized_language,
-            prompt_text,
-        )
-    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_design_models", []))
+    voice_designer_model = voiceweaver_runtime_service.resolve_tts_model(
+        discovered_models, "voice_design", normalized_language,
+    )
     if voice_designer_model is None:
         return _build_generation_request(
             False,
             False,
-            "No healthy Qwen3 Voice Designer model is currently available.",
+            f"No healthy VoiceWeaver design model is available for {normalized_language}.",
             normalized_language,
             prompt_text,
         )
@@ -469,6 +456,9 @@ def voice_target_generation_request(
         generation_mode="definition",
         model_id=resolved_model_id,
         source_model_id=resolved_model_id,
+        runtime_language=voiceweaver_runtime_service.tts_language_for_model(
+            normalized_language, voice_designer_model,
+        ),
     )
 
 
@@ -1272,6 +1262,7 @@ def _build_generation_request(
     generation_mode: str | None = None,
     model_id: str | None = None,
     source_model_id: str | None = None,
+    runtime_language: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the generation request.
@@ -1283,6 +1274,7 @@ def _build_generation_request(
     @param[in]  generation_mode Value for `generation_mode`.
     @param[in]  model_id Identifier for `model_id`.
     @param[in]  source_model_id Identifier for `source_model_id`.
+    @param[in]  runtime_language Language sent to the selected VoiceWeaver model.
     @return     Derived helper result.
     """
     return {
@@ -1292,18 +1284,11 @@ def _build_generation_request(
         "generation_mode": generation_mode,
         "model_id": model_id,
         "source_model_id": source_model_id,
+        "runtime_language": runtime_language,
         "language": language,
         "prompt_text": prompt_text,
     }
 
-
-def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | None:
-    """
-    @brief      Return the first model.
-    @param[in]  model_entries Value for `model_entries`.
-    @return     Resolved helper result.
-    """
-    return None if not model_entries else deepcopy(model_entries[0])
 
 
 def _write_json(path: Path, payload: object) -> None:

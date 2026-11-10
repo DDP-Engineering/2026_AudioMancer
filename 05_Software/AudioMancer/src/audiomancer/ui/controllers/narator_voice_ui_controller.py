@@ -385,10 +385,6 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
         "load_model": ui_state_service.translate("progress.narator_voice_sample_load_model", current_language),
         "generate": ui_state_service.translate("progress.narator_voice_sample_generate", current_language),
         "download": ui_state_service.translate("progress.narator_voice_sample_download", current_language),
-        "qwen_capabilities_missing": ui_state_service.translate(
-            "narator_voice.error_qwen_capabilities_missing",
-            current_language,
-        ),
         "generation_missing_audio": ui_state_service.translate(
             "narator_voice.error_generation_missing_audio",
             current_language,
@@ -929,12 +925,15 @@ def _generate_and_store_sample(
     @exception  RuntimeError Raised when VoiceWeaver fails or does not expose downloadable audio.
     """
     preview_budget_units = tts_budget_service.estimate_budget_units(preview_text)
+    voice_language = narrator_definition_service.narrator_language_code(profile_payload.get("language"))
 
     def _check_cached_preview_budget() -> None:
         """@brief Reject previews above the last discovered model budget before probing."""
         cached_models_payload = settings_payload.get("tts_runtime_discovered_models", [])
         cached_models = cached_models_payload if isinstance(cached_models_payload, list) else []
-        cached_budget_payload = tts_budget_service.resolve_cached_tts_budget(cached_models)
+        cached_budget_payload = tts_budget_service.resolve_cached_tts_budget(
+            cached_models, voice_language=voice_language, operation="voice_design",
+        )
         cached_safe_budget_units = tts_budget_service.estimated_safe_word_count(cached_budget_payload)
         if preview_budget_units > cached_safe_budget_units:
             raise RuntimeError(
@@ -950,7 +949,9 @@ def _generate_and_store_sample(
             profile_payload,
             discovered_models=discovered_models,
         )
-        budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
+        budget_payload = tts_budget_service.resolve_cached_tts_budget(
+            discovered_models, voice_language=voice_language, operation="voice_design",
+        )
         safe_budget_units = tts_budget_service.estimated_safe_word_count(budget_payload)
         if preview_budget_units > safe_budget_units:
             raise RuntimeError(

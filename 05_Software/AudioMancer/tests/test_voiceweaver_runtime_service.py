@@ -210,6 +210,35 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
     assert [model["model_id"] for model in capability_matrix["clone_models"]] == ["clone_good"]
 
 
+def test_resolve_tts_model_prefers_operation_and_native_language() -> None:
+    """@brief Prefer a healthy native-language match over the Qwen fallback."""
+    models = [
+        {"model_id": "qwen-base", "status": "healthy", "supported_generation_modes": ["clone"],
+         "supported_languages": ["it", "en"]},
+        {"model_id": "ro-design", "status": "healthy", "supported_generation_modes": ["voice_design"],
+         "supported_languages": ["ro"]},
+        {"model_id": "offline", "status": "unhealthy", "supported_generation_modes": ["clone"],
+         "supported_languages": ["ro"]},
+        {"model_id": "ro-clone", "status": "ready", "supported_generation_modes": ["clone"],
+         "supported_languages": ["ro"]},
+        {"model_id": "effects", "status": "healthy", "supported_generation_modes": ["sound_prompt"],
+         "supported_languages": ["en"]},
+    ]
+
+    design = voiceweaver_runtime_service.resolve_tts_model(models, "voice_design", "ro")
+    clone = voiceweaver_runtime_service.resolve_tts_model(models, "clone", "ro")
+    fallback = voiceweaver_runtime_service.resolve_tts_model(models[:1], "clone", "ro")
+    sound = voiceweaver_runtime_service.resolve_tts_model(models, "sound_prompt", "ro")
+
+    assert design["model_id"] == "ro-design"
+    assert clone["model_id"] == "ro-clone"
+    assert voiceweaver_runtime_service.tts_language_for_model("ro", clone) == "ro"
+    assert fallback["model_id"] == "qwen-base"
+    assert voiceweaver_runtime_service.tts_language_for_model("ro", fallback) == "it"
+    assert sound["model_id"] == "effects"
+    assert voiceweaver_runtime_service.resolve_tts_model(models, "voice_design", "de") is None
+
+
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:
     """
     @brief      Verify exact Voice Designer payloads and the Italian hint for Romanian.
@@ -240,11 +269,10 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     )
     voiceweaver_runtime_service.generate_voice_design(
         "http://127.0.0.1:8059",
-        "ro",
+        "it",
         "Bun\u0103 diminea\u021ba!",
         "Warm narrator.",
         {"top_k": 33},
-        supported_languages=["en", "it"],
         timeout_seconds=90,
     )
     voiceweaver_runtime_service.generate_voice_design(
@@ -253,7 +281,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
         "Bun\u0103 diminea\u021ba!",
         "Warm narrator.",
         {"top_k": 33},
-        supported_languages=["en", "fr"],
         timeout_seconds=90,
     )
     voiceweaver_runtime_service.generate_voice_design(
@@ -262,7 +289,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
         "Hallo",
         "Warm narrator.",
         {"top_k": 33},
-        supported_languages=["en", "fr"],
         timeout_seconds=90,
     )
 
@@ -294,6 +320,7 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
             "/voice/design",
             {
                 "text": "Bun\u0103 diminea\u021ba!",
+                "language": "ro",
                 "voice_description": "Warm narrator.",
                 "model_parameters": {"top_k": 33},
             },
@@ -304,6 +331,7 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
             "/voice/design",
             {
                 "text": "Hallo",
+                "language": "de",
                 "voice_description": "Warm narrator.",
                 "model_parameters": {"top_k": 33},
             },
@@ -369,14 +397,14 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         "http://127.0.0.1:8059",
         b"sample-bytes",
         "Aceasta este transcrierea mostrei de referin\u021b\u0103.",
-        "ro",
+        "it",
         {"temperature": 0.8},
         timeout_seconds=33,
     )
     voiceweaver_runtime_service.generate_voice_clone_from_prompt(
         "http://127.0.0.1:8059",
         {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
-        "ro",
+        "it",
         "O voce rom\u00e2neasc\u0103.",
         {"top_k": 22},
         timeout_seconds=44,
@@ -554,9 +582,9 @@ def test_generated_wav_downloads_preserve_success_http_and_url_contracts(monkeyp
     assert url_error_info.value.__cause__ is url_failure
 
 
-def test_voiceweaver_runtime_service_direct_clone_uses_italian_hint_for_romanian(monkeypatch) -> None:
+def test_voiceweaver_runtime_service_direct_clone_sends_native_romanian(monkeypatch) -> None:
     """
-    @brief      Verify direct cloning keeps the text and transcript while mapping the Romanian hint.
+    @brief      Verify direct cloning keeps the text and transcript with a native Romanian language hint.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -611,7 +639,7 @@ def test_voiceweaver_runtime_service_direct_clone_uses_italian_hint_for_romanian
 
     assert observed_form_fields == [
         {"sample_text": "Reference transcript.", "language": "fr", "text": "Bonjour."},
-        {"sample_text": "Text de referinta.", "language": "it", "text": "Salut."},
+        {"sample_text": "Text de referinta.", "language": "ro", "text": "Salut."},
     ]
 
 

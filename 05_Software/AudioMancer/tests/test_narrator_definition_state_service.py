@@ -180,7 +180,7 @@ def test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_st
     assert state["can_generate"] is True
 
 
-def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_path) -> None:
+def test_narrator_state_service_status_lines_show_counts_and_design_readiness(tmp_path) -> None:
     """
     @brief      Verify narrator status lines summarize profile counts and Qwen readiness.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -215,7 +215,12 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
         "en",
         {
             "tts_runtime_probe_succeeded": True,
-            "tts_runtime_discovered_models": _minimum_qwen_models(),
+            "tts_runtime_discovered_models": [{
+                "model_id": "native-design",
+                "status": "healthy",
+                "supported_generation_modes": ["voice_design"],
+                "supported_languages": ["en"],
+            }],
         },
         inspected_profile_id=profile["profile_id"],
     )
@@ -223,7 +228,7 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
     assert "Profiles: 1" in state["status_lines"]
     assert "Profiles with samples: 1" in state["status_lines"]
     assert "Selected profiles: 0" in state["status_lines"]
-    assert "Qwen3 TTS readiness: ready" in state["status_lines"]
+    assert "Voice design: ready" in state["status_lines"]
 
 
 def test_repeated_narrator_state_refresh_does_not_write_or_alter_document(monkeypatch, tmp_path) -> None:

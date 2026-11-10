@@ -145,6 +145,9 @@ def build_audio_blocks_state(
         operation_state,
         language,
     )
+    voice_language = character_voices_service.load_selected_voice_language(
+        project_root, narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
     status_lines = [
         ui_state_service.translate("audio_blocks.status_generated", language).format(
             generated_count=generated_count,
@@ -155,10 +158,7 @@ def build_audio_blocks_state(
             total_count=total_count,
         ),
         ui_state_service.translate("audio_blocks.status_voice_language", language).format(
-            language_label=character_voices_service.load_selected_voice_language(
-                project_root,
-                narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-            )
+            language_label=voice_language,
         ),
         ui_state_service.translate("audio_blocks.status_prompts", language).format(
             prompt_count=prompt_count,
@@ -190,7 +190,9 @@ def build_audio_blocks_state(
         "can_regenerate_selected": current_block is not None
         and audio_blocks_service.audio_can_regenerate(current_block),
         "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
-        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(settings_payload),
+        "selected_text_character_limit": tts_budget_service.selected_text_character_limit(
+            settings_payload, voice_language,
+        ),
         "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
     }
 

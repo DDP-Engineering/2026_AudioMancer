@@ -320,10 +320,6 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
         "load_model": ui_state_service.translate("progress.character_voices_sample_load_model", current_language),
         "generate": ui_state_service.translate("progress.character_voices_sample_generate", current_language),
         "download": ui_state_service.translate("progress.character_voices_sample_download", current_language),
-        "qwen_capabilities_missing": ui_state_service.translate(
-            "character_voices.error_qwen_capabilities_missing",
-            current_language,
-        ),
         "generation_missing_audio": ui_state_service.translate(
             "character_voices.error_generation_missing_audio",
             current_language,
@@ -397,10 +393,6 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
         "download": ui_state_service.translate("progress.character_voices_sample_download", current_language),
         "batch_prepare": ui_state_service.translate("progress.character_voices_batch_prepare", current_language),
         "batch_target": ui_state_service.translate("progress.character_voices_batch_target", current_language),
-        "qwen_capabilities_missing": ui_state_service.translate(
-            "character_voices.error_qwen_capabilities_missing",
-            current_language,
-        ),
         "generation_missing_audio": ui_state_service.translate(
             "character_voices.error_generation_missing_audio",
             current_language,

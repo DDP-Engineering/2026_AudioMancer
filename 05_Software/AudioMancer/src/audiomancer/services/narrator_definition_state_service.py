@@ -100,12 +100,9 @@ def build_narrator_definition_state(
     discovered_models = (
         settings_payload.get("tts_runtime_discovered_models", []) if isinstance(settings_payload, dict) else []
     )
-    preview_budget = tts_budget_service.resolve_cached_tts_budget(discovered_models)
-    preview_safe_word_limit = tts_budget_service.estimated_safe_word_count(preview_budget)
     runtime_probe_succeeded = bool(
         settings_payload.get("tts_runtime_probe_succeeded", False) if isinstance(settings_payload, dict) else False
     )
-    capability_matrix = voice_capability_matrix(discovered_models)
     profiles = narrator_definition_service.load_profiles(project_root)
     tts_plan = narrator_definition_service.load_tts_plan(project_root, discovered_models)
     selected_state = narrator_definition_service.load_selected_profile_state(project_root)
@@ -124,6 +121,12 @@ def build_narrator_definition_state(
     narrator_definition_service.apply_voice_language_to_profiles(project_root, selected_voice_language)
     profiles = narrator_definition_service.load_profiles(project_root)
     effective_language = selected_voice_language
+    design_model = voiceweaver_runtime_service.resolve_tts_model(
+        discovered_models, "voice_design", selected_voice_language,
+    )
+    preview_budget = tts_budget_service.resolve_cached_tts_budget([design_model] if design_model else [])
+    preview_safe_word_limit = tts_budget_service.estimated_safe_word_count(preview_budget)
+    design_ready = design_model is not None
 
     profile_entries = [
         _build_profile_entry(
@@ -145,7 +148,7 @@ def build_narrator_definition_state(
         language,
         runtime_probe_succeeded,
         profile_entries,
-        capability_matrix,
+        design_ready,
     )
 
     return {
@@ -177,7 +180,7 @@ def build_narrator_definition_state(
         "status_lines": build_status_lines(
             profile_entries,
             notes,
-            capability_matrix,
+            design_ready,
             language,
             runtime_probe_succeeded,
             settings_payload,
@@ -194,7 +197,7 @@ def build_narrator_definition_notes(
     language: str,
     runtime_probe_succeeded: bool,
     profiles: list[dict[str, object]],
-    capability_matrix: dict[str, object],
+    design_ready: bool,
 ) -> list[str]:
     """
     @brief      Build operator-facing notes for the Narator Voice page.
@@ -204,7 +207,7 @@ def build_narrator_definition_notes(
     @param[in]  language Runtime UI language code.
     @param[in]  runtime_probe_succeeded True when the VoiceWeaver probe cache is valid.
     @param[in]  profiles Narrator profile list enriched with state flags.
-    @param[in]  capability_matrix Current normalized runtime capability matrix.
+    @param[in]  design_ready True when a compatible design model is available.
     @return     Ordered Narator Voice page notes.
     @exception  None
     """
@@ -214,14 +217,9 @@ def build_narrator_definition_notes(
     notes: list[str] = []
     if not runtime_probe_succeeded:
         notes.append(ui_state_service.translate("narator_voice.note_runtime_not_connected", language))
-    elif not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        notes.append(
-            ui_state_service.translate("narator_voice.note_qwen_capabilities_missing", language).format(
-                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-            )
-        )
     else:
-        notes.append(ui_state_service.translate("narator_voice.note_qwen_capabilities_ready", language))
+        key = "narator_voice.note_design_ready" if design_ready else "narator_voice.note_design_missing"
+        notes.append(ui_state_service.translate(key, language))
 
     current_stage = str(manifest.get("current_stage", ""))
     if current_stage not in {"character_discovery_ready", "narrator_definition_ready", "character_voices_ready"}:
@@ -252,7 +250,7 @@ def build_narrator_definition_notes(
 def build_status_lines(
     profiles: list[dict[str, object]],
     notes: list[str],
-    capability_matrix: dict[str, object],
+    design_ready: bool,
     language: str,
     runtime_probe_succeeded: bool = False,
     settings_payload: dict[str, object] | None = None,
@@ -263,19 +261,15 @@ def build_status_lines(
     @brief      Build the bottom status-window lines for the Narator Voice page.
     @param[in]  profiles Current enriched narrator profile entries.
     @param[in]  notes Operator-facing page notes.
-    @param[in]  capability_matrix Current runtime capability matrix.
+    @param[in]  design_ready True when a compatible design model is available.
     @param[in]  language Runtime UI language code.
     @return     Ordered status-window lines.
     @exception  None
     """
     sample_count = sum(1 for profile in profiles if bool(profile.get("has_sample", False)))
     selected_count = sum(1 for profile in profiles if bool(profile.get("is_selected", False)))
-    qwen_status = (
-        ui_state_service.translate("narator_voice.status_qwen_ready", language)
-        if bool(capability_matrix.get("minimum_qwen_ready", False))
-        else ui_state_service.translate("narator_voice.status_qwen_missing", language).format(
-            missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-        )
+    design_status = ui_state_service.translate(
+        "narator_voice.status_design_ready" if design_ready else "narator_voice.status_design_missing", language,
     )
     active_model_id = _active_model_id_from_settings(settings_payload)
     preview_budget_units = (
@@ -303,7 +297,7 @@ def build_status_lines(
             word_count=preview_budget_units,
             safe_word_count=max(0, int(preview_safe_word_limit)),
         ),
-        qwen_status,
+        design_status,
     ]
     lines.extend(note for note in notes if note.strip())
     return lines

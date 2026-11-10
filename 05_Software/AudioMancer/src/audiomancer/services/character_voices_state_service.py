@@ -76,7 +76,6 @@ def build_character_voices_state(
     runtime_probe_succeeded = bool(
         settings_payload.get("tts_runtime_probe_succeeded", False) if isinstance(settings_payload, dict) else False
     )
-    capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     character_profiles = character_discovery_service.load_character_profiles(project_root)
     selected_narrator_state = narrator_definition_service.load_selected_profile_state(project_root)
     selected_narrator_id = str(selected_narrator_state.get("selected_profile_id", "") or "").strip() or None
@@ -137,7 +136,8 @@ def build_character_voices_state(
         assignment_mode,
         current_target,
         runtime_probe_succeeded,
-        capability_matrix,
+        voiceweaver_runtime_service.resolve_tts_model(discovered_models, "voice_design", selected_voice_language)
+        is not None,
         translation_ready,
         missing_narrator_sample,
         selected_narrator_profile is not None,
@@ -210,7 +210,7 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
             assignment_mode,
             None,
             False,
-            voiceweaver_runtime_service.build_capability_matrix([]),
+            False,
             False,
             False,
             False,
@@ -257,7 +257,7 @@ def build_character_voices_notes(
     assignment_mode: str,
     current_target: dict[str, object] | None,
     runtime_probe_succeeded: bool,
-    capability_matrix: dict[str, object],
+    design_ready: bool,
     translation_ready: bool,
     missing_narrator_sample: bool,
     narrator_selected: bool,
@@ -270,7 +270,7 @@ def build_character_voices_notes(
     @param[in]  assignment_mode Current project voice-assignment mode.
     @param[in]  current_target Currently inspected character-voices target.
     @param[in]  runtime_probe_succeeded True when the VoiceWeaver probe cache is valid.
-    @param[in]  capability_matrix Current normalized runtime capability matrix.
+    @param[in]  design_ready True when a compatible design model is available.
     @param[in]  translation_ready True when translation exists and every chunk is approved.
     @param[in]  missing_narrator_sample True when the selected narrator sample is missing.
     @param[in]  narrator_selected True when one narrator profile is selected.
@@ -295,14 +295,8 @@ def build_character_voices_notes(
     if not runtime_probe_succeeded:
         notes.append(ui_state_service.translate("character_voices.note_runtime_not_connected", language))
     elif assignment_mode == "narrator_and_characters":
-        if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-            notes.append(
-                ui_state_service.translate("character_voices.note_qwen_capabilities_missing", language).format(
-                    missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-                )
-            )
-        else:
-            notes.append(ui_state_service.translate("character_voices.note_qwen_capabilities_ready", language))
+        key = "character_voices.note_design_ready" if design_ready else "character_voices.note_design_missing"
+        notes.append(ui_state_service.translate(key, language))
     if not translation_ready and _translation_exists(manifest):
         notes.append(ui_state_service.translate("character_voices.note_translation_not_fully_approved", language))
     if current_target is not None:

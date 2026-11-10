@@ -486,6 +486,70 @@ def test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_langua
     assert clone_profiles[0]["voice_language"] == "en"
 
 
+def test_audio_blocks_use_native_direct_clone_for_batch_and_regeneration(monkeypatch, tmp_path) -> None:
+    """@brief A Romanian clone-only model reads the saved sample without Qwen prompts."""
+    root, manifest = _create_audio_blocks_project(tmp_path, "RomanianDirectClone")
+    character_voices_service.save_selected_voice_language(root, "ro")
+    settings = _runtime_settings()
+    settings["discovered_models"].append({
+        "model_id": "qwen-shaped-name",
+        "backend_name": "native-tts",
+        "status": "healthy",
+        "supported_generation_modes": ["clone"],
+        "supported_languages": ["ro"],
+    })
+    runtime = audio_blocks_service.voiceweaver_runtime_service
+    calls = []
+    status = {"active_model": {"model_id": "qwen-shaped-name"}, "operation": {"status": "completed"},
+              "result": {"available": True, "summary": "Ready"}}
+    monkeypatch.setattr(runtime, "read_status", lambda *args, **kwargs: status)
+    monkeypatch.setattr(runtime, "wait_for_terminal_operation", lambda *args, **kwargs: status)
+    monkeypatch.setattr(runtime, "generate_voice_clone", lambda *args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setattr(runtime, "download_generated_audio", lambda *args, **kwargs: _wav_bytes("clone"))
+
+    def reject_prompt(*args, **kwargs):
+        """@brief Fail if direct synthesis uses the Qwen prompt route."""
+        raise AssertionError("Direct clone must use the reference WAV")
+
+    monkeypatch.setattr(runtime, "create_voice_clone_prompt", reject_prompt)
+    monkeypatch.setattr(runtime, "load_model", reject_prompt)
+
+    result = audio_blocks_service.start_or_continue_generation(root, manifest, settings)
+    assert result["generated_block_count"] == 2
+    audio_blocks_service.regenerate_audio_block(root, manifest, "0001-000001", settings)
+    assert [args[3] for args, _ in calls] == ["ro", "ro", "ro"]
+    assert [args[4] for args, _ in calls] == ["Narration one.", "Hello there.", "Narration one."]
+    assert all(args[1] and args[2] for args, _ in calls)
+    assert audio_blocks_service.load_voice_clone_profiles(root) == []
+
+
+def test_audio_blocks_fingerprints_distinguish_native_romanian_from_fallback() -> None:
+    """@brief Romanian audio rendered under the Italian hint cannot resume as native Romanian."""
+    block = {"voice_target_id": "narrator", "text": "Citește în română."}
+    target = {"voice_target_id": "narrator", "sample_fingerprint": "sample",
+              "sample_text": "Voce de referință."}
+    fallback = {"voice_targets": [target], "voice_language": "ro", "clone_model_id": "same-model",
+                "runtime_language": "it"}
+    native = {**fallback, "runtime_language": "ro"}
+    legacy = {key: value for key, value in fallback.items() if key != "runtime_language"}
+
+    for configured in (False, True):
+        previous = audio_blocks_service._build_audio_block_fingerprint(block, legacy, configured_only=configured)
+        assert previous == audio_blocks_service._build_audio_block_fingerprint(
+            block, fallback, configured_only=configured,
+        )
+        assert previous != audio_blocks_service._build_audio_block_fingerprint(
+            block, native, configured_only=configured,
+        )
+    previous_input = audio_blocks_service._build_input_fingerprint([block], [target], "ro", "same-model", {}, legacy)
+    assert previous_input == audio_blocks_service._build_input_fingerprint(
+        [block], [target], "ro", "same-model", {}, fallback,
+    )
+    assert previous_input != audio_blocks_service._build_input_fingerprint(
+        [block], [target], "ro", "same-model", {}, native,
+    )
+
+
 def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Audio Blocks generation skips Speech Blocks that are not approved yet.

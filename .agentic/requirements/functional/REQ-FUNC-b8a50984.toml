@@ -1,24 +1,21 @@
 schema = 1
 id = "REQ-FUNC-b8a50984"
-title = "The narrator definition service shall require minimum Qwen capabilities"
+title = "Enable voice previews with a compatible design model"
 status = "active"
 
-requirement = """
-The narrator definition service shall require minimum Qwen capabilities for a profile generation request.
-"""
-
-verification = "Automated: 1 linked pytest selector(s)."
-
+requirement = "When generating a narrator or character sample, AudioMancer shall require only a healthy design model compatible with the selected language."
+verification = "Build preview requests with a design-only Romanian runtime and an incompatible runtime and check availability and selected ID."
 affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py",
   "05_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py",
 ]
 linked_tests = [
-  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities",
+  "05_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_voice_design_selects_romanian_without_clone_model",
+  "05_Software/AudioMancer/tests/test_tts_runtime_ui_support.py::test_voice_design_generation_runs_shared_success_flow",
 ]
-
-priority = "high"
-rationale = """
-Generation must not start without the required runtime capabilities.
-"""
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-11-10

@@ -228,6 +228,9 @@ instructions from the Chunking document.
 
 ## Key behaviors
 
+TTS Settings reports available VoiceWeaver operation capabilities. Voice pages
+report design readiness for the selected voice language.
+
 AI Settings binds deferred geometry and popup callbacks to its QObject lifetime so
 destroying the page cancels pending access to its child controls.
 

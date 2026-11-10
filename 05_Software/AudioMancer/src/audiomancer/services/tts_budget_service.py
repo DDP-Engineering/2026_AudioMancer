@@ -18,6 +18,7 @@
 from math import ceil
 
 from audiomancer import config
+from audiomancer.services import voiceweaver_runtime_service
 
 # PUBLIC API
 
@@ -25,6 +26,9 @@ from audiomancer import config
 def resolve_cached_tts_budget(
     discovered_models: list[dict[str, object]] | None,
     max_generation_tokens: int | None = None,
+    *,
+    voice_language: str | None = None,
+    operation: str = "clone",
 ) -> dict[str, object]:
     """
     @brief      Resolve a cached or fallback TTS splitting budget.
@@ -33,6 +37,9 @@ def resolve_cached_tts_budget(
     @return     Budget metadata for prompt guidance and validation.
     @exception  None
     """
+    if voice_language is not None:
+        model = voiceweaver_runtime_service.resolve_tts_model(discovered_models or [], operation, voice_language)
+        discovered_models = [model] if model is not None else []
     for model_payload in discovered_models or []:
         if not isinstance(model_payload, dict):
             continue
@@ -172,11 +179,14 @@ def model_hard_token_maximum(model_payload: object) -> int | None:
     return _positive_int_from_mapping(_token_generation_range(model_payload), "hard_maximum")
 
 
-def selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:
+def selected_text_character_limit(
+    settings_payload: dict[str, object] | None, voice_language: str | None = None,
+) -> int:
     """
     @brief      Resolve an approximate selected speech text limit in characters.
     @param[in]  settings_payload Persisted application settings payload.
-    @return     Approximate safe character limit for the active TTS model.
+    @param[in]  voice_language Speech language of the current project, when known.
+    @return     Approximate safe character limit for the selected clone model.
     @exception  None
     """
     discovered_models = []
@@ -187,6 +197,7 @@ def selected_text_character_limit(settings_payload: dict[str, object] | None) ->
     budget_payload = resolve_cached_tts_budget(
         discovered_models,
         resolve_generation_token_limit(settings_payload),
+        voice_language=voice_language,
     )
     return int(budget_payload.get("safe_word_count", 0) or 0) * 6
 

@@ -121,7 +121,7 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   `voiceweaver_runtime_service.SUPPORTED_GENERATION_MODES` is discarded whole at
   settings validation, and the connection reverts to untested. The VoiceWeaver
   interface was a hard cut, so no legacy mode name is folded onto a current one;
-  trusting such a cache would report Qwen3 capabilities as missing against a
+  trusting such a cache would report generation capabilities as missing against a
   healthy runtime until the operator re-ran Test Connection (`REQ-FUNC-9757d967`).
 - The busy gate before model loading treats every terminal operation status as
   free. `/status` reports the most recent operation and latches its terminal
@@ -176,11 +176,14 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
   terminal-status/active-model verification tail for clone and sound models;
   clone budget selection and its runtime-effective early return remain explicit
   (`REQ-NFR-7fcf36ea`, `REQ-NFR-5bda19fd`).
-- Every VoiceWeaver voice request routes its language through one private
-  helper, `voiceweaver_runtime_service._add_tts_language_field()`. It maps Romanian to the Italian
-  synthesis hint at the outbound boundary and preserves Romanian text,
-  reference transcripts, and project metadata. When the active model reports a
-  supported-language list, the helper omits a hint outside that list (`REQ-FUNC-1562fca1`).
+- `resolve_tts_model()` chooses a healthy model by operation and prefers a declared
+  language match. Romanian uses the Italian hint only for the Qwen fallback.
+  Voice requests send the resolved hint with unchanged speech and transcripts.
+  Qwen uses reusable prompts. Other clone adapters receive the reference WAV and
+  transcript on the direct clone route. Speech Blocks plans against the same
+  clone selection. Audio fingerprints distinguish native Romanian from the
+  existing Italian-hint path. Scene sounds select by capability independently of spoken
+  language (`REQ-FUNC-295f2eb9`, `REQ-FUNC-1562fca1`).
 - `voiceweaver_runtime_service.normalize_model()` owns the discovered-model
   cache contract. It normalizes status, capabilities, scalar defaults and
   `generation_parameter_ranges`, while settings calls that exact contract and

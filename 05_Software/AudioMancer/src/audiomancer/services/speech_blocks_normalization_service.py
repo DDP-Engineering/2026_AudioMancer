@@ -238,10 +238,13 @@ def warning_entries_from_ai_blocks(
     return warning_entries
 
 
-def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> dict[str, object]:
+def resolve_narrator_only_budget(
+    settings_payload: dict[str, object] | None, voice_language: str | None = None,
+) -> dict[str, object]:
     """
     @brief      Resolve TTS budget metadata for narrator-only splitting.
     @param[in]  settings_payload Optional application settings payload.
+    @param[in]  voice_language Speech language used for clone model selection.
     @return     TTS budget payload.
     @exception  None
     """
@@ -255,6 +258,7 @@ def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> 
     return tts_budget_service.resolve_cached_tts_budget(
         discovered_models,
         tts_budget_service.resolve_generation_token_limit(settings_payload),
+        voice_language=voice_language,
     )
 
 

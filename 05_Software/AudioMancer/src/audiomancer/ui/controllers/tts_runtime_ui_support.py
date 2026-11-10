@@ -157,13 +157,6 @@ def run_voice_design_generation(
     if not bool(probe_result.get("success", False)):
         raise RuntimeError(str(probe_result.get("message", "")))
     operation_runtime_service.raise_if_cancelled(cancel_requested)
-    capability_matrix = dict(probe_result.get("capability_matrix", {}))
-    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        raise RuntimeError(
-            progress_messages["qwen_capabilities_missing"].format(
-                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-            )
-        )
     discovered_models = list(probe_result.get("discovered_models", []))
     generation_request = generation_request_builder(discovered_models)
     if not bool(generation_request.get("can_generate", False)):
@@ -215,15 +208,9 @@ def run_voice_design_generation(
         ),
         "timeout_seconds": timeout_seconds,
     }
-    if "supported_languages" in generation_request:
-        generation_options["supported_languages"] = (
-            list(generation_request.get("supported_languages", []))
-            if isinstance(generation_request.get("supported_languages"), list)
-            else None
-        )
     voiceweaver_runtime_service.generate_voice_design(
         base_url,
-        str(generation_request.get("language", default_language)),
+        str(generation_request.get("runtime_language") or generation_request.get("language", default_language)),
         preview_text,
         prompt_text,
         **generation_options,

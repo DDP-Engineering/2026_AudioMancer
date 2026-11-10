@@ -127,7 +127,7 @@ def prepare_chunk_generation(
     ):
         raise ValueError("Speech Blocks generation requires a valid enabled AI profile.")
 
-    tts_budget = _resolve_narrator_only_budget(settings_payload)
+    tts_budget = _resolve_narrator_only_budget(settings_payload, source_language)
     system_prompt = ""
     budget_metadata: BudgetMetadataPayload = {}
     if not narrator_only:

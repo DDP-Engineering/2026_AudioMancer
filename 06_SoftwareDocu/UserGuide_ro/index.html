@@ -131,9 +131,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Limbile tinta pentru traducere sunt engleza, romana, germana, franceza, rusa, portugheza, spaniola
                     si italiana. Limba vorbita urmeaza limba traducerii salvata pe pagina Acasa, deci VoiceWeaver are
-                    nevoie de voci care o sustin. Pentru romana, AudioMancer pastreaza textul si transcrierea
-                    mostrei in romana si trimite catre VoiceWeaver codul de limba pentru italiana la proiectarea
-                    si clonarea vocilor.
+                    nevoie de voci care o sustin. AudioMancer preferă un model care declară suport pentru limba vorbită.
+                    Pentru română, folosește suportul nativ când este disponibil sau codul de italiană ca opțiune de rezervă pentru Qwen.
+                    Textul și transcrierea mostrei rămân în română.
                 </p>
                 <div class="warning">
                     AudioMancer construieste definitii si mostre de voce pentru naratorul si personajele acestui
@@ -362,9 +362,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     testare reuseste, afiseaza o singura linie care spune ca nu s-au descoperit modele.
                 </p>
                 <p>
-                    <strong>Limite Audio Runtime</strong> iti spune daca sunt disponibile capabilitatile Qwen3 de
-                    clonare si proiectare a vocii necesare. Inainte de o testare reusita, iti cere sa testezi intai conexiunea; dupa
-                    aceea fie confirma capabilitatile, fie le numeste pe cele care lipsesc.
+                    <strong>Limite Audio Runtime</strong> afișează capabilitățile VoiceWeaver după testarea conexiunii.
+                    Voce Narator și Voci Personaje aleg un model compatibil pentru crearea mostrelor. Blocuri Audio
+                    alege un model de clonare compatibil și poate folosi mostre importate cu transcriere.
+                    Ambianța folosește un model separat pentru sunete.
                 </p>
                 <h3>Timpi de asteptare si lungimea blocurilor</h3>
                 <table>

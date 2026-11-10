@@ -128,9 +128,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Translation targets are English, Romanian, German, French, Russian, Portuguese, Spanish, and
                     Italian. The spoken language follows the translation language you lock on the Home page, so
-                    VoiceWeaver needs voices that support it. For Romanian, AudioMancer keeps the text
-                    and sample transcript in Romanian and sends the Italian language hint to VoiceWeaver
-                    for voice design and cloning.
+                    VoiceWeaver needs voices that support it. AudioMancer prefers a model that declares support for the spoken language.
+                    For Romanian, it uses native support when available, with the Italian hint as a Qwen fallback.
+                    The text and sample transcript stay in Romanian.
                 </p>
                 <div class="warning">
                     AudioMancer builds voice definitions and samples for the specific narrator and characters of the
@@ -356,9 +356,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     a probe succeeds it shows a single line saying no models were discovered.
                 </p>
                 <p>
-                    <strong>Runtime Audio Limits</strong> tells you whether the required Qwen3 clone and voice-design
-                    capabilities are available. Before a successful probe it asks you to test the connection first;
-                    afterwards it either confirms the capabilities or names the ones that are missing.
+                    <strong>Runtime Audio Limits</strong> reports which VoiceWeaver capabilities are available after testing the
+                    connection. Narrator Voice and Character Voices choose a compatible voice-design model for
+                    creating samples. Audio Blocks chooses a compatible clone model and can use imported voice
+                    samples with transcripts. Scene sounds use a separate sound model.
                 </p>
                 <h3>Timeouts And Block Length</h3>
                 <table>

@@ -59,9 +59,9 @@ Speech Blocks shares one generator between batch and selected-chunk actions.
 Its active checkpoint records the exact source offset. Local single-narrator
 segmentation works without an AI profile when Scene Ambience is disabled.
 
-VoiceWeaver receives the Italian synthesis hint for Romanian voice design and
-cloning. Project languages, speech text, and reference transcripts retain their
-Romanian values.
+AudioMancer chooses VoiceWeaver models by operation and language. Romanian
+capability takes precedence over the Qwen Italian fallback. The selected
+language, speech text and reference transcripts retain their project values.
 
 ## Supported operation
 

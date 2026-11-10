@@ -547,51 +547,20 @@ def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_
     assert project_workspace_service.load_manifest(project_root)["voice_assignment_mode"] == "narrator_and_characters"
 
 
-def test_narrator_service_profile_generation_request_requires_minimum_qwen_capabilities(tmp_path) -> None:
-    """
-    @brief      Verify narrator sample generation resolves only when the minimum Qwen capability set is available.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    """
-    project_root, _manifest = project_workspace_service.create_project("NarratorGenerationProject", tmp_path)
-    custom_profile = narrator_definition_service.create_custom_profile(
-        project_root,
-        "My Narrator",
-        "English",
-        "Warm and intimate.",
-        "Preview text.",
-    )
+def test_narrator_voice_design_selects_romanian_without_clone_model() -> None:
+    """@brief A native design-only runtime can produce a Romanian narrator sample."""
+    profile = {"language": "ro", "prompt_text": "Warm and intimate."}
+    italian = {"model_id": "qwen-designer", "status": "healthy",
+               "supported_generation_modes": ["voice_design"], "supported_languages": ["it"]}
+    romanian = {**italian, "model_id": "romanian-designer", "supported_languages": ["ro"]}
 
-    missing_request = narrator_definition_service.profile_generation_request(
-        custom_profile,
-        {"voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE},
-        [],
-    )
-    ready_models = [
-        {
-            "model_id": "qwen-base",
-            "backend_name": "qwen3-tts-base",
-            "status": "healthy",
-            "supported_generation_modes": ["clone"],
-        },
-        {
-            "model_id": "qwen-designer",
-            "backend_name": "qwen3-tts-voice-designer",
-            "status": "healthy",
-            "supported_generation_modes": ["voice_design"],
-        },
-    ]
-    custom_request = narrator_definition_service.profile_generation_request(
-        custom_profile,
-        {"voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE},
-        ready_models,
-    )
-
-    assert missing_request["can_generate"] is False
-    assert "clone" in missing_request["unavailable_reason"]
-    assert custom_request["generation_mode"] == "definition"
-    assert custom_request["model_id"] == "qwen-designer"
+    assert not narrator_definition_service.profile_generation_request(profile)["can_generate"]
+    fallback = narrator_definition_service.profile_generation_request(profile, discovered_models=[italian])
+    selected = narrator_definition_service.profile_generation_request(profile, discovered_models=[italian, romanian])
+    assert fallback["runtime_language"] == "it"
+    assert selected["can_generate"] is True
+    assert selected["model_id"] == "romanian-designer"
+    assert selected["runtime_language"] == selected["language"] == "ro"
 
 
 def test_narrator_service_normalizes_language_labels_to_runtime_codes(tmp_path) -> None:

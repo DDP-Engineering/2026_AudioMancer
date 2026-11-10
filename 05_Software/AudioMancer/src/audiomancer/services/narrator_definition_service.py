@@ -717,25 +717,17 @@ def profile_generation_request(
     @exception  None
     """
     _ = tts_plan
-    capability_matrix = voiceweaver_runtime_service.build_capability_matrix(list(discovered_models or []))
     language = narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
     prompt_text = str(profile.get("prompt_text", "")).strip()
 
-    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        missing_capabilities = list(capability_matrix.get("missing_qwen_capabilities", []))
-        unavailable_reason = (
-            "Cannot generate a sample because Qwen3 TTS minimum capabilities are missing: "
-            + ", ".join(missing_capabilities)
-            + "."
-        )
-        return _build_generation_request(False, False, unavailable_reason, language, prompt_text)
-
-    voice_designer_model = _first_model(capability_matrix.get("qwen_voice_design_models", []))
+    voice_designer_model = voiceweaver_runtime_service.resolve_tts_model(
+        list(discovered_models or []), "voice_design", language,
+    )
     if voice_designer_model is None:
         return _build_generation_request(
             False,
             False,
-            "No healthy Qwen3 Voice Designer model is currently available.",
+            f"No healthy VoiceWeaver design model is available for {language}.",
             language,
             prompt_text,
         )
@@ -750,9 +742,7 @@ def profile_generation_request(
         model_id=resolved_model_id,
         source_model_id=resolved_model_id,
         speaker_id=None,
-        supported_languages=[
-            str(item).strip() for item in voice_designer_model.get("supported_languages", []) if str(item).strip()
-        ],
+        runtime_language=voiceweaver_runtime_service.tts_language_for_model(language, voice_designer_model),
     )
 
 
@@ -1354,7 +1344,7 @@ def _build_generation_request(
     model_id: str | None = None,
     source_model_id: str | None = None,
     speaker_id: str | None = None,
-    supported_languages: list[str] | None = None,
+    runtime_language: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the generation request.
@@ -1367,6 +1357,7 @@ def _build_generation_request(
     @param[in]  model_id Identifier for `model_id`.
     @param[in]  source_model_id Identifier for `source_model_id`.
     @param[in]  speaker_id Identifier for `speaker_id`.
+    @param[in]  runtime_language Language sent to the selected VoiceWeaver model.
     @return     Derived helper result.
     """
     return {
@@ -1377,7 +1368,7 @@ def _build_generation_request(
         "model_id": model_id,
         "source_model_id": source_model_id,
         "speaker_id": speaker_id,
-        "supported_languages": [] if supported_languages is None else list(supported_languages),
+        "runtime_language": runtime_language,
         "language": language,
         "prompt_text": prompt_text,
     }
@@ -1398,14 +1389,6 @@ def _model_by_id(model_entries: list[dict[str, object]], model_id: str) -> dict[
             return model_entry
     return None
 
-
-def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | None:
-    """
-    @brief      Return the first model.
-    @param[in]  model_entries Value for `model_entries`.
-    @return     Resolved helper result.
-    """
-    return None if not model_entries else dict(model_entries[0])
 
 
 def _current_profile_sample_audio_path(project_root: str | Path, profile_id: str) -> Path:

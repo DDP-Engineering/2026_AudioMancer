@@ -72,7 +72,8 @@ controlled provider responses.
 
 Focused Audio Blocks checks use the service, WAV artifact, document, state,
 page and selected offscreen controller tests. They simulate VoiceWeaver and
-inject file replacement errors. Listening uses an installed local runtime.
+inject file replacement errors. Model routing tests simulate declared capabilities,
+native Romanian and the Qwen fallback. Listening uses an installed local runtime.
 
 Focused Audio Assembly checks use synthetic PCM WAVs in the assembly service,
 state, UI, sample-width and codec tests, plus affected Audio Blocks and Speech

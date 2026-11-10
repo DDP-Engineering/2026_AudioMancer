@@ -199,6 +199,10 @@ approved translation. Reset and regenerate Speech Blocks when it differs.
 
 ## Key behaviors
 
+Spoken-block planning uses the budget of the clone model selected for the
+source speech language. The conservative local estimate is used if that
+model does not advertise a token budget.
+
 - `REQ-FUNC-51afdd49`. The shared pause parser reads explicit milliseconds or
   seconds, and returns the configured default when a duration is missing.
 
