@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-10
+
 ### Changed
 
 - Voice samples and Audio Blocks choose a VoiceWeaver model for the operation
@@ -70,8 +72,6 @@ All notable changes to this project will be documented in this file.
 - Character Discovery keeps distinct characters whose names produce the same ID
   and preserves shared context between windows when resuming. Evidence excerpts
   can be corrected and saved with the character profile.
-- Romanian voice samples and cloned audio use the Italian synthesis hint in
-  VoiceWeaver while keeping Romanian text and transcripts.
 - Narrator Voice keeps the sample and selection while editing or renaming a
   profile. Generated and imported samples save the WAV and transcript together
   and recover the previous pair if replacement fails.
