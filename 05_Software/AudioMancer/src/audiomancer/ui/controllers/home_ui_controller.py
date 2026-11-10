@@ -398,20 +398,19 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
         )
         return
 
-    export_states = project_export_service.build_export_states(window._current_project_root, window._current_manifest)
-    selected_state = next(
-        (state for state in export_states if str(state.get("export_kind", "")) == str(export_kind)),
-        None,
-    )
-    if selected_state is None or not bool(selected_state.get("can_export", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("home.export_not_ready_message", current_language),
-        )
-        return
-
     try:
+        if export_format not in project_export_service.export_formats_for_kind(export_kind):
+            raise ValueError(f"Unsupported export format: {export_format}")
+        selected_state = project_export_service.build_export_state(
+            window._current_project_root, window._current_manifest, export_kind
+        )
+        if not selected_state["can_export"]:
+            message_key = (
+                "home.export_status.invalid_artifact"
+                if selected_state["status"] == project_export_service.EXPORT_STATUS_INVALID_ARTIFACT
+                else "home.export_not_ready_message"
+            )
+            raise ValueError(ui_state_service.translate(message_key, current_language))
         default_file_name = project_export_service.default_export_file_name(
             window._current_manifest,
             export_kind,
@@ -447,35 +446,58 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
         )
         return
 
-    try:
-        export_path.parent.mkdir(parents=True, exist_ok=True)
-        if export_format == project_export_service.EXPORT_FORMAT_ZIP:
-            project_export_service.create_archive_export(
-                window._current_project_root,
-                window._current_manifest,
-                export_kind,
-                export_path,
-            )
-        else:
-            export_content = project_export_service.render_export(
-                window._current_project_root,
-                window._current_manifest,
-                export_kind,
-                export_format,
-            )
-            export_path.write_text(export_content, encoding="utf-8")
-    except (OSError, ValueError) as error:
-        QMessageBox.warning(
+    if export_format == project_export_service.EXPORT_FORMAT_ZIP:
+        operation_runner_controller.start_threaded_operation(
             window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
+            operation_kind="project_export",
+            operation_name=ui_state_service.translate(f"home.export.{export_kind}", current_language),
+            initial_message=ui_state_service.translate("progress.project_export", current_language),
+            worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+                project_export_service.publish_archive_export(
+                    project_root, manifest, export_kind, export_path,
+                    progress_callback=progress_callback, cancel_requested=cancel_requested,
+                )
+            ),
+            set_busy=lambda _busy: None,
+            success_handler=lambda result: _show_archive_export_success(window, result, current_language),
+            failure_handler=lambda error: _show_export_error(window, error, current_language),
+            cancel_handler=lambda _message: misc_ui_controller.show_message(
+                window, ui_state_service.translate("status.project_export_cancelled", current_language)
+            ),
+            cancellable=True,
         )
         return
 
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.project_exported", current_language),
-    )
+    try:
+        project_export_service.write_text_export(
+            window._current_project_root, window._current_manifest, export_kind, export_format, export_path,
+        )
+    except (OSError, ValueError, TypeError, OverflowError) as error:
+        _show_export_error(window, error, current_language)
+        return
+
+    misc_ui_controller.show_message(window, ui_state_service.translate("status.project_exported", current_language))
+
+
+def _show_archive_export_success(
+    window: "MainWindow",
+    result: project_export_service.ArchiveExportResult,
+    language: str,
+) -> None:
+    """Show the actual partial count when the Assembly archive omitted outputs."""
+    if result.partial_counts is None:
+        message = ui_state_service.translate("status.project_exported", language)
+    else:
+        exported, planned = result.partial_counts
+        message = ui_state_service.translate("status.project_exported_partial", language).format(
+            exported=exported, planned=planned
+        )
+    misc_ui_controller.show_message(window, message)
+
+
+def _show_export_error(window: "MainWindow", error: Exception, language: str) -> None:
+    """Present the failure of a text or ZIP export."""
+    QMessageBox.warning(window, ui_state_service.translate("dialog.project_error_title", language), str(error))
 
 
 def handle_project_snapshot_requested(window: "MainWindow") -> None:

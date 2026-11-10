@@ -4,12 +4,14 @@ title = "Project-relative source and artifact paths shall reject absolute paths"
 status = "active"
 
 requirement = """
-Project-relative source and artifact paths shall reject absolute paths, parent traversal, and symlink escapes, and project export or snapshot destinations shall be outside the active project root.
+Project-relative source and artifact paths shall reject absolute paths, parent traversal, and symlink escapes, and project export or snapshot destinations shall have both their containing directories and their resolved targets outside the active project root.
 """
 
 verification = "Automated focused pytest coverage passed for traversal, symlink escape, and external export or snapshot destinations."
 
 affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_text_service.py",
   "05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py",
   "05_Software/AudioMancer/src/audiomancer/services/import_service.py",
   "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
@@ -17,6 +19,11 @@ affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py",
 ]
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_translation_export_rejects_external_chunking_source",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_export_rejects_in_project_link_to_external_destination",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_cleaned_text_export_skips_external_optional_report",
+  "05_Software/AudioMancer/tests/test_project_export_service.py::test_character_voice_export_excludes_external_sample",
+
   "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_shared_manifest_reader_validates_identity_and_project_scoped_paths",
   "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_manifest_rejects_unsafe_source_document_paths",
   "05_Software/AudioMancer/tests/test_project_workspace_service.py::test_open_project_rejects_source_document_symlink_escape",
@@ -31,4 +38,4 @@ rationale = """
 Containment prevents untrusted project metadata or operator destinations from reading, deleting, overwriting, or recursively archiving files beyond the intended workspace.
 """
 created = 2026-07-18
-updated = 2026-08-10
+updated = 2026-11-10

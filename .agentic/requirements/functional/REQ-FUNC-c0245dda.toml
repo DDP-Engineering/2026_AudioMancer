@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-FUNC-c0245dda"
+title = "Describe actual Assembly ZIP contents"
+status = "active"
+requirement = "When publishing an Audio Assembly ZIP, AudioMancer shall list the actual member names, WAV sizes and durations, and whether the exported count represents a complete or partial assembly."
+verification = "Export duplicate basenames and a cancelled report with a false duration and assert distinct manifest members, actual metrics and partial count."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_export_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_assembly_archive_only_includes_valid_generated_wavs", "05_Software/AudioMancer/tests/test_project_export_service.py::test_interrupted_assembly_is_partial_even_with_every_planned_wav", "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_creates_voice_and_audio_archives"]
+created = 2026-11-10
+updated = 2026-11-10

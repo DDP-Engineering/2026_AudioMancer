@@ -21,6 +21,10 @@ fixed in Home, and saves language/narration options automatically with confirmed
 resets of affected results. Mode changes preserve text, characters and narrator
 data; language changes preserve source and text through Chunking.
 
+Home exports TXT, Markdown and stage ZIPs outside the project. Assembly ZIPs
+contain verified WAVs and show the actual exported count for partial results.
+Stage ZIPs and snapshots run in the background and publish atomically.
+
 Cleanup processes canonical text in an isolated pure package. Completed reruns
 retain the published text and downstream work until recoverable replacement
 succeeds; interrupted replacement AI work uses a separate pending checkpoint.

@@ -11,6 +11,7 @@ verification = "Automated: 1 linked pytest selector(s)."
 
 affected_paths = [
   "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/project_export_text_service.py",
 ]
 linked_tests = [
   "05_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_exports_ai_request_parameters_without_prompts",
@@ -21,4 +22,4 @@ rationale = """
 Exports must expose request parameters but never internal prompts.
 """
 created = 2026-07-24
-updated = 2026-07-24
+updated = 2026-11-10

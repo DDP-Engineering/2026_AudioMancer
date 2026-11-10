@@ -653,7 +653,12 @@ class HomeProjectPage(QWidget):
                 format_combo.setEnabled(bool(state.get("can_export", False)))
                 format_combo.setToolTip(f"{export_label}: {export_status}")
             if isinstance(export_button, QPushButton):
-                export_button.setText(ui_state_service.translate("home.export_button", self._current_language))
+                button_key = (
+                    "home.export_partial_button"
+                    if status == project_export_service.EXPORT_STATUS_PARTIAL
+                    else "home.export_button"
+                )
+                export_button.setText(ui_state_service.translate(button_key, self._current_language))
                 export_button.setEnabled(bool(state.get("can_export", False)))
                 export_button.setToolTip(f"{export_label}: {export_status}")
         self._apply_workflow_row_heights()

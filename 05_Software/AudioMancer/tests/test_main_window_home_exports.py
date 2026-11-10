@@ -15,9 +15,12 @@
 
 # IMPORTS
 
+import pytest
+
 from audiomancer import config
 from audiomancer.services import project_export_service, project_workspace_service
 from audiomancer.ui.main_window import MainWindow
+from audiomancer.ui.pages.home_page import HomeProjectPage
 
 # PUBLIC API
 
@@ -69,6 +72,19 @@ def test_main_window_opens_project_with_invalid_character_document(qtbot, tmp_pa
 
     assert window._current_project_root == project_root
     assert window._home_page._export_rows[project_export_service.EXPORT_KIND_CHARACTERS]["button"].isEnabled() is False
+
+
+@pytest.mark.parametrize(("language", "label"), [("en", "Export partial ZIP"), ("ro", "Exportă ZIP parțial")])
+def test_home_displays_partial_assembly_export(qtbot, language, label) -> None:
+    """An available partial archive has a distinct button label in both languages."""
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+    page.apply_language(language)
+    page.set_export_states([{"export_kind": "audio_assembly", "status": "partial", "can_export": True}])
+
+    button = page._export_rows["audio_assembly"]["button"]
+    assert button.isEnabled()
+    assert button.text() == label
 
 
 # END OF FILE

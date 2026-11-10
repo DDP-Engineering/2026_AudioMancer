@@ -67,6 +67,8 @@ The implementation boundary is:
 - `05_Software/AudioMancer/src/audiomancer/services/project_options_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_export_text_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/archive_writer.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_options_service.py` — creation and confirmed option publication.
 - `05_Software/AudioMancer/tests/test_project_options_service.py` — impact, preservation, rollback and path containment.
@@ -98,12 +100,10 @@ safely resolved previous project copy after the copy succeeds, and returns the
   removes its owned temporary file, and propagates the original `OSError`
   (`REQ-REL-ee8f9ed0`).
 
-`project_export_service.create_archive_export` publishes each ready voice or
-audio ZIP through the deterministic sibling `.<archive-name>.tmp`, closes the
-complete archive before `os.replace`, and removes only that owned temporary file
-when archive creation or replacement fails. The requested destination therefore
-remains unchanged until a complete replacement is available
-(`REQ-FUNC-efcaeeed`).
+Stage archives and whole-project snapshots share the same ZIP writer. It uses
+a uniquely owned sibling temporary file and closes the archive before atomic
+replacement. Cancellation between members or a write failure preserves the
+destination. TXT and Markdown use atomic text publication.
 
 `project_options_service.create_project_with_source` stages a complete workspace
 and copied source under a temporary sibling directory before publishing the
@@ -172,11 +172,16 @@ from `config.APP_ROOT`: that root owns read-only packaged resources, so for a
 frozen build installed into a system location it would open the browser inside a
 directory where any created project fails to write.
 
-`project_export_service` reads ready downstream artifacts into format-neutral
-export documents or curated audio ZIP files. `project_snapshot_service` walks
-the active project, skips symlinks and AI transaction logs, archives files under
-one top-level project folder, and replaces the requested destination only after
-the temporary ZIP completes.
+Project Export selects the ready artifact and delegates TXT and Markdown
+projection to its text service. Assembly readiness uses report records and
+local paths. The ZIP worker verifies supported PCM frames and publishes the
+actual member names, measured durations and sizes. Incomplete assemblies or
+omissions produce a partial manifest and a Home completion count. A malformed
+artifact affects only its own Home export row. Export inputs are project-local.
+Optional Cleanup and Speech Blocks metadata omit unsafe source reads.
+
+Snapshot walks the active project, skipping links, junctions and AI transaction
+logs, and places its files under one top-level project folder.
 
 ### Dependencies
 
@@ -288,9 +293,9 @@ with `Project path already exists as a file: <path>` and remains unchanged.
 
 Supported source suffixes are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`,
 and `.epub`. Atomic JSON uses UTF-8, two-space indentation, unescaped Unicode,
-and a trailing newline by default. Export/snapshot paths must be outside the
-active project. Snapshot members share one top-level folder named after the
-project root; AI transaction logs and symlinks are excluded.
+and a trailing newline by default. Export/snapshot paths must have both their
+replacement directory and resolved target outside the active project. Snapshot members share one top-level folder named after the
+project root. AI transaction logs, symlinks and junctions are excluded.
 
 `REQ-FUNC-b1f49831` defines the low-level importer copy-first replacement boundary.
 The selected source and previous manifest path are validated before mutation;
@@ -468,6 +473,8 @@ From the adopted component map:
 - `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared append-only destination-extension normalization.
 - `05_Software/AudioMancer/src/audiomancer/services/persistence_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_export_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/project_export_text_service.py`
+- `05_Software/AudioMancer/src/audiomancer/services/archive_writer.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py`
 - `05_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py` - canonical disk-based operation-summary writer and promotion-only workflow-stage owner.
 - `05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py`

@@ -219,7 +219,7 @@ summary reset construction to Project Lifecycle before success is returned.
 
 ## Files
 
-- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifact, path-containment, and append-only extension helpers.
+- `05_Software/AudioMancer/src/audiomancer/services/operation_runtime_service.py` - shared runtime artifacts, path containment, and append-only destination extensions. External publication checks both the destination parent and resolved target.
 - `05_Software/AudioMancer/src/audiomancer/services/workflow_impact_service.py`
 - `05_Software/AudioMancer/src/audiomancer/ui/operation_progress_dialog.py`
 - `05_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`

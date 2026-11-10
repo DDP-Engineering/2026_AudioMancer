@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-45187235"
+title = "Publish text exports atomically"
+status = "active"
+requirement = "When saving a text export, AudioMancer shall publish the rendered text through atomic replacement outside the project."
+verification = "Save TXT to an external destination and inject a replacement failure to verify previous contents survive."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_export_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_text_export_preserves_previous_file_on_publish_failure", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_applies_selected_export_extension_and_writes_utf8"]
+created = 2026-11-10
+updated = 2026-11-10

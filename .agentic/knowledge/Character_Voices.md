@@ -23,7 +23,9 @@ data. A language change resets the whole target plan and its dependent samples.
 
 `character_voices_service.py` owns `characters_voice.json`, target/sample lookup,
 prompt updates, import and generated-sample persistence, readiness, and operation
-summary derivation. `character_voices_state_service.py` builds the page payload.
+summary derivation. Export requests a strict read-only target-plan load so an
+unreadable or malformed plan is distinct from an empty plan on Home.
+`character_voices_state_service.py` builds the page payload.
 `build_character_voices_state` and `set_character_voices_state` agree key for
 key: the single call site in `MainWindow._refresh_character_voices_page_state`
 splats the payload into the method, so a field added or removed on one side

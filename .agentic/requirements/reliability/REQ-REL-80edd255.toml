@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-80edd255"
+title = "Keep previous ZIP on cancellation"
+status = "active"
+requirement = "When cancellation is requested before ZIP publication, AudioMancer shall preserve the previous destination."
+verification = "Cancel after a member is written and assert the previous ZIP remains and the owned temporary file is removed."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/archive_writer.py", "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py", "05_Software/AudioMancer/src/audiomancer/services/project_snapshot_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_stage_zip_cancellation_preserves_previous_archive", "05_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_cancellation_removes_temporary_zip"]
+created = 2026-11-10
+updated = 2026-11-10

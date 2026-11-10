@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-UX-dda2d417"
+title = "Show partial Audio Assembly exports"
+status = "active"
+requirement = "When the assembly export is known to be partial, Home shall identify the partial export in its readiness or completion presentation."
+verification = "Refresh an incomplete assembly row and finish a ZIP worker with omissions to verify the partial button and exported count message."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/home_page.py", "05_Software/AudioMancer/src/audiomancer/ui/controllers/home_ui_controller.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_main_window_home_exports.py::test_home_displays_partial_assembly_export", "05_Software/AudioMancer/tests/test_home_ui_controller.py::test_home_ui_controller_routes_zip_export_to_archive_writer"]
+created = 2026-11-10
+updated = 2026-11-10

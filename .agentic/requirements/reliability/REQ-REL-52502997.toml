@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-52502997"
+title = "Refuse empty Audio Assembly archives"
+status = "active"
+requirement = "If an Audio Assembly export has no usable generated WAV, AudioMancer shall reject it before replacing the destination."
+verification = "Export a report containing only an invalid WAV and assert the previous destination survives."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_export_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_assembly_archive_rejects_no_usable_wav"]
+created = 2026-11-10
+updated = 2026-11-10

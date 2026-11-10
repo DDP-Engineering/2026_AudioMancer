@@ -17,6 +17,7 @@
 
 import json
 from pathlib import Path
+import wave
 import zipfile
 
 import pytest
@@ -24,7 +25,10 @@ import pytest
 from audiomancer import config
 from audiomancer.services import (
     narrator_definition_service,
+    operation_runtime_service,
+    persistence_service,
     project_export_service,
+    project_snapshot_service,
     project_workspace_service,
     speech_blocks_service,
 )
@@ -113,7 +117,7 @@ def test_project_export_service_invalid_character_document_is_unavailable(tmp_pa
 
     assert (
         states[project_export_service.EXPORT_KIND_CHARACTERS]
-        == project_export_service.EXPORT_STATUS_MISSING_ARTIFACT
+        == "invalid_artifact"
     )
 
 
@@ -371,7 +375,8 @@ def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> No
         manifest_text = archive.read("audio_assembly/audio_assembly_manifest.txt").decode("utf-8")
         assert "Output Mode: whole_book" in manifest_text
         assert "Duration: 01:15" in manifest_text
-        assert "Size: 14 bytes" in manifest_text
+        assert "Size: 150044 bytes" in manifest_text
+        assert "Export Status: Complete" in manifest_text
 
 
 def test_project_archive_export_failure_preserves_existing_archive_and_cleans_temp(tmp_path, monkeypatch) -> None:
@@ -407,14 +412,14 @@ def test_project_archive_export_failure_preserves_existing_archive_and_cleans_te
         )
 
     assert archive_path.read_bytes() == previous_archive
-    assert not (tmp_path / ".narrator_voice.zip.tmp").exists()
+    assert not list(tmp_path.glob(".narrator_voice.zip.*.tmp"))
 
 
 def test_project_archive_export_cleanup_does_not_mask_original_failure(tmp_path, monkeypatch) -> None:
     """Verify a temporary-file cleanup failure cannot replace the archive failure."""
     project_root, manifest = _build_export_project(tmp_path)
     archive_path = tmp_path / "narrator_voice.zip"
-    temporary_path = tmp_path / ".narrator_voice.zip.tmp"
+
     original_build_archive_entries = project_export_service._build_archive_entries
     original_unlink = Path.unlink
 
@@ -426,7 +431,7 @@ def test_project_archive_export_cleanup_does_not_mask_original_failure(tmp_path,
         return archive_entries
 
     def _unlink(path, *args, **kwargs):
-        if path == temporary_path:
+        if path.parent == archive_path.parent and path.match(f".{archive_path.name}.*.tmp"):
             raise PermissionError("temporary export is locked")
         return original_unlink(path, *args, **kwargs)
 
@@ -465,7 +470,7 @@ def test_project_archive_export_success_replaces_existing_archive(tmp_path) -> N
     with zipfile.ZipFile(archive_path) as replacement_archive:
         assert "stale.txt" not in replacement_archive.namelist()
         assert config.NARRATOR_VOICE_FILE_NAME in replacement_archive.namelist()
-    assert not (tmp_path / ".narrator_voice.zip.tmp").exists()
+    assert not list(tmp_path.glob(".narrator_voice.zip.*.tmp"))
 
 
 def test_project_export_archives_never_include_ai_transaction_logs(tmp_path) -> None:
@@ -688,7 +693,7 @@ def _build_export_project(tmp_path):
 
     audiobook_path = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav"
     audiobook_path.parent.mkdir(parents=True, exist_ok=True)
-    audiobook_path.write_bytes(b"RIFF-audiobook")
+    _write_wav(audiobook_path, frames=75_000)
     _write_json(
         project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
         {
@@ -857,3 +862,239 @@ def test_project_archive_export_rejects_destination_inside_project(tmp_path) -> 
 
 
 # END OF FILE
+
+
+def _write_wav(path, frames=1000) -> None:
+    """Write a small valid mono PCM fixture."""
+    with wave.open(str(path), "wb") as audio:
+        audio.setparams((1, 2, 1000, 0, "NONE", "not compressed"))
+        audio.writeframes(b"\0\0" * frames)
+
+
+def test_assembly_archive_only_includes_valid_generated_wavs(tmp_path) -> None:
+    """Verify partial ZIP counts, actual names and measured WAV duration."""
+    project_root, manifest = _build_export_project(tmp_path)
+    report_path = project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    output = report["outputs"][0]
+    audiobook = project_root / output["audio_relative_path"]
+    _write_wav(audiobook)
+    second = audiobook.with_name("second.wav")
+    _write_wav(second, frames=2000)
+    truncated = audiobook.with_name("truncated.wav")
+    truncated.write_bytes(second.read_bytes()[:-2])
+    external = tmp_path / "external.wav"
+    _write_wav(external)
+    ungenerated = audiobook.with_name("stale.wav")
+    _write_wav(ungenerated)
+    report.update(
+        operation_status="cancelled",
+        planned_output_count=7,
+        outputs=[
+            output,
+            {**output, "audio_relative_path": "audiobook/second.wav"},
+            {**output, "audio_relative_path": "audiobook/truncated.wav"},
+            {**output, "audio_relative_path": "audiobook/missing.wav"},
+            {**output, "audio_relative_path": str(external)},
+            {**output, "audio_relative_path": "audiobook/stale.wav", "generated": False},
+        ],
+    )
+    _write_json(report_path, report)
+    readiness = project_export_service.build_export_states(project_root, manifest)[-1]
+    assert readiness["status"] == "partial"
+    assert readiness["can_export"]
+
+    archive_path = project_export_service.create_archive_export(
+        project_root, manifest, "audio_assembly", tmp_path / "partial.zip"
+    )
+    with zipfile.ZipFile(archive_path) as archive:
+        audio_names = [name for name in archive.namelist() if name.endswith(".wav")]
+        assert len(audio_names) == 2
+        assert len({name.casefold() for name in audio_names}) == 2
+        content = archive.read("audio_assembly/audio_assembly_manifest.txt").decode("utf-8")
+        assert "Export Status: Partial" in content
+        assert "Exported WAVs: 2/7" in content
+        assert "Total Duration: 00:03" in content
+        assert "Total Size: 6088 bytes" in content
+        assert all(f"- {name}" in content for name in audio_names)
+
+
+def test_interrupted_assembly_is_partial_even_with_every_planned_wav(tmp_path) -> None:
+    """The report's terminal status matters independently of the WAV count."""
+    project_root, manifest = _build_export_project(tmp_path)
+    report_path = project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report.update(operation_status="cancelled", planned_output_count=1)
+    _write_json(report_path, report)
+
+    result = project_export_service.publish_archive_export(
+        project_root, manifest, "audio_assembly", tmp_path / "partial.zip"
+    )
+    assert result.partial_counts == (1, 1)
+
+
+def test_assembly_archive_rejects_no_usable_wav(tmp_path) -> None:
+    """Verify a corrupt WAV cannot replace an existing archive."""
+    project_root, manifest = _build_export_project(tmp_path)
+    (project_root / "audiobook/audiobook.wav").write_bytes(b"invalid")
+    destination = tmp_path / "assembly.zip"
+    destination.write_bytes(b"previous export")
+
+    with pytest.raises(ValueError, match="usable generated WAV"):
+        project_export_service.create_archive_export(project_root, manifest, "audio_assembly", destination)
+
+    assert destination.read_bytes() == b"previous export"
+
+
+@pytest.mark.parametrize(
+    ("export_kind", "artifact_name", "content"),
+    [
+        ("audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME, "{bad"),
+        ("audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME, "[]"),
+        ("character_voices", config.CHARACTER_VOICES_TARGETS_FILE_NAME, "{bad"),
+        ("character_voices", config.CHARACTER_VOICES_TARGETS_FILE_NAME, "{}"),
+    ],
+)
+def test_malformed_export_readiness_is_isolated(tmp_path, export_kind, artifact_name, content) -> None:
+    """Verify malformed syntax and root shape disable only the affected export."""
+    project_root, manifest = _build_export_project(tmp_path)
+    (project_root / artifact_name).write_text(content, encoding="utf-8")
+
+    states = {row["export_kind"]: row for row in project_export_service.build_export_states(project_root, manifest)}
+
+    assert states[export_kind]["status"] == "invalid_artifact"
+    assert not states[export_kind]["can_export"]
+    assert states["cleaned_text"]["can_export"]
+
+
+def test_stage_zip_cancellation_preserves_previous_archive(tmp_path) -> None:
+    """Cancel after a member is written and check publication and cleanup."""
+    project_root, manifest = _build_export_project(tmp_path)
+    destination = tmp_path / "narrator.zip"
+    destination.write_bytes(b"previous archive")
+    unrelated_temporary = tmp_path / ".narrator.zip.tmp"
+    unrelated_temporary.write_bytes(b"unrelated")
+    events = []
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        project_export_service.create_archive_export(
+            project_root,
+            manifest,
+            "narrator_voice",
+            destination,
+            progress_callback=lambda current, *_args: events.append(current),
+            cancel_requested=lambda: any(events),
+        )
+
+    assert events == [0, 1]
+    assert destination.read_bytes() == b"previous archive"
+    assert unrelated_temporary.read_bytes() == b"unrelated"
+    assert list(tmp_path.glob(".narrator.zip.*.tmp")) == []
+
+
+def test_text_export_preserves_previous_file_on_publish_failure(tmp_path, monkeypatch) -> None:
+    """Use the atomic persistence path and leave a previous export intact."""
+    project_root, manifest = _build_export_project(tmp_path)
+    destination = tmp_path / "cleaned.txt"
+    destination.write_text("previous text", encoding="utf-8")
+
+    def _fail_replace(*_args):
+        raise PermissionError("destination is locked")
+
+    monkeypatch.setattr(persistence_service.os, "replace", _fail_replace)
+    with pytest.raises(PermissionError, match="destination is locked"):
+        project_export_service.write_text_export(project_root, manifest, "cleaned_text", "txt", destination)
+
+    assert destination.read_text(encoding="utf-8") == "previous text"
+
+
+def test_character_voice_export_excludes_external_sample(tmp_path) -> None:
+    """A persisted sample reference cannot archive a file outside the project."""
+    project_root, manifest = _build_export_project(tmp_path)
+    targets_path = project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    payload = json.loads(targets_path.read_text(encoding="utf-8"))
+    target = next(item for item in payload if item["target_kind"] == "character")
+    external = tmp_path / "outside.wav"
+    _write_wav(external)
+    target["sample_audio_path"] = str(external)
+    _write_json(targets_path, payload)
+
+    states = {row["export_kind"]: row for row in project_export_service.build_export_states(project_root, manifest)}
+
+    assert not states["character_voices"]["can_export"]
+    with pytest.raises(ValueError, match="no generated audio"):
+        project_export_service.create_archive_export(
+            project_root, manifest, "character_voices", tmp_path / "voices.zip"
+        )
+
+
+def _redirect_file(path, target, monkeypatch) -> None:
+    """Use a real symlink or simulate resolution on restricted Windows accounts."""
+    path.unlink(missing_ok=True)
+    try:
+        path.symlink_to(target)
+    except OSError:
+        original_resolve = Path.resolve
+
+        def _resolve(candidate, *args, **kwargs):
+            return target if candidate == path else original_resolve(candidate, *args, **kwargs)
+
+        path.write_bytes(target.read_bytes())
+        monkeypatch.setattr(Path, "resolve", _resolve)
+
+
+@pytest.mark.parametrize("export_type", ["text", "stage_zip", "snapshot"])
+def test_export_rejects_in_project_link_to_external_destination(tmp_path, monkeypatch, export_type) -> None:
+    """Check the destination entry even when resolution points outside the project."""
+    project_root, manifest = _build_export_project(tmp_path)
+    suffix = ".txt" if export_type == "text" else ".zip"
+    destination = project_root / f"export{suffix}"
+    external = tmp_path / f"external{suffix}"
+    external.write_bytes(b"external payload")
+    _redirect_file(destination, external, monkeypatch)
+
+    with pytest.raises(ValueError, match="outside the active project folder"):
+        if export_type == "text":
+            project_export_service.write_text_export(project_root, manifest, "cleaned_text", "txt", destination)
+        elif export_type == "stage_zip":
+            project_export_service.create_archive_export(project_root, manifest, "narrator_voice", destination)
+        else:
+            project_snapshot_service.create_project_snapshot(project_root, destination)
+
+    assert external.read_bytes() == b"external payload"
+    assert destination.resolve() == external
+    assert destination.read_bytes() == b"external payload"
+    assert not list(project_root.glob(f".{destination.name}.*.tmp"))
+
+
+def test_cleaned_text_export_skips_external_optional_report(tmp_path, monkeypatch) -> None:
+    """Keep exporting local cleaned text without reading a redirected Cleanup report."""
+    project_root, manifest = _build_export_project(tmp_path)
+    optional_report = project_root / config.CLEANUP_DOCUMENT_FILE_NAME
+    external = tmp_path / "external_cleanup.json"
+    external.write_text("{bad", encoding="utf-8")
+    _redirect_file(optional_report, external, monkeypatch)
+
+    rendered = project_export_service.render_export(project_root, manifest, "cleaned_text", "txt")
+
+    assert "Cleaned Text" in rendered
+
+
+def test_translation_export_rejects_external_chunking_source(tmp_path, monkeypatch) -> None:
+    """Home readiness and text rendering both reject a redirected Chunking document."""
+    project_root, manifest = _build_export_project(tmp_path)
+    chunks = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    external = tmp_path / "external_chunks.json"
+    external.write_bytes(chunks.read_bytes())
+    _redirect_file(chunks, external, monkeypatch)
+
+    def _unexpected_load(*_args):
+        pytest.fail("Translation must not open a redirected Chunking document.")
+
+    monkeypatch.setattr(project_export_service.ai_translation_service, "load_translated_chunks", _unexpected_load)
+    state = project_export_service.build_export_state(project_root, manifest, "ai_translation")
+    assert state["status"] == "invalid_artifact"
+    assert not state["can_export"]
+
+    with pytest.raises(ValueError, match="not available"):
+        project_export_service.render_export(project_root, manifest, "ai_translation", "txt")

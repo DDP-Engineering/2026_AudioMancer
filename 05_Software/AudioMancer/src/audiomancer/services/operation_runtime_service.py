@@ -481,6 +481,12 @@ def is_path_inside_project(project_root: str | Path, candidate_path: str | Path)
     return True
 
 
+def is_destination_inside_project(project_root: str | Path, destination: str | Path) -> bool:
+    """Check both the replacement directory and the resolved destination."""
+    path = Path(destination)
+    return is_path_inside_project(project_root, path.parent) or is_path_inside_project(project_root, path)
+
+
 def validate_project_relative_path(relative_path: str | Path) -> str:
     """
     @brief      Normalize one manifest project-relative path and reject unsafe forms.

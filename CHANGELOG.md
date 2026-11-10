@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Audio Assembly export includes only usable generated WAVs. Partial ZIPs
+  show the exported count and list the actual files, durations, and sizes.
+- Stage ZIP exports run in the background and can be cancelled. Failed or
+  cancelled exports preserve any previous file at the destination.
+
 - Improved checks for reliable Cleanup saves and Book Analysis results.
 
 - Character Voices edits the prompt and preview in a draft. Cancel keeps the
@@ -20,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - Speech Blocks can split single-narrator projects locally with Scene Ambience off.
 
 ### Fixed
+
+- An unreadable export artifact no longer disables unrelated Home exports.
 
 - Audio Assembly identifies missing or damaged source WAVs before composing.
   Scene previews and the audiobook use the same anchored mixes and durations.

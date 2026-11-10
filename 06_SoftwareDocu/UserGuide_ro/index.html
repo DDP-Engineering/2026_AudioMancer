@@ -1158,8 +1158,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Panoul <strong>Exporturi</strong> de pe pagina Acasa are cate un rand pe etapa. Fiecare rand ofera
                     un format si un buton <strong>Exporta</strong>, iar ambele raman inactive pana cand acea etapa a
-                    produs date utilizabile. Treci cu mouseul peste un rand ca sa vezi daca este <em>Disponibil</em>,
-                    <em>Nepregatit</em> sau raporteaza un <em>Artefact lipsa</em>.
+                    produs date utilizabile. Treci cu mouse-ul peste un rând pentru a vedea starea lui. Dacă un
+                    artefact nu poate fi citit, exportul lui este indisponibil, iar celelalte rânduri își păstrează starea.
                 </p>
                 <table>
                     <thead>
@@ -1177,16 +1177,26 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     </tbody>
                 </table>
                 <p>
-                    Blocurile Audio nu au export propriu &mdash; audio lor ajunge la tine prin arhiva de Asamblare Audio.
-                    Arhivele ZIP de voce contin mostra WAV si un fisier text insotitor cu definitia vocala si textul de
-                    previzualizare. Arhiva ZIP de Asamblare Audio contine fisierele WAV de iesire si un manifest cu
-                    metoda de compunere, fisierele, duratele si dimensiunile lor.
+                    Arhiva Voce Narator conține <code>narrator_voice.json</code> cu profilurile și transcrierile
+                    mostrelor, împreună cu fișierele WAV disponibile. Arhiva Voci Personaje include pentru fiecare WAV
+                    un fișier TXT cu definiția vocală și textul de previzualizare.
+                </p>
+                <p>
+                    Asamblare Audio exportă WAV-urile generate și utilizabile. Dacă asamblarea a fost întreruptă sau
+                    unele WAV-uri planificate lipsesc ori sunt deteriorate, arhiva este marcată ca parțială. Mesajul
+                    de salvare și fișierul <code>audio_assembly_manifest.txt</code> indică numărul de WAV-uri exportate
+                    din totalul planificat. Manifestul listează numele fișierelor din ZIP, duratele măsurate,
+                    dimensiunile și setările de asamblare. Dacă nu există niciun WAV utilizabil, AudioMancer
+                    afișează problema și păstrează arhiva anterioară.
+                </p>
+                <p>
+                    Exporturile ZIP rulează în fundal. Le poți anula între fișiere, iar exportul anterior rămâne la
+                    destinația selectată.
                 </p>
                 <p>
                     <strong>Exporta ZIP Proiect</strong>, langa butoanele de proiect, scrie un snapshot complet al
-                    proiectului. Exporturile trebuie scrise in afara folderului de proiect, ca un snapshot sa nu fie
-                    niciodata arhivat in el insusi si un fisier de runtime sa nu fie suprascris; AudioMancer refuza o
-                    destinatie din interiorul proiectului si spune de ce. Fisierele WAV finale raman si in proiect, sub
+                    fișierelor proiectului, cu excluderea jurnalelor de tranzacții AI și a legăturilor din sistemul
+                    de fișiere. Alege o destinație din afara proiectului pentru fiecare export. Fisierele WAV finale raman si in proiect, sub
                     <code>audiobook/</code>.
                 </p>
             </section>

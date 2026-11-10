@@ -125,19 +125,19 @@ def test_project_snapshot_service_does_not_leave_final_zip_when_creation_fails(m
         project_snapshot_service.create_project_snapshot(project_root, snapshot_path)
 
     assert snapshot_path.exists() is False
-    assert snapshot_path.with_name(f".{snapshot_path.name}.tmp").exists() is False
+    assert not list(snapshot_path.parent.glob(f".{snapshot_path.name}.*.tmp"))
 
 
 def test_project_snapshot_cleanup_does_not_mask_original_failure(monkeypatch, tmp_path) -> None:
     """Verify a temporary-file cleanup failure cannot replace the snapshot failure."""
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "failed.zip"
-    temporary_path = snapshot_path.with_name(f".{snapshot_path.name}.tmp")
+
     missing_file = project_root / "missing.txt"
     original_unlink = Path.unlink
 
     def _unlink(path, *args, **kwargs):
-        if path == temporary_path:
+        if path.parent == snapshot_path.parent and path.match(f".{snapshot_path.name}.*.tmp"):
             raise PermissionError("temporary snapshot is locked")
         return original_unlink(path, *args, **kwargs)
 
@@ -226,7 +226,7 @@ def test_project_snapshot_service_cancellation_removes_temporary_zip(tmp_path) -
         )
 
     assert snapshot_path.exists() is False
-    assert snapshot_path.with_name(f".{snapshot_path.name}.tmp").exists() is False
+    assert not list(snapshot_path.parent.glob(f".{snapshot_path.name}.*.tmp"))
 
 
 # LOCAL HELPERS

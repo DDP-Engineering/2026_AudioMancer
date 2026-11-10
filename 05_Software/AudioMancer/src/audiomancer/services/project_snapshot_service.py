@@ -17,13 +17,11 @@
 
 from collections.abc import Iterator
 from datetime import datetime
-from functools import partial
 import os
 from pathlib import Path
-import zipfile
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service
+from audiomancer.services import archive_writer, operation_runtime_service
 from audiomancer.services.logging_service import get_component_logger
 
 # CONSTANTS
@@ -31,7 +29,6 @@ from audiomancer.services.logging_service import get_component_logger
 # @brief Default archive extension used by project snapshots.
 SNAPSHOT_EXTENSION = ".zip"
 _PROJECT_SNAPSHOT_LOGGER = get_component_logger("project_snapshot")
-_emit_progress = partial(operation_runtime_service.emit_progress_update, include_token_usage=False)
 
 
 # PUBLIC API
@@ -82,7 +79,7 @@ def is_path_inside_project(project_root: str | Path, snapshot_path: str | Path) 
     @return     True when the destination equals or sits below the project root.
     @exception  None
     """
-    return operation_runtime_service.is_path_inside_project(project_root, snapshot_path)
+    return operation_runtime_service.is_destination_inside_project(project_root, snapshot_path)
 
 
 def create_project_snapshot(
@@ -106,55 +103,20 @@ def create_project_snapshot(
     if not resolved_project_root.is_dir():
         raise FileNotFoundError(f"Project root does not exist: {resolved_project_root}")
 
-    final_path = ensure_snapshot_extension(snapshot_path).resolve()
+    final_path = ensure_snapshot_extension(snapshot_path)
     if is_path_inside_project(resolved_project_root, final_path):
         raise ValueError("Snapshot destination must be outside the active project folder.")
+    final_path = final_path.resolve()
 
-    final_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = final_path.with_name(f".{final_path.name}.tmp")
     archive_root_name = resolved_project_root.name or "project"
-    project_files = list(_iter_project_files(resolved_project_root))
-    total_files = len(project_files)
-    file_count = 0
-    _PROJECT_SNAPSHOT_LOGGER.info(
-        "Creating project ZIP snapshot project_root=%s snapshot_path=%s file_count=%s",
-        resolved_project_root,
-        final_path,
-        total_files,
+    entries: list[archive_writer.ArchiveEntry] = []
+    for file_path in _iter_project_files(resolved_project_root):
+        archive_name = Path(archive_root_name) / file_path.relative_to(resolved_project_root)
+        entries.append((archive_name.as_posix(), file_path, None))
+    archive_writer.write_archive(
+        final_path, entries, progress_callback=progress_callback, cancel_requested=cancel_requested,
     )
-
-    if temporary_path.exists():
-        temporary_path.unlink()
-
-    try:
-        _raise_if_cancelled(cancel_requested)
-        _emit_progress(progress_callback, 0, total_files, "Preparing project ZIP snapshot...")
-        with zipfile.ZipFile(temporary_path, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
-            for file_path in project_files:
-                _raise_if_cancelled(cancel_requested)
-                archive_name = Path(archive_root_name) / file_path.relative_to(resolved_project_root)
-                zip_file.write(file_path, archive_name.as_posix())
-                file_count += 1
-                _emit_progress(
-                    progress_callback,
-                    file_count,
-                    total_files,
-                    f"Archiving {file_count}/{total_files}: {file_path.name}",
-                )
-        _raise_if_cancelled(cancel_requested)
-        os.replace(temporary_path, final_path)
-    except Exception:
-        _PROJECT_SNAPSHOT_LOGGER.exception("Project ZIP snapshot failed snapshot_path=%s", final_path)
-        if temporary_path.exists():
-            try:
-                temporary_path.unlink()
-            except OSError:
-                _PROJECT_SNAPSHOT_LOGGER.exception(
-                    "Could not remove failed snapshot temporary path=%s",
-                    temporary_path,
-                )
-        raise
-
+    file_count = len(entries)
     _PROJECT_SNAPSHOT_LOGGER.info("Created project ZIP snapshot snapshot_path=%s file_count=%s", final_path, file_count)
 
     return {
@@ -178,12 +140,22 @@ def _iter_project_files(project_root: Path) -> Iterator[Path]:
         directory_names[:] = sorted(
             directory_name
             for directory_name in directory_names
-            if not (Path(current_root) / directory_name).is_symlink()
+            if not _is_link(Path(current_root) / directory_name)
         )
         for file_name in sorted(file_names):
             file_path = Path(current_root) / file_name
-            if file_path.is_file() and not file_path.is_symlink() and not _is_ai_transaction_log(file_path):
+            if (
+                not _is_link(file_path)
+                and not _is_ai_transaction_log(file_path)
+                and operation_runtime_service.is_path_inside_project(project_root, file_path)
+                and file_path.is_file()
+            ):
                 yield file_path
+
+
+def _is_link(path: Path) -> bool:
+    """Identify symbolic links and Windows directory junctions."""
+    return path.is_symlink() or path.is_junction()
 
 
 def _is_ai_transaction_log(file_path: Path) -> bool:
@@ -197,17 +169,6 @@ def _is_ai_transaction_log(file_path: Path) -> bool:
     return file_name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) and file_name.endswith(
         config.AI_TRANSACTION_LOG_FILE_EXTENSION
     )
-
-
-def _raise_if_cancelled(cancel_requested) -> None:
-    """
-    @brief      Raise the shared operation-cancelled exception when requested.
-    @param[in]  cancel_requested Optional cancellation predicate.
-    @return     None.
-    @exception  OperationCancelledError Raised when cancellation is requested.
-    """
-    if cancel_requested is not None and bool(cancel_requested()):
-        raise operation_runtime_service.OperationCancelledError("Project ZIP export cancelled.")
 
 
 # END OF FILE

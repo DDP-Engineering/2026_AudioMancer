@@ -4,7 +4,7 @@ title = "Project export shall atomically create voice and audio archives"
 status = "active"
 
 requirement = """
-Project export shall create voice and audio archives through a deterministic
+Project export shall create voice and audio archives through a uniquely owned
 same-directory temporary ZIP, replace the requested destination only after the
 archive closes successfully, preserve an existing destination on failure, and
 remove the export-owned temporary file before re-raising the original failure.
@@ -13,6 +13,7 @@ remove the export-owned temporary file before re-raising the original failure.
 verification = "Focused archive-export tests verify expected archive contents, failed source-read preservation and temporary cleanup, and successful replacement of an existing archive."
 
 affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/archive_writer.py",
   "05_Software/AudioMancer/src/audiomancer/services/project_export_service.py",
 ]
 linked_tests = [
@@ -27,4 +28,4 @@ rationale = """
 Deliverables must include packaged voice and audio artifacts.
 """
 created = 2026-07-24
-updated = 2026-08-09
+updated = 2026-11-10

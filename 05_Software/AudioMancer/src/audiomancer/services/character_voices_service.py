@@ -158,19 +158,25 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     return normalized_language
 
 
-def load_voice_plan(project_root: str | Path) -> list[dict[str, object]]:
+def load_voice_plan(project_root: str | Path, *, strict: bool = False) -> list[dict[str, object]]:
     """
     @brief      Load the persisted character-voices target list.
     @param[in]  project_root Active project root folder.
+    @param[in]  strict Report invalid or unreadable data without initializing the plan.
     @return     Normalized ordered voice target payload list.
-    @exception  None
+    @exception  OSError or ValueError in strict mode.
     """
-    ensure_character_voices_files(project_root)
+    if not strict:
+        ensure_character_voices_files(project_root)
     try:
         payload = json.loads(_targets_path(project_root).read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        if strict:
+            raise
         return []
     if not isinstance(payload, list):
+        if strict:
+            raise ValueError("Character Voices document must be a JSON array.")
         return []
     return [_normalize_voice_target(item) for item in payload if isinstance(item, dict)]
 

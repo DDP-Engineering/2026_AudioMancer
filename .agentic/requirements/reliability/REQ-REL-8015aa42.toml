@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-REL-8015aa42"
+title = "Isolate unreadable export readiness"
+status = "active"
+requirement = "If an export artifact is unreadable or malformed, Home shall mark that row invalid while retaining unrelated export readiness."
+verification = "Use invalid syntax and root shapes for Assembly and Character Voices alongside valid cleaned text, and assert both readiness rows."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/project_export_service.py", "05_Software/AudioMancer/src/audiomancer/services/character_voices_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_project_export_service.py::test_malformed_export_readiness_is_isolated"]
+created = 2026-11-10
+updated = 2026-11-10

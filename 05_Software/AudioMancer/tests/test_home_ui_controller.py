@@ -601,14 +601,8 @@ def test_home_ui_controller_rejects_export_inside_project(
 
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
-        "build_export_states",
-        lambda *_args: [
-            {
-                "export_kind": project_export_service.EXPORT_KIND_CLEANED_TEXT,
-                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
-                "can_export": True,
-            }
-        ],
+        "build_export_state",
+        lambda *_args: {"status": project_export_service.EXPORT_STATUS_AVAILABLE, "can_export": True},
     )
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
@@ -657,14 +651,8 @@ def test_home_ui_controller_applies_selected_export_extension_and_writes_utf8(
 
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
-        "build_export_states",
-        lambda *_args: [
-            {
-                "export_kind": project_export_service.EXPORT_KIND_AI_TRANSLATION,
-                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
-                "can_export": True,
-            }
-        ],
+        "build_export_state",
+        lambda *_args: {"status": project_export_service.EXPORT_STATUS_AVAILABLE, "can_export": True},
     )
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
@@ -709,17 +697,21 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
     window._current_manifest = manifest
     selected_path = tmp_path / "outside" / "voices.final"
     archive_calls = []
+    worker_request = {}
+    messages = []
+    monkeypatch.setattr(
+        home_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        lambda _window, **kwargs: worker_request.update(kwargs),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.misc_ui_controller, "show_message", lambda _window, message: messages.append(message)
+    )
 
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
-        "build_export_states",
-        lambda *_args: [
-            {
-                "export_kind": project_export_service.EXPORT_KIND_NARRATOR_VOICE,
-                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
-                "can_export": True,
-            }
-        ],
+        "build_export_state",
+        lambda *_args: {"status": project_export_service.EXPORT_STATUS_AVAILABLE, "can_export": True},
     )
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
@@ -728,8 +720,9 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
     )
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
-        "create_archive_export",
-        lambda *args, **kwargs: archive_calls.append(args),
+        "publish_archive_export",
+        lambda *args, **kwargs: archive_calls.append(args)
+        or project_export_service.ArchiveExportResult(args[3], partial_counts=(1, 2)),
     )
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
@@ -739,12 +732,18 @@ def test_home_ui_controller_routes_zip_export_to_archive_writer(
 
     home_ui_controller.handle_export_requested(
         window,
-        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY,
         project_export_service.EXPORT_FORMAT_ZIP,
     )
 
-    assert archive_calls
-    assert archive_calls[0][2] == project_export_service.EXPORT_KIND_NARRATOR_VOICE
+    assert not archive_calls
+    assert worker_request["cancellable"]
+    result = worker_request["worker_callable"](project_root, manifest)
+    worker_request["success_handler"](result)
+    assert "partial" in messages[0].lower()
+    assert "1/2" in messages[0]
+    assert len(archive_calls) == 1
+    assert archive_calls[0][2] == project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY
     assert archive_calls[0][3] == selected_path.with_name("voices.final.zip")
 
 
@@ -1245,14 +1244,8 @@ def test_home_ui_controller_preserves_dotted_export_destination(
     selected_path = tmp_path / "outside" / "draft.final"
     monkeypatch.setattr(
         home_ui_controller.project_export_service,
-        "build_export_states",
-        lambda *_args: [
-            {
-                "export_kind": project_export_service.EXPORT_KIND_CLEANED_TEXT,
-                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
-                "can_export": True,
-            }
-        ],
+        "build_export_state",
+        lambda *_args: {"status": project_export_service.EXPORT_STATUS_AVAILABLE, "can_export": True},
     )
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,

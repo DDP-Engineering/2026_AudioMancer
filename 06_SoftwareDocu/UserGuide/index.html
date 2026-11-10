@@ -1126,8 +1126,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     The <strong>Exports</strong> panel on the Home page has one row per stage. Each row offers a
                     format and an <strong>Export</strong> button, and both stay greyed out until that stage has
-                    produced usable data. Hover a row to see whether it is <em>Available</em>, <em>Not ready</em>, or
-                    reporting a <em>Missing artifact</em>.
+                    produced usable data. Hover over a row to see its status. If an artifact is unreadable, its export
+                    is unavailable and the other rows keep their own status.
                 </p>
                 <table>
                     <thead>
@@ -1145,16 +1145,25 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     </tbody>
                 </table>
                 <p>
-                    Audio Blocks has no export of its own &mdash; its audio reaches you through the Audio Assembly archive.
-                    Voice ZIPs contain the WAV sample and a companion text file with the voice definition and preview
-                    text. The Audio Assembly ZIP contains the WAV outputs and a manifest listing the composition
-                    method, the files, their durations and their sizes.
+                    The Narrator Voice ZIP contains <code>narrator_voice.json</code> with the profiles and sample
+                    transcripts, along with the available sample WAVs. The Character Voices ZIP pairs each sample WAV
+                    with a TXT file containing the voice definition and preview text.
+                </p>
+                <p>
+                    Audio Assembly exports usable generated WAVs. If the assembly was interrupted or any planned WAVs
+                    are missing or damaged, the ZIP is marked partial. The save notification and
+                    <code>audio_assembly_manifest.txt</code> give the number of WAVs exported out of the number planned.
+                    The manifest lists the ZIP member names, measured durations, sizes and assembly settings.
+                    If no usable WAV remains, AudioMancer reports the problem and leaves any previous archive in place.
+                </p>
+                <p>
+                    ZIP exports run in the background. You can cancel between files and keep any previous export at
+                    the selected destination.
                 </p>
                 <p>
                     <strong>Export Project ZIP</strong>, beside the project buttons, writes a complete snapshot of the
-                    project. Exports must be written outside the project folder, so a snapshot is never archived into
-                    itself and a runtime file is never overwritten; AudioMancer refuses a destination inside the
-                    project and says why. The final audiobook WAV files also remain in the project under
+                    project files, excluding AI transaction logs and filesystem links. Choose a destination outside the
+                    project for every export. The final audiobook WAV files also remain in the project under
                     <code>audiobook/</code>.
                 </p>
             </section>

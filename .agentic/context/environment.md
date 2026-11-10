@@ -92,3 +92,6 @@ includes httpx/CA data and native keyring backends.
 - `.agentic/aegis.toml`
 - `02_Tools/audiomancer_windows.spec` and platform packaging scripts
 - `.agentic/knowledge/AI_Runtime.md` and `Release_Packaging.md`
+
+Focused Export checks use the export and snapshot service suites with synthetic PCM WAVs,
+plus the export/snapshot selectors in the Home controller and main-window tests with Qt offscreen.
