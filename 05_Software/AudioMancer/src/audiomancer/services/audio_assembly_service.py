@@ -19,7 +19,7 @@
 # IMPORTS
 
 from collections.abc import Callable
-from contextlib import ExitStack, suppress
+from contextlib import suppress
 from functools import lru_cache, partial
 import hashlib
 import json
@@ -28,11 +28,25 @@ import wave
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_assembly_plan,
+    audio_assembly_wav,
+    audio_blocks_artifact_service,
     audio_blocks_service,
     operation_runtime_service,
-    pcm_codec,
     project_workspace_service,
     speech_blocks_service,
+)
+from audiomancer.services.audio_assembly_plan import (
+    OUTPUT_MODE_PER_CHUNK as OUTPUT_MODE_PER_CHUNK,
+)
+from audiomancer.services.audio_assembly_plan import (
+    OUTPUT_MODE_TIME_LIMIT as OUTPUT_MODE_TIME_LIMIT,
+)
+from audiomancer.services.audio_assembly_plan import (
+    OUTPUT_MODE_WHOLE_BOOK as OUTPUT_MODE_WHOLE_BOOK,
+)
+from audiomancer.services.audio_assembly_plan import (
+    AudioAssemblySettings,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -59,16 +73,11 @@ AUDIO_ASSEMBLY_STAGE_NOT_STARTED = "not_started"
 AUDIO_ASSEMBLY_STAGE_IN_PROGRESS = "in_progress"
 AUDIO_ASSEMBLY_STAGE_COMPLETED = "completed"
 
-OUTPUT_MODE_PER_CHUNK = "per_chunk"
-OUTPUT_MODE_TIME_LIMIT = "time_limit"
-OUTPUT_MODE_WHOLE_BOOK = "whole_book"
 OUTPUT_FORMAT_WAV = "wav"
 
 _MODE = "audio_composition"
-_TEMP_SUFFIX = ".tmp"
 _SCENE_MIX_PREVIEW_FOLDER_NAME = "scene_mix_previews"
 _SCENE_MIX_KEY_PREFIX = "scene_mix"
-_WAV_COPY_FRAME_CHUNK_SIZE = 65_536
 # The stat identity in `_cached_file_sha1` invalidates changed sources. The
 # finite `lru_cache` retains only digest strings and supplies synchronized cache
 # access for refreshes from UI or worker threads; source audio bytes are never
@@ -77,17 +86,6 @@ _FILE_SHA1_CACHE_MAXSIZE = 256
 _RIFF_UINT32_MAX = (1 << 32) - 1
 _WAV_RIFF_DATA_OVERHEAD_BYTES = 36
 _WAV_MAX_DATA_BYTES = _RIFF_UINT32_MAX - _WAV_RIFF_DATA_OVERHEAD_BYTES
-# Signed-PCM sample widths Audio Assembly can stitch. One-byte PCM is excluded on
-# purpose: WAV stores 8-bit samples unsigned, while this module and `pcm_codec` read
-# every width as signed, so an 8-bit render would write silence as a full negative-rail
-# DC offset instead of quiet. Rejecting the width is honest; rendering it is not.
-_WAV_SAMPLE_WIDTH_BY_FORMAT = {
-    2: 2,
-    3: 3,
-    4: 4,
-}
-
-AudioAssemblySettings = dict[str, object]
 AudioAssemblyReport = dict[str, object]
 AudioAssemblyState = dict[str, object]
 SceneMixGroup = dict[str, object]
@@ -231,7 +229,7 @@ def list_scene_mix_groups(
     @return     Ordered Scene Ambience group records.
     @exception  None
     """
-    resolved_project_root = Path(project_root)
+    resolved_project_root = Path(project_root).resolve()
     loaded_blocks = (
         audio_blocks_service.load_audio_blocks(resolved_project_root) if audio_blocks is None else audio_blocks
     )
@@ -258,7 +256,7 @@ def generate_scene_mix_preview(
     @return     Refreshed Scene Ambience group record.
     @exception  ValueError Raised when the group is unavailable or incomplete.
     """
-    resolved_project_root = Path(project_root)
+    resolved_project_root = Path(project_root).resolve()
     _emit_progress(progress_callback, 0, 3, "Preparing Scene Mix preview.")
     groups = _scene_mix_groups_from_blocks(
         resolved_project_root,
@@ -268,8 +266,12 @@ def generate_scene_mix_preview(
     target_group = next((group for group in groups if str(group.get("group_key", "")) == str(group_key).strip()), None)
     if target_group is None:
         raise ValueError("The selected Scene Ambience mix is no longer available.")
-    if not bool(target_group.get("can_generate_preview", False)):
+    sources = target_group["_source_blocks"]
+    if not sources or any(
+        not audio_blocks_service.is_approved(block) or not _requires_source_wav(block, True) for block in sources
+    ):
         raise ValueError("Generate and approve every source Scene Ambience Audio Block before previewing the mix.")
+    _validate_compatible_wav_inputs(resolved_project_root, sources)
     _emit_progress(progress_callback, 1, 3, f"Mixing {target_group.get('label', 'Scene Mix preview')}.")
     _write_scene_mix_group(
         resolved_project_root,
@@ -350,7 +352,7 @@ def start_or_continue_composition(
     @exception  RuntimeError Raised when source WAV files cannot be composed.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     """
-    resolved_project_root = Path(project_root)
+    resolved_project_root = Path(project_root).resolve()
     speech_blocks_service.validate_current_translated_speech_source(resolved_project_root, manifest)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
     approved_blocks = _load_approved_audio_blocks(
@@ -364,13 +366,15 @@ def start_or_continue_composition(
         raise ValueError("Audio Assembly inputs or settings changed. Reset Audio Assembly before continuing.")
 
     output_plan = _build_output_plan(resolved_project_root, approved_blocks, settings)
-    completed_records = _completed_records_for_resume(resolved_project_root, existing_state, input_fingerprint)
+    completed_records = _completed_records_for_resume(
+        resolved_project_root, existing_state, existing_report, input_fingerprint, output_plan,
+    )
     planned_output_keys = {str(output.get("output_key", "")) for output in output_plan}
-    completed_output_keys = {str(output.get("output_key", "")) for output in completed_records}
+    completed_by_key = {output["output_key"]: output for output in completed_records}
     was_already_completed = (
         str(existing_state.get("status", "")).strip() == "completed"
         and bool(planned_output_keys)
-        and planned_output_keys.issubset(completed_output_keys)
+        and planned_output_keys.issubset(completed_by_key)
     )
     existing_completed_at = str(existing_report.get("completed_at", "") or "").strip()
     _validate_pending_output_wav_sizes(
@@ -397,11 +401,14 @@ def start_or_continue_composition(
 
     try:
         for output_item in output_plan:
-            if output_item["output_key"] in {str(record.get("output_key", "")) for record in completed_records}:
+            if output_item["output_key"] in completed_by_key:
                 continue
             raise_if_cancelled(cancel_requested)
             output_record = _compose_output_file(resolved_project_root, output_item, settings, cancel_requested)
-            completed_records.append(output_record)
+            completed_by_key[output_item["output_key"]] = output_record
+            completed_records = [
+                completed_by_key[item["output_key"]] for item in output_plan if item["output_key"] in completed_by_key
+            ]
             report = _build_report(
                 settings,
                 approved_blocks,
@@ -492,17 +499,20 @@ def _load_approved_audio_blocks(project_root: Path, include_scene_ambience: bool
     unapproved = [block for block in candidate_blocks if not audio_blocks_service.is_approved(block)]
     if unapproved:
         raise ValueError("Approve every generated Audio Block before running Audio Assembly.")
+    recorded_ids = {block["speech_block_id"] for block in candidate_blocks}
+    for speech_block in speech_blocks_service.load_speech_blocks(project_root):
+        required = _is_required_speech(speech_block) or (
+            speech_block["content_kind"] == speech_blocks_service.CONTENT_KIND_PAUSE
+        )
+        if required and speech_block["speech_block_id"] not in recorded_ids:
+            raise ValueError(f"Generate and approve Audio Block {speech_block['speech_block_id']} before assembly.")
     composition_sources = [
         block
         for block in candidate_blocks
-        if _is_assembly_block(block, include_scene_ambience) and not _is_pause_block(block)
+        if _requires_source_wav(block, include_scene_ambience)
     ]
     if not composition_sources:
         raise ValueError("Audio Assembly requires at least one generated speech audio block.")
-    for block in composition_sources:
-        audio_path = _audio_path(project_root, block)
-        if audio_path is None or not audio_path.is_file():
-            raise ValueError("Every approved Audio Block must reference an existing WAV file.")
     _validate_compatible_wav_inputs(project_root, composition_sources)
     return audio_blocks
 
@@ -521,7 +531,7 @@ def _build_composition_blocks(
     @exception  None
     """
     blocks = [
-        _enrich_block_duration(project_root, block)
+        dict(block) if _is_scene_ambience_block(block) else _enrich_block_duration(project_root, block)
         for block in audio_blocks
         if _is_assembly_block(block, include_scene_ambience)
     ]
@@ -566,7 +576,8 @@ def _scene_mix_groups_from_blocks(
         groups_by_key.setdefault(_scene_mix_group_key(block), []).append(dict(block))
     groups = []
     for blocks in groups_by_key.values():
-        group = _scene_mix_group_record(project_root, blocks, include_blocks=include_blocks)
+        sources = [block for block in blocks if _requires_source_wav(block, include_scene_ambience=True)]
+        group = _scene_mix_group_record(project_root, sources or blocks, include_blocks=include_blocks)
         if group["block_count"] > 0:
             groups.append(group)
     return groups
@@ -592,6 +603,7 @@ def _scene_mix_group_record(
     output_path = _scene_mix_output_path(project_root, ordered_blocks, duration_seconds)
     source_paths = [_audio_path(project_root, block) for block in ordered_blocks]
     has_source_audio = all(path is not None and path.is_file() for path in source_paths)
+    valid_preview = _valid_scene_mix(project_root, output_path, first_block, duration_seconds)
     is_approved = all(audio_blocks_service.is_approved(block) for block in ordered_blocks)
     group: SceneMixGroup = {
         "group_key": _scene_mix_group_key(first_block),
@@ -602,10 +614,10 @@ def _scene_mix_group_record(
         "speech_block_ids": [str(block.get("speech_block_id", "")).strip() for block in ordered_blocks],
         "block_count": len(ordered_blocks),
         "duration_seconds": duration_seconds,
-        "audio_relative_path": relative_to_project(project_root, output_path),
+        "audio_relative_path": output_path.relative_to(project_root).as_posix(),
         "can_generate_preview": bool(ordered_blocks) and is_approved and has_source_audio,
-        "can_play_preview": output_path.is_file(),
-        "generated": output_path.is_file(),
+        "can_play_preview": valid_preview,
+        "generated": valid_preview,
         "output_format": OUTPUT_FORMAT_WAV,
     }
     if include_blocks:
@@ -656,144 +668,14 @@ def _build_output_plan(
     settings: AudioAssemblySettings,
 ) -> list[dict[str, object]]:
     """
-    @brief      Build ordered output-file composition groups from Audio Blocks and settings.
-    @param[in]  project_root Active project root folder.
+    @brief      Resolve source durations and build the ordered output plan.
+    @param[in]  project_root Active project root.
     @param[in]  audio_blocks Approved Audio Blocks.
     @param[in]  settings Normalized Audio Assembly settings.
-    @return     Ordered output plan entries.
-    @exception  ValueError Raised when no playable blocks exist.
+    @return     Planned WAV files.
     """
-    playable_blocks = _build_composition_blocks(project_root, audio_blocks, bool(settings["include_scene_ambience"]))
-    if not playable_blocks:
-        raise ValueError("Audio Assembly requires at least one generated speech audio block.")
-    output_mode = str(settings["output_mode"])
-    if output_mode == OUTPUT_MODE_PER_CHUNK:
-        return _with_reference_audio_path(_plan_per_chunk_outputs(playable_blocks), playable_blocks)
-    if output_mode == OUTPUT_MODE_TIME_LIMIT:
-        return _with_reference_audio_path(
-            _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"]), settings),
-            playable_blocks,
-        )
-    return _with_reference_audio_path(
-        [
-            {
-                "output_key": "audiobook",
-                "file_name": "audiobook.wav",
-                "blocks": playable_blocks,
-                "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in playable_blocks}),
-                "over_limit_warning": False,
-            }
-        ],
-        playable_blocks,
-    )
-
-
-def _plan_per_chunk_outputs(blocks: list[dict[str, object]]) -> list[dict[str, object]]:
-    """
-    @brief      Build one output file per text chunk.
-    @param[in]  blocks Playable Audio Blocks.
-    @return     Ordered per-chunk output plan.
-    @exception  None
-    """
-    grouped: dict[str, list[dict[str, object]]] = {}
-    for block in blocks:
-        grouped.setdefault(str(block.get("chunk_id", "")).strip(), []).append(block)
-    output_plan = []
-    for output_index, chunk_id in enumerate(grouped, start=1):
-        output_plan.append(
-            {
-                "output_key": f"chunk-{output_index:04d}",
-                "file_name": f"chunk-{output_index:04d}.wav",
-                "blocks": grouped[chunk_id],
-                "chunk_ids": [chunk_id],
-                "over_limit_warning": False,
-            }
-        )
-    return output_plan
-
-
-def _plan_time_limited_outputs(
-    blocks: list[dict[str, object]],
-    max_minutes: int,
-    settings: AudioAssemblySettings,
-) -> list[dict[str, object]]:
-    """
-    @brief      Pack sequential blocks into duration-limited output parts.
-    @param[in]  blocks Playable Audio Blocks.
-    @param[in]  max_minutes Maximum requested part duration.
-    @param[in]  settings Normalized Audio Assembly settings.
-    @return     Ordered time-limited output plan.
-    @exception  None
-    """
-    max_seconds = max(1, int(max_minutes) * 60)
-    output_plan: list[dict[str, object]] = []
-    current_blocks: list[dict[str, object]] = []
-    current_seconds = 0.0
-    for block in blocks:
-        block_seconds = float(block.get("duration_seconds", 0.0))
-        added_seconds = block_seconds
-        if current_blocks:
-            added_seconds += _automatic_gap_ms(current_blocks[-1], block, settings) / 1000.0
-        if current_blocks and current_seconds + added_seconds > max_seconds:
-            output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, False))
-            current_blocks = []
-            current_seconds = 0.0
-            added_seconds = block_seconds
-        current_blocks.append(block)
-        current_seconds += added_seconds
-        if block_seconds > max_seconds:
-            output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, True))
-            current_blocks = []
-            current_seconds = 0.0
-    if current_blocks:
-        output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, False))
-    return output_plan
-
-
-def _time_part_record(
-    output_index: int,
-    blocks: list[dict[str, object]],
-    over_limit_warning: bool,
-) -> dict[str, object]:
-    """
-    @brief      Build one time-limited output plan record.
-    @param[in]  output_index Sequential output index.
-    @param[in]  blocks Blocks assigned to the output.
-    @param[in]  over_limit_warning True when one block exceeds the limit.
-    @return     Output plan record.
-    @exception  None
-    """
-    return {
-        "output_key": f"part-{output_index:04d}",
-        "file_name": f"part-{output_index:04d}.wav",
-        "blocks": list(blocks),
-        "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in blocks}),
-        "over_limit_warning": over_limit_warning,
-    }
-
-
-def _with_reference_audio_path(
-    output_plan: list[dict[str, object]],
-    blocks: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    """
-    @brief      Add a fallback source WAV reference to planned outputs.
-    @param[in]  output_plan Planned output records.
-    @param[in]  blocks Full composable Audio Block list.
-    @return     Output plan with optional reference audio paths.
-    @exception  None
-    """
-    reference_path = next(
-        (
-            str(block.get("audio_relative_path", "")).strip()
-            for block in blocks
-            if str(block.get("audio_relative_path", "") or "").strip()
-        ),
-        "",
-    )
-    for output_item in output_plan:
-        output_item["reference_audio_relative_path"] = reference_path
-    return output_plan
+    blocks = _build_composition_blocks(project_root, audio_blocks, bool(settings["include_scene_ambience"]))
+    return audio_assembly_plan.build_output_plan(blocks, settings)
 
 
 def _warnings_for_output_plan(output_plan: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -882,50 +764,50 @@ def _planned_output_frame_count(
     previous_block = None
     for block_index, block in enumerate(blocks):
         if block_index > 0 and previous_block is not None:
-            planned_frames += _silence_frame_count(
+            planned_frames += audio_assembly_wav.silence_frame_count(
                 output_rate,
-                _automatic_gap_ms(previous_block, block, settings),
+                audio_assembly_plan.automatic_gap_ms(previous_block, block, settings),
             )
-        if _is_pause_block(block):
-            planned_frames += _silence_frame_count(output_rate, _pause_duration_ms(block))
+        if audio_assembly_plan.is_pause_block(block):
+            pause_ms = audio_assembly_plan.pause_duration_ms(block)
+            planned_frames += audio_assembly_wav.silence_frame_count(output_rate, pause_ms)
         else:
-            planned_frames += _planned_block_output_frame_count(project_root, block, output_rate)
+            planned_frames += _planned_block_output_frame_count(project_root, block, reference_params)
         previous_block = block
     return planned_frames
 
 
-def _planned_block_output_frame_count(project_root: Path, block: dict[str, object], output_rate: int) -> int:
+def _planned_block_output_frame_count(
+    project_root: Path,
+    block: dict[str, object],
+    reference_params: wave._wave_params,
+) -> int:
     """
-    @brief      Count or bound final-output frames for one source block.
+    @brief      Size one source and verify that its channels can reach the output layout.
     @param[in]  project_root Active project root folder.
     @param[in]  block Planned direct or virtual composition block.
-    @param[in]  output_rate Final output sample rate.
+    @param[in]  reference_params Planned output WAV parameters.
     @return     Conservative output frame count for the block.
-    @exception  RuntimeError Raised when source audio is unavailable.
+    @exception  RuntimeError Raised when a source or channel conversion is unavailable.
     """
-    if _is_scene_mix_virtual_block(block):
-        source_blocks = [dict(item) for item in block.get("scene_mix_source_blocks", []) if isinstance(item, dict)]
-        source_paths = [_audio_path(project_root, item) for item in source_blocks]
-        if not source_paths or any(path is None for path in source_paths):
-            raise RuntimeError("Audio Assembly cannot size Scene Ambience without source WAV files.")
-        with ExitStack() as stack:
-            source_wavs = [stack.enter_context(wave.open(str(path), "rb")) for path in source_paths if path is not None]
-            source_rate = int(source_wavs[0].getframerate())
-            source_frames = _scene_mix_target_frames(
-                source_wavs,
-                source_rate,
-                float(block.get("duration_seconds", 0.0) or 0.0),
-            )
-        return _conservative_resampled_frame_count(source_frames, source_rate, output_rate)
-    source_path = _audio_path(project_root, block)
+    source_blocks = block.get("scene_mix_source_blocks")
+    source_block = source_blocks[0] if source_blocks else block
+    source_path = _audio_path(project_root, source_block)
+    block_id = source_block.get("speech_block_id", "")
     if source_path is None:
-        raise RuntimeError("Audio Assembly cannot size an output source without a WAV file.")
+        raise RuntimeError(f"Audio Assembly cannot size Block {block_id} without a WAV file.")
     with wave.open(str(source_path), "rb") as source_wav:
-        return _conservative_resampled_frame_count(
-            int(source_wav.getnframes()),
-            int(source_wav.getframerate()),
-            output_rate,
-        )
+        params = source_wav.getparams()
+        if not audio_assembly_wav.can_convert_channels(params.nchannels, reference_params.nchannels):
+            raise RuntimeError(
+                f"Audio Assembly supports WAV channel conversion only between mono and stereo. Block {block_id}."
+            )
+        frames = params.nframes
+        if source_blocks:
+            frames = audio_assembly_wav.scene_mix_target_frames(
+                [source_wav], params.framerate, float(block.get("duration_seconds", 0.0) or 0.0),
+            )
+    return _conservative_resampled_frame_count(frames, params.framerate, reference_params.framerate)
 
 
 def _conservative_resampled_frame_count(source_frames: int, source_rate: int, output_rate: int) -> int:
@@ -962,26 +844,6 @@ def _validate_classic_wav_data_size(file_name: str, planned_frames: int, referen
         )
 
 
-def _automatic_gap_ms(
-    previous_block: dict[str, object],
-    current_block: dict[str, object],
-    settings: AudioAssemblySettings,
-) -> int:
-    """
-    @brief      Resolve automatic silence inserted between two adjacent blocks.
-    @param[in]  previous_block Previous planned Audio Block.
-    @param[in]  current_block Current planned Audio Block.
-    @param[in]  settings Normalized Audio Assembly settings.
-    @return     Automatic gap in milliseconds.
-    @exception  None
-    """
-    if _is_pause_block(previous_block) or _is_pause_block(current_block):
-        return 0
-    if str(current_block.get("chunk_id", "")) != str(previous_block.get("chunk_id", "")):
-        return int(settings["inter_chunk_silence_ms"])
-    return int(settings["inter_block_silence_ms"])
-
-
 def _compose_output_file(
     project_root: Path,
     output_item: dict[str, object],
@@ -998,11 +860,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
-    output_root.mkdir(parents=True, exist_ok=True)
     output_path = output_root / str(output_item["file_name"])
-    temp_path = output_path.with_name(output_path.name + _TEMP_SUFFIX)
-    if temp_path.is_file():
-        temp_path.unlink()
     blocks = [dict(block) for block in output_item.get("blocks", []) if isinstance(block, dict)]
     blocks = [_materialize_scene_mix_block(project_root, block, cancel_requested) for block in blocks]
     reference_params = _reference_wav_params(
@@ -1011,44 +869,45 @@ def _compose_output_file(
         str(output_item.get("reference_audio_relative_path", "")),
     )
     total_frames = 0
-    try:
+
+    def render(temp_path: Path) -> None:
+        """@brief Write the final PCM stream to the unpublished candidate."""
+        nonlocal total_frames
         with wave.open(str(temp_path), "wb") as output_wav:
             output_wav.setparams(reference_params)
             previous_block = None
             for block_index, block in enumerate(blocks):
                 raise_if_cancelled(cancel_requested)
                 source_path = _audio_path(project_root, block)
-                if source_path is None and not _is_pause_block(block):
-                    continue
+                if source_path is None and not audio_assembly_plan.is_pause_block(block):
+                    raise ValueError(f"Audio Assembly cannot open the WAV for Block {block['speech_block_id']}.")
                 if block_index > 0 and previous_block is not None:
-                    gap_ms = _automatic_gap_ms(previous_block, block, settings)
-                    silence_frames = _write_silence(output_wav, gap_ms, reference_params)
+                    gap_ms = audio_assembly_plan.automatic_gap_ms(previous_block, block, settings)
+                    silence_frames = audio_assembly_wav.append_silence(
+                        output_wav, gap_ms, reference_params, cancel_requested,
+                    )
                     total_frames += silence_frames
-                if _is_pause_block(block):
-                    pause_frames = _write_silence(output_wav, _pause_duration_ms(block), reference_params)
+                if audio_assembly_plan.is_pause_block(block):
+                    pause_frames = audio_assembly_wav.append_silence(
+                        output_wav, audio_assembly_plan.pause_duration_ms(block), reference_params, cancel_requested,
+                    )
                     total_frames += pause_frames
                     previous_block = block
                     continue
                 assert source_path is not None
                 with wave.open(str(source_path), "rb") as source_wav:
                     params = source_wav.getparams()
-                    if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+                    if params.sampwidth not in audio_assembly_wav.SUPPORTED_SAMPLE_WIDTHS:
                         raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-                    total_frames += _copy_or_convert_wav_frames(
+                    total_frames += audio_assembly_wav.copy_or_convert_wav_frames(
                         source_wav,
                         output_wav,
                         reference_params,
                         cancel_requested,
                     )
                     previous_block = block
-    except Exception:
-        with suppress(OSError):
-            if temp_path.is_file():
-                temp_path.unlink()
-        raise
-    if output_path.is_file():
-        output_path.unlink()
-    temp_path.replace(output_path)
+
+    audio_assembly_wav.publish_wav(project_root, output_path, render, cancel_requested)
     sample_rate = int(reference_params.framerate)
     duration_seconds = 0.0 if sample_rate <= 0 else total_frames / sample_rate
     return {
@@ -1081,13 +940,42 @@ def _materialize_scene_mix_block(
     source_blocks = [dict(item) for item in block.get("scene_mix_source_blocks", []) if isinstance(item, dict)]
     if not source_blocks:
         raise RuntimeError("Audio Assembly cannot mix Scene Ambience without source audio blocks.")
-    group = _scene_mix_group_record(project_root, source_blocks, include_blocks=True)
-    output_path = _write_scene_mix_group(project_root, group, cancel_requested=cancel_requested)
+    output_path = project_root / str(block["audio_relative_path"])
+    if not _valid_scene_mix(project_root, output_path, source_blocks[0], float(block["duration_seconds"])):
+        group = _scene_mix_group_record(project_root, source_blocks, include_blocks=True)
+        output_path = _write_scene_mix_group(project_root, group, cancel_requested=cancel_requested)
     materialized_block = dict(block)
     materialized_block["audio_relative_path"] = relative_to_project(project_root, output_path)
     materialized_block["duration_seconds"] = _wav_duration_seconds(output_path)
     materialized_block["audio_duration_seconds"] = materialized_block["duration_seconds"]
     return materialized_block
+
+
+def _valid_scene_mix(
+    project_root: Path,
+    output_path: Path,
+    first_source: dict[str, object],
+    duration_seconds: float,
+) -> bool:
+    """
+    @brief      Check a cached mix against the group's expected PCM layout and length.
+    @param[in]  project_root Active project root.
+    @param[in]  output_path Deterministic Scene Mix WAV path.
+    @param[in]  first_source Source block that defines the mix layout.
+    @param[in]  duration_seconds Planned group length.
+    @return     True when the cached mix is complete and matches the plan.
+    """
+    params = _completed_wav_params(output_path)
+    if params is None or params.nframes != max(1, round(duration_seconds * params.framerate)):
+        return False
+    source_path = _audio_path(project_root, first_source)
+    if source_path is None:
+        return False
+    try:
+        with wave.open(str(source_path), "rb") as source:
+            return source.getparams()[:3] == params[:3]
+    except (EOFError, OSError, wave.Error):
+        return False
 
 
 def _write_scene_mix_group(
@@ -1115,174 +1003,24 @@ def _write_scene_mix_group(
     source_paths = [_audio_path(project_root, block) for block in source_blocks]
     if not source_paths or any(path is None or not path.is_file() for path in source_paths):
         raise RuntimeError("Scene Ambience mix requires generated source WAV files.")
-    output_path = _safe_project_artifact_path(project_root, group.get("audio_relative_path"))
-    if output_path is None:
-        output_path = _scene_mix_output_path(project_root, source_blocks, float(group.get("duration_seconds", 0.0)))
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = output_path.with_name(output_path.name + _TEMP_SUFFIX)
-    if temp_path.is_file():
-        temp_path.unlink()
-    assert all(path is not None for path in source_paths)
-    _mix_wav_sources(
-        [path for path in source_paths if path is not None],
-        temp_path,
-        float(group.get("duration_seconds", 0.0) or 0.0),
-        progress_callback=progress_callback,
-        progress_start=progress_start,
-        progress_end=progress_end,
-        progress_total=progress_total,
-        progress_message=f"Mixing {group.get('label', 'Scene Mix preview')}.",
-        cancel_requested=cancel_requested,
-    )
-    if output_path.is_file():
-        output_path.unlink()
-    temp_path.replace(output_path)
+    output_path = project_root / str(group["audio_relative_path"])
+
+    def render(temp_path: Path) -> None:
+        """@brief Render the preview or final Scene Mix before publication."""
+        audio_assembly_wav.mix_wav_sources(
+            [path for path in source_paths if path is not None],
+            temp_path,
+            float(group.get("duration_seconds", 0.0) or 0.0),
+            progress_callback=progress_callback,
+            progress_start=progress_start,
+            progress_end=progress_end,
+            progress_total=progress_total,
+            progress_message=f"Mixing {group.get('label', 'Scene Mix preview')}.",
+            cancel_requested=cancel_requested,
+        )
+
+    audio_assembly_wav.publish_wav(project_root, output_path, render, cancel_requested)
     return output_path
-
-
-def _mix_wav_sources(
-    source_paths: list[Path],
-    output_path: Path,
-    duration_seconds: float,
-    progress_callback=None,
-    progress_start: int = 0,
-    progress_end: int = 1,
-    progress_total: int = 1,
-    progress_message: str = "Mixing Scene Mix preview.",
-    cancel_requested=None,
-) -> None:
-    """
-    @brief      Overlay compatible PCM WAV sources into one fixed-duration WAV.
-    @param[in]  source_paths Source WAV files.
-    @param[in]  output_path Destination WAV file path.
-    @param[in]  duration_seconds Target mix duration in seconds.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_start Completed progress units before mixing starts.
-    @param[in]  progress_end Completed progress units after mixing ends.
-    @param[in]  progress_total Total progress units for the parent operation.
-    @param[in]  progress_message Operator-facing progress message.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @return     None.
-    @exception  RuntimeError Raised when source WAV files are incompatible.
-    """
-    if not source_paths:
-        raise RuntimeError("Scene Ambience mix requires at least one source WAV.")
-    with ExitStack() as stack:
-        sources = [stack.enter_context(wave.open(str(path), "rb")) for path in source_paths]
-        reference_params = sources[0].getparams()
-        expected_params = reference_params[:3], reference_params[4:]
-        if reference_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
-            raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-        for source_wav in sources[1:]:
-            params = source_wav.getparams()
-            if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
-                raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-            if (params[:3], params[4:]) != expected_params:
-                raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
-        target_frames = _scene_mix_target_frames(sources, reference_params.framerate, duration_seconds)
-        last_progress_unit = -1
-        with wave.open(str(output_path), "wb") as output_wav:
-            output_wav.setparams(reference_params)
-            remaining_frames = target_frames
-            while remaining_frames > 0:
-                raise_if_cancelled(cancel_requested)
-                written_frames = target_frames - remaining_frames
-                progress_unit = progress_start
-                if target_frames > 0 and progress_end > progress_start:
-                    progress_unit = progress_start + int(
-                        ((progress_end - progress_start) * written_frames) / target_frames
-                    )
-                if progress_unit != last_progress_unit:
-                    _emit_progress(progress_callback, progress_unit, progress_total, progress_message)
-                    last_progress_unit = progress_unit
-                frame_count = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
-                chunks = [_read_or_pad_wav_frames(source_wav, frame_count, reference_params) for source_wav in sources]
-                output_wav.writeframes(_mix_pcm_chunks(chunks, frame_count, reference_params))
-                remaining_frames -= frame_count
-        _emit_progress(progress_callback, progress_end, progress_total, progress_message)
-
-
-def _scene_mix_target_frames(sources: list[wave.Wave_read], frame_rate: int, duration_seconds: float) -> int:
-    """
-    @brief      Resolve the fixed frame count for one Scene Ambience mix.
-    @param[in]  sources Open source WAV readers.
-    @param[in]  frame_rate Mix frame rate.
-    @param[in]  duration_seconds Requested target duration.
-    @return     Target frame count.
-    @exception  None
-    """
-    if frame_rate > 0 and duration_seconds > 0.0:
-        return max(1, int(round(frame_rate * duration_seconds)))
-    return max((int(source.getnframes()) for source in sources), default=1)
-
-
-def _read_or_pad_wav_frames(source_wav: wave.Wave_read, frame_count: int, params) -> bytes:
-    """
-    @brief      Read WAV frames and pad short sources with silence.
-    @param[in]  source_wav Open source WAV reader.
-    @param[in]  frame_count Requested frame count.
-    @param[in]  params Reference WAV parameters.
-    @return     Exactly `frame_count` frames of PCM bytes.
-    @exception  None
-    """
-    frame_size = max(int(params.nchannels) * int(params.sampwidth), 1)
-    data = source_wav.readframes(frame_count)
-    expected_size = frame_count * frame_size
-    if len(data) >= expected_size:
-        return data[:expected_size]
-    silence_byte = b"\x80" if int(params.sampwidth) == 1 else b"\x00"
-    return data + (silence_byte * (expected_size - len(data)))
-
-
-def _mix_pcm_chunks(chunks: list[bytes], frame_count: int, params) -> bytes:
-    """
-    @brief      Mix same-format PCM chunks with conservative gain reduction.
-    @param[in]  chunks Source PCM chunks.
-    @param[in]  frame_count Number of frames in each chunk.
-    @param[in]  params Reference WAV parameters.
-    @return     Mixed PCM byte chunk.
-    @exception  None
-    """
-    channels = int(params.nchannels)
-    sample_width = int(params.sampwidth)
-    sample_count = frame_count * channels
-    scale = 1.0 / max(len(chunks), 1)
-    output = bytearray()
-    for sample_index in range(sample_count):
-        mixed_value = 0
-        offset = sample_index * sample_width
-        for chunk in chunks:
-            mixed_value += _decode_pcm_sample(chunk[offset : offset + sample_width], sample_width)
-        output.extend(_encode_pcm_sample(int(round(mixed_value * scale)), sample_width))
-    return bytes(output)
-
-
-def _decode_pcm_sample(sample_bytes: bytes, sample_width: int) -> int:
-    """
-    @brief      Decode one PCM sample to a signed integer.
-    @param[in]  sample_bytes Raw PCM sample bytes.
-    @param[in]  sample_width Sample width in bytes.
-    @return     Signed sample value.
-    @exception  None
-    """
-    if sample_width == 1:
-        return int.from_bytes(sample_bytes or b"\x80", "little", signed=False) - 128
-    return int.from_bytes(sample_bytes.ljust(sample_width, b"\x00"), "little", signed=True)
-
-
-def _encode_pcm_sample(sample_value: int, sample_width: int) -> bytes:
-    """
-    @brief      Encode one signed integer as a clipped PCM sample.
-    @param[in]  sample_value Signed sample value.
-    @param[in]  sample_width Sample width in bytes.
-    @return     Raw PCM sample bytes.
-    @exception  None
-    """
-    if sample_width == 1:
-        return int(max(0, min(sample_value + 128, 255))).to_bytes(1, "little", signed=False)
-    minimum = -(1 << (8 * sample_width - 1))
-    maximum = (1 << (8 * sample_width - 1)) - 1
-    return int(max(minimum, min(sample_value, maximum))).to_bytes(sample_width, "little", signed=True)
 
 
 def _scene_mix_group_key(block: dict[str, object]) -> str:
@@ -1327,7 +1065,8 @@ def _scene_mix_duration_seconds(project_root: Path, source_blocks: list[dict[str
             durations.append(float(block.get("duration_seconds", 0.0) or 0.0))
         audio_path = _audio_path(project_root, block)
         if audio_path is not None and audio_path.is_file():
-            durations.append(_wav_duration_seconds(audio_path))
+            with suppress(EOFError, OSError, wave.Error):
+                durations.append(_wav_duration_seconds(audio_path))
     return max([duration for duration in durations if duration > 0.0], default=0.0)
 
 
@@ -1400,172 +1139,6 @@ def _composition_block_count(block: dict[str, object]) -> int:
     if _is_scene_mix_virtual_block(block):
         return _bounded_int(block.get("scene_mix_source_block_count", 1), 1, 1_000_000, 1)
     return 1
-
-
-def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
-    """
-    @brief      Write PCM silence frames into one output WAV stream.
-    @details    Zero bytes are silence only for signed PCM. That holds for every width
-                in `_WAV_SAMPLE_WIDTH_BY_FORMAT`, which excludes unsigned 8-bit for
-                exactly this reason; do not re-admit one-byte PCM without also giving
-                this function an unsigned zero level of 0x80.
-    @param[in]  output_wav Active output WAV writer.
-    @param[in]  gap_ms Gap length in milliseconds.
-    @param[in]  params WAV params from the current source file.
-    @return     Number of frames written.
-    @exception  None
-    """
-    if gap_ms <= 0:
-        return 0
-    channels = int(params.nchannels)
-    sample_width = int(params.sampwidth)
-    frame_rate = int(params.framerate)
-    frame_count = _silence_frame_count(frame_rate, gap_ms)
-    if frame_count <= 0:
-        return 0
-    output_wav.writeframes(b"\x00" * frame_count * channels * sample_width)
-    return frame_count
-
-
-def _silence_frame_count(frame_rate: int, duration_ms: int) -> int:
-    """
-    @brief      Convert silence milliseconds to exact whole PCM frames.
-    @param[in]  frame_rate Output sample rate.
-    @param[in]  duration_ms Silence duration in milliseconds.
-    @return     Whole silence frame count using floor semantics.
-    @exception  None
-    """
-    if frame_rate <= 0 or duration_ms <= 0:
-        return 0
-    return frame_rate * duration_ms // 1000
-
-
-def _copy_wav_frames(source_wav, output_wav: wave.Wave_write, cancel_requested=None) -> int:
-    """
-    @brief      Copy source WAV frames to the output in bounded chunks.
-    @param[in]  source_wav Active source WAV reader.
-    @param[in]  output_wav Active output WAV writer.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @return     Number of frames copied.
-    @exception  OperationCancelledError Raised when the operator cancels the run.
-    """
-    frame_size = max(int(source_wav.getnchannels()) * int(source_wav.getsampwidth()), 1)
-    remaining_frames = int(source_wav.getnframes())
-    copied_frames = 0
-    while remaining_frames > 0:
-        raise_if_cancelled(cancel_requested)
-        frames_to_read = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
-        frame_data = source_wav.readframes(frames_to_read)
-        if not frame_data:
-            break
-        output_wav.writeframes(frame_data)
-        frames_read = len(frame_data) // frame_size
-        copied_frames += frames_read
-        remaining_frames -= frames_read
-        if frames_read <= 0:
-            break
-    return copied_frames
-
-
-def _copy_or_convert_wav_frames(
-    source_wav,
-    output_wav: wave.Wave_write,
-    target_params,
-    cancel_requested=None,
-) -> int:
-    """
-    @brief      Copy or convert source WAV frames to the output WAV format.
-    @param[in]  source_wav Active source WAV reader.
-    @param[in]  output_wav Active output WAV writer.
-    @param[in]  target_params Output WAV parameters.
-    @param[in]  cancel_requested Optional cancellation callback.
-    @return     Number of output frames written.
-    @exception  RuntimeError Raised when source conversion is unsupported.
-    """
-    source_params = source_wav.getparams()
-    if (source_params[:3], source_params[4:]) == (target_params[:3], target_params[4:]):
-        return _copy_wav_frames(source_wav, output_wav, cancel_requested)
-    if (
-        source_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
-        or target_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
-    ):
-        raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-    rate_state = None
-    remaining_frames = int(source_wav.getnframes())
-    output_frame_size = max(int(target_params.nchannels) * int(target_params.sampwidth), 1)
-    source_frame_size = max(int(source_params.nchannels) * int(source_params.sampwidth), 1)
-    written_frames = 0
-    while remaining_frames > 0:
-        raise_if_cancelled(cancel_requested)
-        frames_to_read = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
-        frame_data = source_wav.readframes(frames_to_read)
-        if not frame_data:
-            break
-        converted_data, rate_state = _convert_wav_frame_chunk(frame_data, source_params, target_params, rate_state)
-        if converted_data:
-            output_wav.writeframes(converted_data)
-            written_frames += len(converted_data) // output_frame_size
-        frames_read = len(frame_data) // source_frame_size
-        remaining_frames -= frames_read
-        if frames_read <= 0:
-            break
-    return written_frames
-
-
-def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, rate_state) -> tuple[bytes, object]:
-    """
-    @brief      Convert one PCM frame chunk between compatible WAV layouts.
-    @param[in]  frame_data Source PCM bytes.
-    @param[in]  source_params Source WAV parameters.
-    @param[in]  target_params Target WAV parameters.
-    @param[in]  rate_state Running resampler state from `pcm_codec.convert_frame_rate`.
-    @return     Tuple of converted PCM bytes and updated rate-conversion state.
-    @exception  RuntimeError Raised when channel conversion is unsupported.
-    """
-    converted_data = frame_data
-    current_sample_width = int(source_params.sampwidth)
-    current_channels = int(source_params.nchannels)
-    target_sample_width = int(target_params.sampwidth)
-    target_channels = int(target_params.nchannels)
-    if current_sample_width != target_sample_width:
-        converted_data = pcm_codec.convert_sample_width(converted_data, current_sample_width, target_sample_width)
-        current_sample_width = target_sample_width
-    converted_data = _convert_wav_channels(
-        converted_data,
-        current_sample_width,
-        current_channels,
-        target_channels,
-    )
-    current_channels = target_channels
-    if int(source_params.framerate) != int(target_params.framerate):
-        converted_data, rate_state = pcm_codec.convert_frame_rate(
-            converted_data,
-            current_sample_width,
-            current_channels,
-            int(source_params.framerate),
-            int(target_params.framerate),
-            rate_state,
-        )
-    return converted_data, rate_state
-
-
-def _convert_wav_channels(frame_data: bytes, sample_width: int, source_channels: int, target_channels: int) -> bytes:
-    """
-    @brief      Convert PCM frame data between mono and stereo channel layouts.
-    @param[in]  frame_data Source PCM bytes.
-    @param[in]  sample_width Sample width in bytes.
-    @param[in]  source_channels Source channel count.
-    @param[in]  target_channels Target channel count.
-    @return     PCM bytes with the target channel count.
-    @exception  RuntimeError Raised when the channel conversion is unsupported.
-    """
-    if source_channels == target_channels:
-        return frame_data
-    if source_channels == 1 and target_channels == 2:
-        return pcm_codec.mono_to_stereo(frame_data, sample_width, 1.0, 1.0)
-    if source_channels == 2 and target_channels == 1:
-        return pcm_codec.stereo_to_mono(frame_data, sample_width, 0.5, 0.5)
-    raise RuntimeError("Audio Assembly supports WAV channel conversion only between mono and stereo.")
 
 
 def _build_report(
@@ -1676,24 +1249,53 @@ def _persist_state(project_root: Path, report: AudioAssemblyReport, operation_st
 def _completed_records_for_resume(
     project_root: Path,
     existing_state: dict[str, object],
+    report: AudioAssemblyReport,
     input_fingerprint: str,
+    output_plan: list[dict[str, object]],
 ) -> list[dict[str, object]]:
     """
-    @brief      Return completed output records that are safe to reuse.
+    @brief      Return valid completed outputs in canonical plan order.
     @param[in]  project_root Active project root folder.
     @param[in]  existing_state Persisted operation state.
+    @param[in]  report Persisted output report.
     @param[in]  input_fingerprint Current input fingerprint.
+    @param[in]  output_plan Canonical planned output records.
     @return     Reusable completed output records.
     @exception  None
     """
-    metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
-    if not isinstance(metadata, dict) or str(metadata.get("input_fingerprint", "")) != input_fingerprint:
+    metadata = existing_state.get("metadata", {})
+    if (
+        not isinstance(metadata, dict)
+        or metadata.get("input_fingerprint") != input_fingerprint
+        or report.get("input_fingerprint") != input_fingerprint
+    ):
         return []
+    outputs = report.get("outputs", [])
+    if not isinstance(outputs, list):
+        return []
+    by_key = {
+        str(output.get("output_key", "")): output
+        for output in outputs
+        if isinstance(output, dict) and output.get("generated") is True
+    }
     records = []
-    for output in load_generated_outputs(project_root):
-        audio_path = _safe_project_artifact_path(project_root, output.get("audio_relative_path"))
-        if audio_path is not None and audio_path.is_file():
-            records.append(output)
+    for item in output_plan:
+        output = by_key.get(str(item["output_key"]))
+        if output is None:
+            continue
+        expected_path = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / str(item["file_name"])
+        actual_path = _safe_project_artifact_path(project_root, output.get("audio_relative_path"))
+        if actual_path != expected_path or output.get("file_name") != item["file_name"]:
+            continue
+        params = _completed_wav_params(expected_path)
+        if params is None:
+            continue
+        try:
+            record = _normalize_output_record(output)
+        except (TypeError, ValueError):
+            continue
+        if record["duration_seconds"] == params.nframes / params.framerate:
+            records.append(record)
     return records
 
 
@@ -1740,6 +1342,21 @@ def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | No
     return _safe_project_artifact_path(project_root, audio_block.get("audio_relative_path"))
 
 
+def _requires_source_wav(block: dict[str, object], include_scene_ambience: bool) -> bool:
+    """
+    @brief      Require speech WAVs and included ambience known to have been synthesized.
+    @param[in]  block Approved Audio Block.
+    @param[in]  include_scene_ambience Whether scene sounds belong to the output.
+    @return     True when the absence of a WAV would omit audio.
+    """
+    if _is_scene_ambience_block(block):
+        return include_scene_ambience and bool(
+            block.get("audio_relative_path")
+            or (audio_blocks_service.is_generated(block) and block.get("generation_fingerprint"))
+        )
+    return _is_required_speech(block)
+
+
 def _is_assembly_block(audio_block: dict[str, object], include_scene_ambience: bool) -> bool:
     """
     @brief      Return whether one Audio Block contributes to final composition.
@@ -1749,8 +1366,19 @@ def _is_assembly_block(audio_block: dict[str, object], include_scene_ambience: b
     @exception  None
     """
     if _is_scene_ambience_block(audio_block):
-        return bool(include_scene_ambience) and bool(str(audio_block.get("audio_relative_path", "") or "").strip())
-    return bool(str(audio_block.get("audio_relative_path", "") or "").strip()) or _is_pause_block(audio_block)
+        return include_scene_ambience and bool(audio_block.get("audio_relative_path"))
+    return _is_required_speech(audio_block) or audio_assembly_plan.is_pause_block(audio_block)
+
+
+def _is_required_speech(block: dict[str, object]) -> bool:
+    """
+    @brief      Identify spoken blocks that require an approved WAV.
+    @param[in]  block Speech Block or enriched Audio Block.
+    @return     True for narration or dialogue.
+    """
+    return block.get("content_kind") in {
+        speech_blocks_service.CONTENT_KIND_NARRATION, speech_blocks_service.CONTENT_KIND_DIALOGUE,
+    }
 
 
 def _is_included_scene_ambience_block(audio_block: dict[str, object], include_scene_ambience: bool) -> bool:
@@ -1774,36 +1402,6 @@ def _is_scene_ambience_block(audio_block: dict[str, object]) -> bool:
     return str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
 
 
-def _is_pause_block(audio_block: dict[str, object]) -> bool:
-    """
-    @brief      Return whether one Audio Block represents metadata-only pause silence.
-    @param[in]  audio_block Audio Block payload.
-    @return     True for pause content-kind blocks.
-    @exception  None
-    """
-    return (
-        bool(audio_block.get("metadata_only", False))
-        and str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_PAUSE
-    )
-
-
-def _pause_duration_ms(audio_block: dict[str, object]) -> int:
-    """
-    @brief      Resolve one metadata-only pause block duration.
-    @param[in]  audio_block Audio Block payload.
-    @return     Positive pause duration in milliseconds.
-    @exception  None
-    """
-    value = audio_block.get("pause_duration_ms")
-    try:
-        duration_ms = int(value)
-    except (TypeError, ValueError):
-        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
-    if duration_ms <= 0:
-        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
-    return duration_ms
-
-
 def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict[str, object]:
     """
     @brief      Add measured WAV or pause duration to one Audio Block payload copy.
@@ -1813,8 +1411,8 @@ def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict
     @exception  wave.Error Raised when the source file is not a readable WAV.
     """
     enriched = dict(block)
-    if _is_pause_block(enriched):
-        enriched["duration_seconds"] = _pause_duration_ms(enriched) / 1000.0
+    if audio_assembly_plan.is_pause_block(enriched):
+        enriched["duration_seconds"] = audio_assembly_plan.pause_duration_ms(enriched) / 1000.0
         return enriched
     audio_path = _audio_path(project_root, block)
     enriched["duration_seconds"] = 0.0 if audio_path is None else _wav_duration_seconds(audio_path)
@@ -1853,6 +1451,27 @@ def _reference_wav_params(
     raise RuntimeError("Audio Assembly cannot write an output file without at least one source WAV.")
 
 
+def _completed_wav_params(path: Path) -> wave._wave_params | None:
+    """
+    @brief      Return supported complete PCM parameters for a canonical published WAV.
+    @param[in]  path Planned local WAV path.
+    @return     Verified WAV parameters or None when the file cannot be reused.
+    """
+    try:
+        if path.resolve() != path or not path.is_file():
+            return None
+        with wave.open(str(path), "rb") as wav:
+            params = wav.getparams()
+            if (
+                params.sampwidth in audio_assembly_wav.SUPPORTED_SAMPLE_WIDTHS
+                and audio_blocks_artifact_service.has_complete_frames(wav)
+            ):
+                return params
+    except (EOFError, OSError, RuntimeError, wave.Error):
+        return None
+    return None
+
+
 def _wav_duration_seconds(path: Path) -> float:
     """
     @brief      Measure one WAV file duration in seconds.
@@ -1876,16 +1495,29 @@ def _validate_compatible_wav_inputs(project_root: Path, audio_blocks: list[dict[
     @exception  ValueError Raised when a source is not a readable WAV.
     @exception  RuntimeError Raised when WAV parameters are unsupported or incompatible.
     """
+    scene_formats: dict[str, tuple[int, int, int]] = {}
     for block in audio_blocks:
         audio_path = _audio_path(project_root, block)
-        assert audio_path is not None
+        block_id = str(block.get("speech_block_id", ""))
+        error_message = f"Every approved Audio Block must reference an existing readable WAV file. Block {block_id}."
+        if audio_path is None or not audio_path.is_file():
+            raise ValueError(error_message)
         try:
             with wave.open(str(audio_path), "rb") as wav_file:
                 params = wav_file.getparams()
-                if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
-                    raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+                if params.sampwidth not in audio_assembly_wav.SUPPORTED_SAMPLE_WIDTHS:
+                    raise RuntimeError(
+                        f"Audio Assembly supports uncompressed PCM WAV source files only. Block {block_id}."
+                    )
+                if not audio_blocks_artifact_service.has_complete_frames(wav_file):
+                    raise ValueError(error_message)
+                if _is_scene_ambience_block(block):
+                    layout = (params.nchannels, params.sampwidth, params.framerate)
+                    first_layout = scene_formats.setdefault(_scene_mix_group_key(block), layout)
+                    if layout != first_layout:
+                        raise ValueError(f"Scene Mix sources must use the same PCM format. Block {block_id}.")
         except (EOFError, OSError, wave.Error) as exc:
-            raise ValueError("Every approved Audio Block must reference an existing readable WAV file.") from exc
+            raise ValueError(error_message) from exc
 
 
 def _build_input_fingerprint(
@@ -1910,6 +1542,10 @@ def _build_input_fingerprint(
                 "chunk_id": str(block.get("chunk_id", "")),
                 "content_kind": str(block.get("content_kind", "")),
                 "pause_duration_ms": block.get("pause_duration_ms"),
+                **({
+                    "ambience_group": _scene_mix_group_key(block),
+                    "ambience_duration_seconds": block.get("duration_seconds"),
+                } if _is_scene_ambience_block(block) else {}),
                 "audio_relative_path": block.get("audio_relative_path"),
                 "file_sha1": _file_sha1(_audio_path(project_root, block)) if _audio_path(project_root, block) else None,
             }

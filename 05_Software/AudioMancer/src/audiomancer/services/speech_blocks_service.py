@@ -17,6 +17,7 @@
 
 # IMPORTS
 
+from decimal import Decimal
 import hashlib
 import json
 from pathlib import Path
@@ -1140,15 +1141,19 @@ def sort_speech_blocks(speech_blocks: list[dict[str, object]]) -> list[dict[str,
 
 def pause_duration_ms(text: object) -> int:
     """
-    @brief      Parse a pause Speech Block duration from free-form text.
+    @brief      Parse a pause duration in milliseconds or seconds.
     @param[in]  text Candidate pause text.
     @return     Positive duration in milliseconds, or the configured default.
     @exception  None
     """
-    match = re.search(r"\b(\d{1,9})\b", str(text))
-    if match is None:
-        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
-    duration_ms = int(match.group(1))
+    value = str(text)
+    explicit = re.search(r"(?<![\w.,-])([+-]?(?:\d{1,9}(?:[.,]\d+)?|[.,]\d+))\s*(ms|s)\b", value, re.IGNORECASE)
+    if explicit is not None:
+        multiplier = 1000 if explicit.group(2).lower() == "s" else 1
+        duration_ms = int(Decimal(explicit.group(1).replace(",", ".")) * multiplier)
+    else:
+        match = re.search(r"\b(\d{1,9})\b", value)
+        duration_ms = int(match.group(1)) if match else 0
     if duration_ms <= 0:
         return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
     return duration_ms

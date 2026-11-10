@@ -38,23 +38,22 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When Audio Assembly includes an approved row in final composition and the row
-is not a synthesized pause, the service shall preflight its source as a safe
-existing regular readable supported-PCM WAV before composition opens it.
+When an included non-pause source is required for Audio Assembly, the service shall reject a missing, unsafe, unsupported or incomplete WAV with the affected Speech Block ID before publishing any output.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "Service regressions inject path-carrying metadata-only Scene Ambience rows with missing, unsafe, non-file, and invalid WAV sources and observe the user-facing preflight error, while valid included ambience, synthesized pauses, and disabled ambience retain their established composition behavior."
+verification = "Remove or truncate an approved spoken WAV and verify a block-specific preflight error and absent output, while metadata pauses and disabled ambience remain usable."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_wav.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_artifact_service.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_rejects_incompatible_later_output_before_publication",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_rejects_incomplete_required_speech",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_requires_missing_generated_ambience_only_when_included",
   "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_accepts_a_narrow_path_resolver",
   "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_reference_params_resolves_default_path_at_call_time",
   "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_writes_pause_blocks_as_silence",
@@ -73,4 +72,4 @@ priority = "high"   # low | normal | high
 rationale = "The composition boundary must defend against legacy or corrupt rows even when current Audio Blocks loading normally keeps metadata-only ambience pathless."
 
 created = 2026-08-09
-updated = 2026-08-10
+updated = 2026-11-10

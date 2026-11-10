@@ -1,0 +1,29 @@
+schema = 1
+
+id = "REQ-FUNC-51afdd49"
+
+title = "Apply explicit pause duration units and stream silence"
+
+status = "active"
+
+requirement = """
+When a pause contains a duration in milliseconds or seconds, AudioMancer shall render its parsed duration as cancellable, bounded PCM silence.
+"""
+
+verification = "Parse integer milliseconds and decimal seconds, verify the output frame count, and cancel during a long silence before publication."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_wav.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_plan.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_indication_content_kind_normalizes_and_pause_duration_parses",
+  "05_Software/AudioMancer/tests/test_audio_assembly_sample_widths.py::test_long_silence_checks_cancellation_between_frame_chunks",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-10
+updated = 2026-11-10

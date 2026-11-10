@@ -27,10 +27,240 @@ from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
     audio_assembly_state_service,
+    audio_assembly_wav,
     audio_blocks_service,
     project_workspace_service,
     speech_blocks_service,
 )
+
+
+@pytest.mark.parametrize("damage", ["missing", "truncated", "unrecorded"])
+def test_audio_assembly_rejects_incomplete_required_speech(tmp_path, damage) -> None:
+    """
+    @brief      Reject a missing or incomplete source before producing a partial audiobook.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  damage Missing file, truncated file, or missing Audio Blocks entry.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    block_id = "0001-000002"
+    source = root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / f"{block_id}.wav"
+    if damage == "missing":
+        source.unlink()
+    elif damage == "truncated":
+        source.write_bytes(source.read_bytes()[:-4])
+    else:
+        document = audio_blocks_service.load_audio_blocks_document(root)
+        document["blocks"] = [block for block in document["blocks"] if block["speech_block_id"] != block_id]
+        audio_blocks_service.write_audio_blocks_document(root, document)
+
+    with pytest.raises(ValueError, match=block_id):
+        audio_assembly_service.start_or_continue_composition(root, manifest)
+
+    assert audio_assembly_service.load_audio_assembly_report(root) is None
+    assert not (root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME).exists()
+
+
+def test_audio_assembly_requires_missing_generated_ambience_only_when_included(tmp_path) -> None:
+    """
+    @brief      Detect a deleted generated cue without requiring optional ambience when disabled.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(root, approved=True, with_audio=True)
+    cue = next(
+        block for block in audio_blocks_service.load_audio_blocks(root) if block["content_kind"] == "scene_ambience"
+    )
+    (root / cue["audio_relative_path"]).unlink()
+    group = audio_assembly_service.list_scene_mix_groups(root)[0]
+    assert group["block_count"] == 2
+    assert group["can_generate_preview"] is False
+    with pytest.raises(ValueError, match=cue["speech_block_id"]):
+        audio_assembly_service.generate_scene_mix_preview(root, group["group_key"])
+    with pytest.raises(ValueError, match=cue["speech_block_id"]):
+        audio_assembly_service.start_or_continue_composition(root, manifest)
+    manifest["audio_assembly_settings"]["include_scene_ambience"] = False
+    assert audio_assembly_service.start_or_continue_composition(root, manifest)["generated_output_count"] == 1
+
+
+@pytest.mark.parametrize("incompatible", ["scene_mix", "channels"])
+def test_audio_assembly_rejects_incompatible_later_output_before_publication(tmp_path, incompatible) -> None:
+    """
+    @brief      Preflight a later chunk without publishing an earlier one first.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  incompatible Incompatible mix rates or unsupported channel conversion.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"]["output_mode"] = audio_assembly_service.OUTPUT_MODE_PER_CHUNK
+    blocks = _load_block_fixtures(root)
+    audio_root = root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    bad_id = "0002-000002"
+    if incompatible == "scene_mix":
+        _insert_scene_ambience_blocks(root, approved=True, with_audio=True)
+        blocks = _load_block_fixtures(root)
+        for index, cue in enumerate((blocks[1], blocks[2]), start=2):
+            cue.update(
+                speech_block_id=f"0002-{index:06d}", chunk_id="chunk-0002", sequence_index=index,
+                ambience_position="scene_change", after_speech_block_id="0002-000001",
+            )
+            rate = 24_000 if index == 2 else 48_000
+            _write_wav(audio_root / f"{cue['speech_block_id']}.wav", rate // 10, frame_rate=rate)
+        bad_id = "0002-000003"
+    else:
+        blocks.append({**blocks[-1], "speech_block_id": bad_id, "sequence_index": 2})
+        _write_wav(audio_root / f"{bad_id}.wav", 2400, channels=3)
+    _persist_block_fixtures(root, blocks)
+
+    with pytest.raises((RuntimeError, ValueError), match=bad_id):
+        audio_assembly_service.start_or_continue_composition(root, manifest)
+
+    assert audio_assembly_service.load_audio_assembly_report(root) is None
+    assert not (root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME).exists()
+
+
+def test_audio_assembly_simultaneous_wav_candidates_are_independent(tmp_path) -> None:
+    """
+    @brief      Interleaved publications never move or delete another candidate.
+    @param[in]  tmp_path Temporary project location.
+    """
+    output = tmp_path / "audiobook.wav"
+
+    def render_outer(candidate):
+        """@brief Simulate a second render publishing while the first candidate is open."""
+        _write_wav(candidate, 100)
+        audio_assembly_wav.publish_wav(tmp_path, output, lambda path: _write_wav(path, 50))
+        assert candidate.is_file()
+
+    audio_assembly_wav.publish_wav(tmp_path, output, render_outer)
+    with wave.open(str(output), "rb") as final:
+        assert final.getnframes() == 100
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_audio_assembly_preserves_scene_anchors_and_preview_duration(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Use separate anchored mixes and the preview duration in the final audiobook.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(root, approved=True, with_audio=True)
+    blocks = _load_block_fixtures(root)
+    # Place each cue immediately after a different spoken block in the first chunk.
+    blocks[1].update(ambience_position="scene_change", after_speech_block_id="0001-000001", duration_seconds=0.2)
+    blocks[2].update(
+        sequence_index=4, ambience_position="scene_change", after_speech_block_id="0001-000002", duration_seconds=0.2,
+    )
+    blocks[3]["sequence_index"] = 3
+    _persist_block_fixtures(root, blocks)
+    groups = audio_assembly_service.list_scene_mix_groups(root)
+    assert [group["after_speech_block_id"] for group in groups] == ["0001-000001", "0001-000002"]
+    assert [group["duration_seconds"] for group in groups] == [0.2, 0.2]
+    preview_paths = []
+    for group in groups:
+        preview = audio_assembly_service.generate_scene_mix_preview(root, group["group_key"])
+        preview_paths.append(root / preview["audio_relative_path"])
+    def reject_remix(*_args, **_kwargs):
+        """@brief Require reuse of the already generated matching preview WAVs."""
+        pytest.fail("Expected final assembly to reuse the valid scene previews.")
+
+    monkeypatch.setattr(audio_assembly_wav, "mix_wav_sources", reject_remix)
+    manifest["audio_assembly_settings"].update(inter_block_silence_ms=0, inter_chunk_silence_ms=0)
+    report = audio_assembly_service.start_or_continue_composition(root, manifest)
+    with wave.open(str(root / report["outputs"][0]["audio_relative_path"]), "rb") as result:
+        assert result.getnframes() == 3 * 2400 + 2 * 4800
+    assert set(preview_paths[0].parent.glob("*.wav")) == set(preview_paths)
+
+
+@pytest.mark.parametrize("target_kind", ["audiobook", "scene_mix"])
+def test_audio_assembly_replace_failure_keeps_previous_wav(monkeypatch, tmp_path, target_kind) -> None:
+    """
+    @brief      Keep the published audiobook or preview when replacing it fails.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  target_kind Which WAV writer to exercise.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    if target_kind == "scene_mix":
+        _insert_scene_ambience_blocks(root, approved=True, with_audio=True)
+        group = audio_assembly_service.list_scene_mix_groups(root)[0]
+        output = root / group["audio_relative_path"]
+    else:
+        output = root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    _write_wav(output, 90)
+    previous = output.read_bytes()
+    original_replace = Path.replace
+
+    def fail_publish(source, destination):
+        """@brief Inject an I/O error at the final replacement."""
+        if destination == output:
+            raise OSError("replacement failed")
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_publish)
+    with pytest.raises(OSError, match="replacement failed"):
+        if target_kind == "scene_mix":
+            audio_assembly_service.generate_scene_mix_preview(root, group["group_key"])
+        else:
+            audio_assembly_service.start_or_continue_composition(root, manifest)
+
+    assert output.read_bytes() == previous
+    assert list(output.parent.glob("*.tmp")) == []
+
+
+def test_audio_assembly_cancels_preview_without_leaving_a_candidate(tmp_path) -> None:
+    """
+    @brief      A cancelled preview leaves its published WAV available.
+    @param[in]  tmp_path Temporary project location.
+    """
+    root, _ = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(root, approved=True, with_audio=True)
+    group = audio_assembly_service.list_scene_mix_groups(root)[0]
+    preview = audio_assembly_service.generate_scene_mix_preview(root, group["group_key"])
+    output = root / preview["audio_relative_path"]
+    original = output.read_bytes()
+    def cancel_after_rendering_started():
+        """@brief Cancel once the preview writer has written frames to its candidate."""
+        return any(path.stat().st_size > 0 for path in output.parent.glob(f".{output.name}.*.tmp"))
+
+    with pytest.raises(audio_assembly_service.operation_runtime_service.OperationCancelledError):
+        audio_assembly_service.generate_scene_mix_preview(
+            root, group["group_key"], cancel_requested=cancel_after_rendering_started,
+        )
+    assert output.read_bytes() == original
+    assert list(output.parent.glob("*.tmp")) == []
+
+
+@pytest.mark.parametrize("damage", ["missing", "truncated"])
+def test_audio_assembly_resume_rebuilds_only_invalid_output_in_order(monkeypatch, tmp_path, damage) -> None:
+    """
+    @brief      Resume only the damaged output and keep report order and run identity.
+    @param[in]  monkeypatch Pytest patch fixture.
+    @param[in]  tmp_path Temporary project location.
+    @param[in]  damage Whether the first WAV is missing or truncated.
+    """
+    root, manifest = _create_project_with_audio_blocks(tmp_path)
+    manifest["audio_assembly_settings"]["output_mode"] = audio_assembly_service.OUTPUT_MODE_PER_CHUNK
+    initial = audio_assembly_service.start_or_continue_composition(root, manifest)
+    first, second = (root / record["audio_relative_path"] for record in initial["outputs"])
+    if damage == "missing":
+        first.unlink()
+    else:
+        first.write_bytes(first.read_bytes()[:-2])
+    compose = audio_assembly_service._compose_output_file  # noqa: SLF001
+    rebuilt = []
+
+    def observe(project_root, item, settings, cancel_requested):
+        """@brief Record regenerated plan keys."""
+        rebuilt.append(item["output_key"])
+        return compose(project_root, item, settings, cancel_requested)
+
+    monkeypatch.setattr(audio_assembly_service, "_compose_output_file", observe)
+    resumed = audio_assembly_service.start_or_continue_composition(root, manifest)
+    assert rebuilt == ["chunk-0001"]
+    assert resumed["outputs"] == initial["outputs"]
+    assert resumed["started_at"] == initial["started_at"]
+    assert second.is_file()
 
 
 def test_audio_assembly_service_composes_per_chunk_outputs(tmp_path) -> None:
@@ -768,7 +998,7 @@ def test_audio_assembly_service_classic_wav_size_boundary_uses_whole_frames() ->
     params = wave._wave_params(1, 2, 24_000, 0, "NONE", "not compressed")
     assert audio_assembly_service._WAV_MAX_DATA_BYTES == (1 << 32) - 1 - 36  # noqa: SLF001
     assert audio_assembly_service._conservative_resampled_frame_count(1, 24_000, 44_100) == 2  # noqa: SLF001
-    assert audio_assembly_service._silence_frame_count(44_100, 1) == 44  # noqa: SLF001
+    assert audio_assembly_wav.silence_frame_count(44_100, 1) == 44
     maximum_frames = audio_assembly_service._WAV_MAX_DATA_BYTES // 2  # noqa: SLF001
 
     audio_assembly_service._validate_classic_wav_data_size(  # noqa: SLF001
@@ -906,12 +1136,10 @@ def test_audio_assembly_service_removes_temp_after_output_writer_failure(
     output_root.mkdir()
     output_path = output_root / str(output_item["file_name"])
     output_path.write_bytes(b"published output")
-    temp_path = output_path.with_name(output_path.name + ".tmp")
     real_wave_open = wave.open
 
     class FailingWriter:
         def __enter__(self):
-            temp_path.write_bytes(b"partial temp")
             return self
 
         def __exit__(self, exc_type, exc_value, traceback):
@@ -927,7 +1155,9 @@ def test_audio_assembly_service_removes_temp_after_output_writer_failure(
                 raise OSError("simulated write failure")
 
     def failing_output_open(path, mode=None):
-        if mode == "wb" and str(path) == str(temp_path):
+        candidate = Path(path)
+        if mode == "wb" and candidate.name.startswith(f".{output_path.name}.") and candidate.suffix == ".tmp":
+            candidate.write_bytes(b"partial temp")
             return FailingWriter()
         return real_wave_open(path, mode)
 
@@ -937,7 +1167,7 @@ def test_audio_assembly_service_removes_temp_after_output_writer_failure(
         audio_assembly_service._compose_output_file(project_root, output_item, settings)  # noqa: SLF001
 
     assert output_path.read_bytes() == b"published output"
-    assert not temp_path.exists()
+    assert list(output_root.glob("*.tmp")) == []
 
 
 def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> None:
@@ -996,6 +1226,7 @@ def test_audio_assembly_service_resume_ignores_escaping_output_record(tmp_path, 
     _write_wav(outside_path, 2400)
     escaping_path = _escaping_artifact_path(path_kind, "outside_resume.wav", outside_path)
     report = {
+        "input_fingerprint": "fingerprint",
         "outputs": [
             {
                 "output_key": "part-0001",
@@ -1017,7 +1248,9 @@ def test_audio_assembly_service_resume_ignores_escaping_output_record(tmp_path, 
         audio_assembly_service._completed_records_for_resume(  # noqa: SLF001
             project_root,
             operation_state,
+            report,
             "fingerprint",
+            [{"output_key": "part-0001", "file_name": "part-0001.wav"}],
         )
         == []
     )
@@ -1371,6 +1604,7 @@ def _insert_scene_ambience_blocks(
                 "ambience_position": "opener",
                 "after_speech_block_id": "",
                 "audio_duration_seconds": 0.1 if with_audio else None,
+                "generation_fingerprint": f"cue-{speech_block_id}" if with_audio else None,
                 "approved": approved,
                 "generated": with_audio,
             }
@@ -1586,7 +1820,7 @@ def _persist_block_fixtures(project_root, blocks) -> None:
                         )
                     ),
                     "audio_duration_seconds": block.get("audio_duration_seconds"),
-                    "generation_fingerprint": None,
+                    "generation_fingerprint": block.get("generation_fingerprint"),
                 }
                 for block in blocks
             ],

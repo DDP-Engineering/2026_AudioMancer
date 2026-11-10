@@ -1063,8 +1063,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <code>audiobook/</code> folder.
                 </p>
                 <div class="note">
-                    <strong>Generate Audio</strong> stays greyed out until <em>every</em> Audio Block is approved. If
-                    it will not light up, return to Audio Blocks and look for unapproved rows.
+                    <strong>Generate Audio</strong> requires approval of the Audio Blocks included in assembly.
+                    If a required WAV is missing or damaged, the error identifies the block to regenerate in Audio Blocks.
                 </div>
                 <h3>Output Settings</h3>
                 <table>
@@ -1081,8 +1081,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     </tbody>
                 </table>
                 <p>
-                    Pause Speech Blocks become exact silence of their own length; the two silence settings add the
-                    automatic gaps around and between blocks and chunks. Changing any of these settings after
+                    Pause Speech Blocks become silence of their own length. Enter a duration such as
+                    <code>1250 ms</code> or <code>1.25 s</code>. Explicit pauses replace the automatic gaps beside them.
+                    The two silence settings apply between the other blocks and chunks. Changing these settings after
                     audiobook files already exist asks first, then deletes those outputs and the assembly report &mdash;
                     approved Audio Blocks and everything upstream are preserved.
                 </p>
@@ -1091,7 +1092,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     This list shows each Scene Ambience group as <em>label | duration | sounds | status</em>, where the
                     status is <em>needs generated audio</em>, <em>ready</em> or <em>preview ready</em>.
                     <strong>Generate / Refresh Scene Mix</strong> overlays that group's approved sound WAVs into one
-                    ambient bed, and <strong>Play Scene Mix</strong> plays it. Final assembly uses the same mix when
+                    ambient segment, and <strong>Play Scene Mix</strong> plays it. Cues anchored after different
+                    Speech Blocks are kept in separate groups. Final assembly uses the same grouping and duration when
                     <strong>Include Scene Ambience</strong> is on.
                 </p>
                 <h3>Reviewing The Result</h3>
@@ -1108,8 +1110,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     <strong>Reset Audio Assembly</strong> deletes the generated audiobook files and the assembly
-                    progress after confirming. Assembly can be interrupted and continued later, as long as the inputs
-                    and settings still match.
+                    progress after confirming. To continue with the same inputs and settings, press
+                    <strong>Generate Audio</strong> again. Assembly keeps completed, readable WAVs and rebuilds missing or
+                    damaged outputs. It restarts the interrupted file from the beginning. Cancelling or failing a
+                    replacement leaves the previous WAV available.
                 </p>
                 <figure>
                     <img src="assets/screenshots/audio-assembly.png" alt="Audio Assembly page">

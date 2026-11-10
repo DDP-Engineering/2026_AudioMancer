@@ -38,23 +38,22 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-If final-output WAV writing or close fails after a temporary file is created,
-Audio Assembly shall remove that temporary file without replacing a previously
-published output.
+If writing, closing or publishing a candidate WAV fails or is cancelled, Audio Assembly shall remove the temporary candidate and preserve any previous published WAV.
 """
 
 # The observation that settles whether the behavior holds — not a
 # restatement of the requirement.
-verification = "A service regression simulates write and close failures after temp creation and observes the original exception, no remaining temp artifact, and unchanged previously published output bytes."
+verification = "Inject write, close, replacement and cancellation faults in output and preview paths and compare old WAV bytes and temporary files."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
-affected_paths = [
-  "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
-]
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_wav.py"]
 
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_simultaneous_wav_candidates_are_independent",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_replace_failure_keeps_previous_wav",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_cancels_preview_without_leaving_a_candidate",
   "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_removes_temp_after_output_writer_failure",
 ]
 
@@ -67,4 +66,4 @@ priority = "high"   # low | normal | high
 rationale = "Atomic publication is incomplete when a failed writer leaves a large temporary WAV behind or disturbs the last valid deliverable."
 
 created = 2026-08-09
-updated = 2026-08-09
+updated = 2026-11-10

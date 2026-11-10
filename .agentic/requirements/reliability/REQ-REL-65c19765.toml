@@ -1,0 +1,28 @@
+schema = 1
+
+id = "REQ-REL-65c19765"
+
+title = "Resume only validated WAV outputs from the current Assembly plan"
+
+status = "active"
+
+requirement = """
+When continuing a matching Audio Assembly run, the service shall reuse only valid, canonical WAV outputs recorded for the current plan and rebuild other outputs in plan order.
+"""
+
+verification = "Truncate or remove one completed WAV, then continue and verify only that key is rebuilt while its siblings and run token are preserved."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_wav.py", "05_Software/AudioMancer/src/audiomancer/services/audio_assembly_plan.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_resume_rebuilds_only_invalid_output_in_order",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-10
+updated = 2026-11-10

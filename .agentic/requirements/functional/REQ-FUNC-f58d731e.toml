@@ -1,0 +1,29 @@
+schema = 1
+
+id = "REQ-FUNC-f58d731e"
+
+title = "Share anchored Scene Mix planning between preview and assembly"
+
+status = "active"
+
+requirement = """
+When previewing or assembling a Scene Mix, Audio Assembly shall use the same source groups and duration, preserving each scene-change anchor.
+"""
+
+verification = "Place cues after two different speech IDs and compare group keys, WAV duration and preview identity with final composition."
+
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py", "05_Software/AudioMancer/src/audiomancer/services/audio_blocks_service.py"]
+
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_requires_missing_generated_ambience_only_when_included",
+  "05_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_preserves_scene_anchors_and_preview_duration",
+]
+
+
+spec = ""
+
+priority = "normal"   # low | normal | high
+rationale = ""        # why this behavior exists, if not obvious
+
+created = 2026-11-10
+updated = 2026-11-10

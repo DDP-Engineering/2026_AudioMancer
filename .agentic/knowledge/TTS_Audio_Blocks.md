@@ -229,6 +229,8 @@ per-block checkpoint. See `.agentic/specs/audio_blocks_document.spec.md`.
 
 ## Key behaviors
 
+- Loaded Audio Blocks preserve the Speech Blocks scene-change anchor for Assembly grouping.
+
 - `REQ-FUNC-168e8717`. Playable audio retains its actual synthesis fingerprint.
   The page and generation compare available synthesis inputs and mark changed
   rows for review. The page uses cached model descriptions and local references.

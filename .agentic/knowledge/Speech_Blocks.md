@@ -1,18 +1,22 @@
 <!-- Copyright (c) 2026 DDP Engineering. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 # Speech Blocks
 
-## 1. Purpose
+## Routing
+
+For text-to-Speech-Block segmentation, pause text or scene placement, start in
+`speech_blocks_service.py` and `test_speech_blocks_service.py`. Audio Assembly
+owns the final WAV stream.
+
+## Purpose and boundaries
 
 Converts approved text and voice context into an ordered, operator-reviewable speech-block plan for TTS.
-
-## 2. Responsibilities
 
 - Select compatible source chunks and derive narration, dialogue, pause, indication, and scene-ambience blocks.
 - Normalize stable IDs, speakers, text, durations, warnings, approvals, and TTS-budget-safe splits.
 - Persist a single authoritative `speech_blocks.json` document and provide manual edit, approval, reset, and downstream invalidation behavior.
 - Present the review workflow through the Speech Blocks controller and page; it does not synthesize WAV files.
 
-## 3. Implementation Overview
+### Implementation overview
 
 The orchestration service resolves source chunks and voice assignments, assembles one authoritative `speech_blocks.json` document (source identity, AI/budget metadata, resume checkpoint, and blocks), and coordinates reset/approval transitions. Its public `voice_assignment_mode()` is also the state service's canonical normalization point (`REQ-NFR-7fcf36ea`). Generate All and Split Chunk share preparation and execution in speech_blocks_generation_service.py. That module owns model prompts, request slices, deterministic narration and optional ambience for a single chunk. The orchestration service writes checkpoints and completed chunk results. Normalization and text-split services provide deterministic content/speaker/identifier handling and size-aware splits. Report and operation-state views are recomputed as projections from that single document through `load_speech_blocks_report()` and `load_operation_state()`; one public read or mutation shares one resolved source context/count across its projections and log-path work. The controller and page route operations, guarded edits, selection, warnings, and review actions through the shared runner.
 
@@ -24,17 +28,17 @@ block gets the narrator voice, the only remaining decision is structural, and
 `speech_blocks_narrator_split_service` makes it by packing whole sentences into
 evenly sized blocks under the `deterministic_narrator_blocks` contract. Both page actions work without an AI profile when Scene Ambience is disabled.
 
-## 4. Dependencies
+### Dependencies
 
 - Internal: canonical/translated chunk artifacts, Character Discovery/Voice Profiles, TTS budget service, operation/workflow-impact runtime, persistence/logging services, and Qt/shared operation runner.
 - External: no provider is required to review stored blocks; later VoiceWeaver TTS consumes approved outputs.
 
-## 5. Inputs And Outputs
+## Public interface
 
 - Inputs: project state, source/translation chunks, selected narrator/character voice plan, operator edits/approvals, and configured TTS limits.
 - Outputs: ordered speech-block document, reports/state summaries, normalized warnings/operation rows, approval state, and exact downstream invalidation targets.
 
-## 6. Data Contracts
+## Invariants
 
 Source selection uses the AI Translation approved-source resolver shared with
 Character Discovery. A completed translation must cover the current nonempty
@@ -186,11 +190,23 @@ approved translation. Reset and regenerate Speech Blocks when it differs.
   exposes no unused incremental insert or remove methods
   (`REQ-NFR-b3fb9944`).
 
-## 7. Workflow Integration
+## Change map
+
+| Change requested | Start with | Focused verification |
+|---|---|---|
+| Source segmentation and resume | `speech_blocks_service.py`, `speech_blocks_generation_service.py` | Speech Blocks service tests |
+| Editable pause units | `pause_duration_ms` | Pause parser and Audio Assembly silence tests |
+
+## Key behaviors
+
+- `REQ-FUNC-51afdd49`. The shared pause parser reads explicit milliseconds or
+  seconds, and returns the configured default when a duration is missing.
+
+### Workflow integration
 
 Speech Blocks follows Voice Profiles and is the review gate before TTS Audio Blocks. An operator must resolve warnings and approve the block plan; material edits reset only affected generated audio and assembly work.
 
-## 8. Usage
+### Usage
 
 Open Speech Blocks after selecting voices, generate or resume the block plan,
 inspect list rows and warnings, edit the selected block deliberately, then save
@@ -199,7 +215,7 @@ payloads remain intact when the interface language changes. Use reset when
 upstream character, language, or voice changes make the current plan
 incompatible.
 
-## 9. Validation And Tests
+### Verification
 
 Primary automated coverage:
 
@@ -222,7 +238,7 @@ above with `uv run pytest`, plus `uv run python -m py_compile` and
 `uv run ruff check` on changed files. Operators must manually review semantic
 speaker assignment, ambience suitability, and pause interpretation.
 
-## 10. Limitations And Future Work
+### Verification limits
 
 Automated tests establish deterministic structural and invalidation contracts, but cannot decide whether a dialogue attribution, ambience prompt, pause, or pronunciation-oriented split is artistically correct. The operator remains responsible for reviewing the speech plan before audio is generated.
 

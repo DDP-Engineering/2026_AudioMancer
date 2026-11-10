@@ -74,6 +74,10 @@ Focused Audio Blocks checks use the service, WAV artifact, document, state,
 page and selected offscreen controller tests. They simulate VoiceWeaver and
 inject file replacement errors. Listening uses an installed local runtime.
 
+Focused Audio Assembly checks use synthetic PCM WAVs in the assembly service,
+state, UI, sample-width and codec tests, plus affected Audio Blocks and Speech
+Blocks selectors. Replacement faults are injected without touching user projects.
+
 ## Platform details
 
 Protected account state lives outside portable data. Windows uses

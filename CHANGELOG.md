@@ -21,6 +21,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Audio Assembly identifies missing or damaged source WAVs before composing.
+  Scene previews and the audiobook use the same anchored mixes and durations.
+- Failed or cancelled assembly keeps the previous WAV. Resume rebuilds only
+  incomplete or damaged outputs, and explicit pauses accept milliseconds or seconds.
+
 - Audio Blocks keeps the previous WAV and its approval if regeneration fails or
   is cancelled. Interrupted generation finds the block by ID and reuses valid
   parts from the saved checkpoint. Start can retry missing or unreadable WAVs.

@@ -88,7 +88,7 @@ def normalize_speaker_name(value: str) -> str:
     return cleaned_value or "speaker"
 
 
-def _has_complete_frames(audio_file: wave.Wave_read) -> bool:
+def has_complete_frames(audio_file: wave.Wave_read) -> bool:
     """
     @brief      Check the WAV has a positive frame count and its declared last frame.
     @param[in]  audio_file Open PCM WAV reader.
@@ -110,7 +110,7 @@ def validate_wav_bytes(audio_bytes: bytes) -> None:
     """
     try:
         with wave.open(io.BytesIO(audio_bytes), "rb") as audio_file:
-            if not _has_complete_frames(audio_file):
+            if not has_complete_frames(audio_file):
                 raise RuntimeError
     except (EOFError, OSError, RuntimeError, ValueError, wave.Error) as exc:
         raise RuntimeError("VoiceWeaver returned invalid WAV audio for Audio Blocks generation.") from exc
@@ -125,7 +125,7 @@ def is_valid_wav_path(audio_path: Path) -> bool:
     """
     try:
         with wave.open(str(audio_path), "rb") as audio_file:
-            return _has_complete_frames(audio_file)
+            return has_complete_frames(audio_file)
     except (EOFError, OSError, ValueError, wave.Error):
         return False
 

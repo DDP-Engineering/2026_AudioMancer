@@ -25,7 +25,7 @@ import tomllib
 
 import pytest
 
-from audiomancer.services import audio_assembly_service, pcm_codec
+from audiomancer.services import audio_assembly_service, audio_assembly_wav, pcm_codec
 
 # The optional reference implementation is available on Python 3.12. Everything
 # guarded by `requires_audioop` runs there as an additional differential oracle.
@@ -278,7 +278,7 @@ def test_audio_assembly_rejects_unsupported_channel_conversion() -> None:
                 This pre-existing contract must survive the move off audioop.
     """
     with pytest.raises(RuntimeError, match="only between mono and stereo"):
-        audio_assembly_service._convert_wav_channels(b"\x00\x00" * 6, 2, 3, 2)
+        audio_assembly_wav._convert_wav_channels(b"\x00\x00" * 6, 2, 3, 2)
 
 
 # DIFFERENTIAL PARITY - optional oracle comparisons.

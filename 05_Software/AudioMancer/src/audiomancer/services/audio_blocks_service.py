@@ -3101,6 +3101,7 @@ def _attach_current_speech_block_fields(
             and audio_block.get("duration_seconds") is not None
             else _optional_float(speech_block.get("duration_seconds")),
             "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
+            "after_speech_block_id": str(speech_block.get("after_speech_block_id") or "").strip(),
         }
         if metadata_only or content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
             enriched_block["audio_can_play"] = _filesystem_audio_can_play(project_root, enriched_block)

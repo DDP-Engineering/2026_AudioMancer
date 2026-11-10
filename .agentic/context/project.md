@@ -80,6 +80,10 @@ project artifacts belong to workflow services.
 
 ## Implementation orientation
 
+Audio Assembly validates required source WAVs before planning. Scene previews
+and final output share anchored mixes. Assembly resumes at file boundaries
+and publishes a completed WAV through a staged replacement.
+
 Audio Blocks publishes generated WAVs with review state and the compact
 project summary. Split resume uses the saved Speech Block ID, synthesis
 fingerprint and contiguous valid parts. The generation service renders

@@ -1864,6 +1864,12 @@ def test_indication_content_kind_normalizes_and_pause_duration_parses(tmp_path) 
     assert speech_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_INDICATION
     assert speech_blocks[0]["speaker_display_name"] == "Indication"
     assert speech_blocks_service.pause_duration_ms("pause 2500 ms") == 2500
+    assert speech_blocks_service.pause_duration_ms("pause 1 s") == 1000
+    assert speech_blocks_service.pause_duration_ms("pause 1,25 s") == 1250
+    assert speech_blocks_service.pause_duration_ms("pause .5 s") == 500
+    assert speech_blocks_service.pause_duration_ms("pause ,5 s") == 500
+    assert speech_blocks_service.pause_duration_ms("pause 1.2345 s") == 1234
+    assert speech_blocks_service.pause_duration_ms("pause -1 s") == config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
     assert speech_blocks_service.pause_duration_ms("pause") == config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
 
 

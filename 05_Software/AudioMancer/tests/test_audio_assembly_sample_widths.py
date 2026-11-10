@@ -17,7 +17,9 @@
 
 import wave
 
-from audiomancer.services import audio_assembly_service
+import pytest
+
+from audiomancer.services import audio_assembly_service, audio_assembly_wav, operation_runtime_service
 
 
 def test_eight_bit_source_is_rejected_by_input_validation(tmp_path) -> None:
@@ -73,7 +75,7 @@ def test_silence_at_retained_widths_is_zero_filled_and_frame_exact(tmp_path) -> 
         output_wav.setframerate(8000)
         output_wav.setcomptype("NONE", "not compressed")
         params = output_wav.getparams()
-        written_frames = audio_assembly_service._write_silence(output_wav, 100, params)  # noqa: SLF001
+        written_frames = audio_assembly_wav.append_silence(output_wav, 100, params)
 
     assert written_frames == 800
     with wave.open(str(output_path), "rb") as rendered_wav:
@@ -97,6 +99,29 @@ def _write_wav(path, sample_width: int) -> None:
         wav_file.setsampwidth(sample_width)
         wav_file.setframerate(8000)
         wav_file.writeframes(b"\x00" * 64 * sample_width)
+
+
+def test_long_silence_checks_cancellation_between_frame_chunks(tmp_path) -> None:
+    """
+    @brief      Cancel long silence after writing one bounded chunk.
+    @param[in]  tmp_path Temporary WAV directory.
+    """
+    output = tmp_path / "silence.wav"
+    checks = 0
+
+    def cancel_after_one_chunk():
+        """@brief Cancel at the second cancellation check."""
+        nonlocal checks
+        checks += 1
+        return checks == 2
+
+    params = wave._wave_params(1, 2, 24_000, 0, "NONE", "not compressed")  # noqa: SLF001
+    with wave.open(str(output), "wb") as wav:
+        wav.setparams(params)
+        with pytest.raises(operation_runtime_service.OperationCancelledError):
+            audio_assembly_wav.append_silence(wav, 60_000, params, cancel_after_one_chunk)
+    with wave.open(str(output), "rb") as wav:
+        assert 0 < wav.getnframes() < 24_000 * 60
 
 
 # END OF FILE
