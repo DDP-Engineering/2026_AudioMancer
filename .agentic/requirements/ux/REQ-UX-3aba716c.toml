@@ -1,0 +1,10 @@
+schema = 1
+id = "REQ-UX-3aba716c"
+title = "Cap the context field at the detected limit"
+status = "active"
+requirement = "For the current AI profile, AI Settings shall cap the editable context at the loaded server context when reported, or at the model maximum when only that limit is known."
+verification = "Apply a local probe result, verify the context field and saved setting respect the limit, and verify switching endpoints removes stale metadata."
+affected_paths = ["05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py", "05_Software/AudioMancer/src/audiomancer/services/ui_state_service.py", "05_Software/AudioMancer/src/audiomancer/services/settings_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_caps_context_at_loaded_server_limit", "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_unloaded_model_maximum_does_not_autofill_context"]
+created = 2026-11-10
+updated = 2026-11-10

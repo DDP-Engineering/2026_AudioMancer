@@ -15,7 +15,7 @@ affected_paths = [
 linked_tests = [
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks",
   "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules",
-  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction",
+  "05_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_reserves_context",
 ]
 
 priority = "high"
@@ -23,4 +23,4 @@ rationale = """
 Generation must produce a durable normalized plan under the selected profile.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-10

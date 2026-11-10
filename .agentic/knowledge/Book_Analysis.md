@@ -39,7 +39,8 @@ rejected with guidance to use Text Chunking or a wider-context profile.
 The request budget requires at least 16,384 configured context tokens. Source
 text uses at most 50 percent of local LM Studio/Ollama context or 30 percent of
 an online OpenAI-compatible context, and is further reduced by prompt, output,
-reasoning, and safety reserves. Model names are never allowlisted. The profile's
+reasoning, and safety reserves. The controller and worker both require the effective profile context to meet
+the minimum. This context controls the budget and its output reserve is sent on each Chat Completions request. Model names are never allowlisted. The profile's
 reasoning budget summary is provider default, enabled, or disabled. API-key/local
 providers may reject explicit reasoning, in which case the shared provider can
 retry without it. Subscription profiles select exact model-supported effort;

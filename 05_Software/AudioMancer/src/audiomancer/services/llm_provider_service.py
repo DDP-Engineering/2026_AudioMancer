@@ -26,7 +26,7 @@ import time
 from urllib import error, request
 
 from audiomancer import config
-from audiomancer.services import token_usage_service
+from audiomancer.services import ai_budget_service, token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import OperationCancelledError
 from audiomancer.services.time_service import utc_now_iso
@@ -92,6 +92,10 @@ class _UnsupportedReasoningModeError(RuntimeError):
     """
 
 
+class _UnsupportedMaxTokensError(RuntimeError):
+    """@brief Mark an explicit request to use max_completion_tokens instead."""
+
+
 class _TransientProviderError(RuntimeError):
     """
     @brief      Mark provider and transport failures that are safe to retry.
@@ -151,6 +155,7 @@ def chat_json(
             {"role": "user", "content": user_prompt},
         ],
         "temperature": float(profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
+        "max_tokens": ai_budget_service.output_token_limit(profile_payload),
     }
     reasoning_effort = _reasoning_effort_for_profile(profile_payload)
     effective_reasoning_mode = str(
@@ -206,6 +211,11 @@ def chat_json(
                         cancel_requested=cancel_requested,
                     )
                     break
+                except _UnsupportedMaxTokensError:
+                    if "max_tokens" not in active_request_payload:
+                        raise
+                    active_request_payload = dict(active_request_payload)
+                    active_request_payload["max_completion_tokens"] = active_request_payload.pop("max_tokens")
                 except _UnsupportedResponseFormatError as error_object:
                     if (
                         "response_format" not in active_request_payload
@@ -523,6 +533,8 @@ def _request_chat_completion(
             raw_body = response.read().decode("utf-8")
     except error.HTTPError as http_error:
         error_body = http_error.read().decode("utf-8", errors="replace")
+        if "max_tokens" in request_payload and _requires_max_completion_tokens(http_error.code, error_body):
+            raise _UnsupportedMaxTokensError(error_body) from http_error
         if "response_format" in request_payload and _supports_response_format_retry(http_error.code, error_body):
             _LLM_PROVIDER_LOGGER.info("Retrying AI provider request without response_format compatibility field.")
             raise _UnsupportedResponseFormatError(error_body) from http_error
@@ -608,6 +620,26 @@ def _build_response_format(
     }
 
 
+def _requires_max_completion_tokens(status_code: int, error_body: str) -> bool:
+    """
+    @brief      Recognize a provider directing callers from max_tokens to max_completion_tokens.
+    @param[in]  status_code Provider HTTP status.
+    @param[in]  error_body Provider error message.
+    @return     True when the alternate output field is required.
+    """
+    if status_code not in {400, 422}:
+        return False
+    normalized = error_body.lower()
+    return (
+        re.search(r"\bmax_tokens\b", normalized) is not None
+        and re.search(r"\bmax_completion_tokens\b", normalized) is not None
+        and any(
+            marker in normalized
+            for marker in ("instead", "unsupported", "not supported", "deprecated", "requires")
+        )
+    )
+
+
 def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
     """
     @brief      Decide whether one provider failure should retry without response_format.
@@ -661,9 +693,14 @@ def _reasoning_effort_for_profile(profile_payload: dict[str, object]) -> str | N
     """
     @brief      Translate one normalized reasoning preference to OpenAI shape.
     @param[in]  profile_payload Normalized profile payload.
-    @return     `medium`, `none`, or `None` for provider default.
+    @return     The selected effort or None for provider default.
     @exception  None
     """
+    if profile_payload.get("backend_kind") in {"lmstudio", "ollama"}:
+        effort = profile_payload.get("reasoning_effort")
+        levels = profile_payload.get("discovered_reasoning_levels")
+        if isinstance(effort, str) and isinstance(levels, list) and effort in levels:
+            return {"off": "none", "on": "medium"}.get(effort, effort)
     reasoning_mode = str(
         profile_payload.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE)
     )
@@ -903,6 +940,8 @@ def _repair_json_response_with_model(
         ],
         "temperature": 0.0,
     }
+    limit_field = "max_completion_tokens" if "max_completion_tokens" in active_request_payload else "max_tokens"
+    repair_request_payload[limit_field] = active_request_payload[limit_field]
     repair_payload, repair_body = _request_chat_completion_with_cancellation(
         profile_payload,
         repair_request_payload,

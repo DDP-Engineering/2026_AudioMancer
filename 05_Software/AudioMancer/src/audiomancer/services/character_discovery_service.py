@@ -1447,7 +1447,7 @@ def _build_chunk_windows(
                     "AI-assisted character discovery cannot run because source chunk "
                     f"{chunk_id} exceeds the available request input budget "
                     f"({candidate_tokens} estimated tokens, {text_budget_tokens} available). "
-                    "Use a larger context window, reduce max output tokens, or re-run chunking with smaller chunks."
+                    "Use a larger context window or re-run chunking with smaller chunks."
                 )
             if current_window_count > 0 and current_window_tokens + candidate_tokens > text_budget_tokens:
                 break
@@ -1497,28 +1497,29 @@ def _build_budget_metadata(
         config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
         config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted character discovery cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for discovery input",
+        "leaves too little room for discovery input",
         online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
     context_window = int(discovery_budget_metadata["context_window"])
     output_reserve_tokens = int(discovery_budget_metadata["output_reserve_tokens"])
     safety_margin_tokens = int(discovery_budget_metadata["safety_margin_tokens"])
     synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
-    if ai_budget_service.uses_online_text_budget(ai_profile_payload):
-        synthesis_payload_budget_tokens = int(context_window * config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION)
-    else:
-        synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
-            context_window,
-            output_reserve_tokens,
-            synthesis_prompt_budget_tokens,
-            safety_margin_tokens,
-            config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
-        )
+    synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
+        context_window,
+        output_reserve_tokens,
+        synthesis_prompt_budget_tokens,
+        safety_margin_tokens,
+        (
+            config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION
+            if ai_budget_service.uses_online_text_budget(ai_profile_payload)
+            else config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION
+        ),
+    )
     min_text_budget = config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS
     if synthesis_payload_budget_tokens < min_text_budget:
         raise ValueError(
             "AI-assisted character discovery cannot run because the selected AI profile context window "
-            "and max output tokens leave too little room for character synthesis input "
+            "leaves too little room for character synthesis input "
             f"({synthesis_payload_budget_tokens} estimated tokens available, {min_text_budget} required)."
         )
     return {

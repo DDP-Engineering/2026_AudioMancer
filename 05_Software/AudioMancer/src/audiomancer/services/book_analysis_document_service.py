@@ -253,6 +253,11 @@ def safe_profile_fingerprint(profile_payload: dict[str, object]) -> str:
         from audiomancer.services.chatgpt_catalog_service import requested_effort
 
         safe_request_fields["reasoning_effort"] = requested_effort(profile_payload)
+    elif profile_payload.get("backend_kind") in {"lmstudio", "ollama"}:
+        effort = profile_payload.get("reasoning_effort")
+        levels = profile_payload.get("discovered_reasoning_levels")
+        if isinstance(effort, str) and isinstance(levels, list) and effort in levels:
+            safe_request_fields["reasoning_effort"] = effort
     encoded = json.dumps(
         safe_request_fields,
         ensure_ascii=False,

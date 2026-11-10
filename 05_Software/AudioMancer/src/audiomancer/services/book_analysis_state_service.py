@@ -12,6 +12,7 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     ai_state_note_service,
     book_analysis_document_service,
     chunking_document_service,
@@ -78,7 +79,7 @@ def build_book_analysis_state(
     selected_profile = _selected_profile(settings, selected_id)
     profile_compatible = bool(
         selected_profile is not None
-        and int(selected_profile.get("context_window", 0))
+        and ai_budget_service.effective_context_window(selected_profile, default=0)
         >= config.BOOK_ANALYSIS_MIN_CONTEXT_TOKENS
     )
     try:

@@ -235,10 +235,12 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
     assert "secret" not in str(result["message"])
 
 
-def test_probe_profile_discovers_generic_inline_context_for_exact_model(monkeypatch) -> None:
+@pytest.mark.parametrize("context_window", [32768, 1_048_576])
+def test_probe_profile_discovers_generic_inline_context_for_exact_model(monkeypatch, context_window) -> None:
     """
     @brief      Verify generic inline context metadata belongs to the exact selected model.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  context_window Advertised context, including a one-megatoken profile.
     @return     None.
     @exception  None
     """
@@ -247,7 +249,7 @@ def test_probe_profile_discovers_generic_inline_context_for_exact_model(monkeypa
         assert url == "https://provider.test/v1/models"
         return {
             "data": [
-                {"id": "model-a", "context_length": 32768},
+                {"id": "model-a", "context_length": context_window},
                 {"id": "model-b", "max_context_length": 131072},
             ]
         }
@@ -262,14 +264,16 @@ def test_probe_profile_discovers_generic_inline_context_for_exact_model(monkeypa
     )
 
     assert result["success"] is True
-    assert result["discovered_context_window"] == 32768
+    assert result["discovered_context_window"] == context_window
     assert result["discovered_context_model_name"] == "model-a"
 
 
-def test_probe_profile_discovers_lm_studio_loaded_instance_context(monkeypatch) -> None:
+@pytest.mark.parametrize("instance_id", ["publisher/model-a", "model-a-alias"])
+def test_probe_profile_discovers_lm_studio_loaded_instance_context(monkeypatch, instance_id) -> None:
     """
     @brief      Verify LM Studio prefers the matching loaded runtime context.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  instance_id Exact or aliased loaded model identifier.
     @return     None.
     @exception  None
     """
@@ -283,8 +287,11 @@ def test_probe_profile_discovers_lm_studio_loaded_instance_context(monkeypatch) 
                 {
                     "key": "publisher/model-a",
                     "max_context_length": 131072,
+                    "capabilities": {
+                        "reasoning": {"allowed_options": ["off", "low", "xhigh"], "default": "low"}
+                    },
                     "loaded_instances": [
-                        {"id": "publisher/model-a", "config": {"context_length": 24576}}
+                        {"id": instance_id, "config": {"context_length": 24576}}
                     ],
                 }
             ]
@@ -299,7 +306,9 @@ def test_probe_profile_discovers_lm_studio_loaded_instance_context(monkeypatch) 
         }
     )
 
-    assert result["discovered_context_window"] == 24576
+    assert result["discovered_context_window"] == 131072
+    assert result["server_context_window"] == 24576
+    assert result["reasoning"] == {"allowed_options": ["off", "low", "xhigh"], "default": "low"}
     assert result["discovered_context_model_name"] == "publisher/model-a"
 
 
@@ -319,7 +328,8 @@ def test_probe_profile_uses_lm_studio_model_context_limit_without_loaded_match(m
                 {
                     "key": "publisher/model-a",
                     "max_context_length": 65536,
-                    "loaded_instances": [{"id": "other-instance", "config": {"context_length": 4096}}],
+                    "loaded_instances": [{"id": "first-alias", "config": {"context_length": 4096}},
+                                         {"id": "second-alias", "config": {"context_length": 8192}}],
                 }
             ]
         }
@@ -334,6 +344,7 @@ def test_probe_profile_uses_lm_studio_model_context_limit_without_loaded_match(m
     )
 
     assert result["discovered_context_window"] == 65536
+    assert result["server_context_window"] is None
     assert result["discovered_context_model_name"] == "publisher/model-a"
 
 
@@ -379,6 +390,7 @@ def test_probe_profile_posts_exact_ollama_model_for_context(monkeypatch) -> None
             _FakeResponse(
                 json.dumps(
                     {
+                        "thinking": {"values": [False, True, "high"], "default": True},
                         "model_info": {
                             "gemma4.attention.head_count": 8,
                             "gemma4.context_length": 131072,
@@ -390,7 +402,13 @@ def test_probe_profile_posts_exact_ollama_model_for_context(monkeypatch) -> None
     )
 
     def _fake_urlopen(http_request, timeout):
+        """@brief Return the requested Ollama metadata fixture."""
         observed_requests.append(http_request)
+        if http_request.full_url.endswith("/api/ps"):
+            return _FakeResponse(json.dumps({"models": [
+                {"name": "other:latest", "context_length": 4096},
+                {"model": "gemma4:latest", "context_length": 32768},
+            ]}).encode("utf-8"))
         return next(responses)
 
     monkeypatch.setattr(ai_backend_service.request, "urlopen", _fake_urlopen)
@@ -405,14 +423,17 @@ def test_probe_profile_posts_exact_ollama_model_for_context(monkeypatch) -> None
     assert [request_object.full_url for request_object in observed_requests] == [
         "http://localhost:11434/api/tags",
         "http://localhost:11434/api/show",
+        "http://localhost:11434/api/ps",
     ]
-    assert [request_object.get_method() for request_object in observed_requests] == ["GET", "POST"]
+    assert [request_object.get_method() for request_object in observed_requests] == ["GET", "POST", "GET"]
     assert json.loads(observed_requests[1].data.decode("utf-8")) == {"model": "gemma4:latest"}
     assert result["discovered_context_window"] == 131072
+    assert result["server_context_window"] == 32768
+    assert result["reasoning"] == {"allowed_options": ["off", "on", "high"], "default": "on"}
     assert result["discovered_context_model_name"] == "gemma4:latest"
 
 
-@pytest.mark.parametrize("context_value", [None, True, "large", 0, -1, 1_000_001])
+@pytest.mark.parametrize("context_value", [None, True, "large", 0, -1, 2_147_483_648])
 def test_probe_profile_ignores_invalid_context_metadata(monkeypatch, context_value) -> None:
     """
     @brief      Verify malformed, non-positive, and out-of-range context values are ignored.

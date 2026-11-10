@@ -152,14 +152,16 @@ def _install_successful_provider(monkeypatch) -> dict[str, list[object]]:
         "prompts": [],
         "log_paths": [],
         "log_contexts": [],
+        "output_limits": [],
     }
 
-    def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **kwargs):
+    def fake_chat_json(profile_payload, _system_prompt, user_prompt, **kwargs):
         """@brief Provide test fixture behavior for fake chat json."""
         schema_name = kwargs["response_schema_name"]
         marker = "SOURCE_JSON:\n"
         source_items = json.loads(user_prompt.split(marker, maxsplit=1)[1])
         calls["prompts"].append(user_prompt)
+        calls["output_limits"].append(profile_payload["output_reserve_tokens"])
         calls["log_paths"].append(kwargs.get("log_path"))
         calls["log_contexts"].append(kwargs.get("log_context"))
         if schema_name == "book_analysis_leaf":
@@ -233,6 +235,22 @@ def test_analyze_book_covers_every_chunk_once_in_order(monkeypatch, tmp_path) ->
     flattened = [chunk_id for window in calls["leaf_chunk_ids"] for chunk_id in window]
     assert flattened == [f"chunk-{index:04d}" for index in range(1, 6)]
     assert result["status"] == "completed"
+
+
+def test_analyze_book_sends_its_planned_output_limit(monkeypatch, tmp_path) -> None:
+    """@brief Use the effective context and the same smaller cap on every request."""
+    _write_completed_chunks(tmp_path, ["First paragraph.", "Second paragraph."])
+    profile = _profile()
+    profile.update(context_window=65536, output_reserve_tokens=16000,
+                   discovered_context_model_name=profile["model_name"], server_context_window=32768)
+    calls = _install_successful_provider(monkeypatch)
+
+    report = book_analysis_service.analyze_book(tmp_path, profile, "ro")
+
+    assert report["status"] == "completed"
+    assert calls["output_limits"]
+    assert set(calls["output_limits"]) == {6553}
+    assert profile["output_reserve_tokens"] == 16000
 
 
 def test_ai_requests_share_candidate_transaction_log(monkeypatch, tmp_path) -> None:

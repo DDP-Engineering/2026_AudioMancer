@@ -14,7 +14,7 @@ schema = 1
 # and must match the category folder this file sits in.
 id = "REQ-PLAT-75d29093"
 
-title = "Delegate AI output length to providers"
+title = "Send planned output limit in Chat Completions"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
@@ -38,9 +38,7 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When AudioMancer sends a chat-completion request for any AI workflow, it shall
-omit provider output-token limit fields so the selected provider determines the
-response length.
+When AudioMancer sends a Chat Completions request, it shall transmit the planned output-token limit in the provider's supported token-limit field.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -51,7 +49,7 @@ response length.
 # "Inspection:" and name the method, and `check` records the requirement
 # as verified by hand instead of counting it among the tests still owed.
 # The prefix alone is not enough — it has to say what someone does.
-verification = "Automated provider-request tests cover initial, compatibility-retry, and JSON-repair requests and assert that none contain max_tokens or max_completion_tokens."
+verification = "Capture initial, compatibility retry and JSON repair bodies and assert the planned cap is retained. Subscription uses the separate Responses transport."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -64,7 +62,9 @@ affected_paths = [
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-    "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_omits_provider_output_limits",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_with_max_completion_tokens_when_required",
+  "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retains_max_completion_tokens_for_json_repair",
+    "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_provider_output_limits",
     "05_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_retries_without_response_format_when_provider_rejects_it",
 ]
 
@@ -74,7 +74,7 @@ linked_tests = [
 spec = "specs/REQ-PLAT-75d29093.md"
 
 priority = "normal"   # low | normal | high
-rationale = "Provider defaults can use response capacity left by shorter source payloads instead of an application-imposed completion ceiling."
+rationale = "Sending the planned cap gives the provider the same output allocation used to fit the request."
 
 created = 2026-08-30
-updated = 2026-08-30
+updated = 2026-11-10

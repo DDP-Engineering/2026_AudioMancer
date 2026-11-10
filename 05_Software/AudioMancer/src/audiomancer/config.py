@@ -634,6 +634,9 @@ DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION = 0.30
 # @brief Default configured context window for AI profiles.
 DEFAULT_LLM_CONTEXT_WINDOW = 16384
 
+# @brief Maximum context value representable by the AI settings spin box.
+MAX_LLM_CONTEXT_WINDOW = 2_147_483_647
+
 # @brief Default configured maximum output tokens for AI profiles.
 DEFAULT_LLM_OUTPUT_RESERVE_TOKENS = 8192
 

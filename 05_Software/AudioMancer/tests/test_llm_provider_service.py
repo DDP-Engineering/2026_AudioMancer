@@ -69,8 +69,8 @@ class _FakeResponse:
         return self._body.encode("utf-8")
 
 
-def test_chat_json_omits_provider_output_limits(monkeypatch) -> None:
-    """Provider-managed completion length never serializes either limit field."""
+def test_chat_json_sends_provider_output_limits(monkeypatch) -> None:
+    """@brief Initial requests and model repair carry the configured limit."""
     request_bodies: list[dict[str, object]] = []
 
     def fake_urlopen(http_request, timeout):
@@ -102,7 +102,7 @@ def test_chat_json_omits_provider_output_limits(monkeypatch) -> None:
     )
 
     assert len(request_bodies) == 2
-    assert all("max_tokens" not in body for body in request_bodies)
+    assert all(body["max_tokens"] == 256 for body in request_bodies)
     assert all("max_completion_tokens" not in body for body in request_bodies)
 
 
@@ -150,6 +150,35 @@ def test_chat_json_applies_reasoning_mode_without_model_name_gating(
 
     assert request_bodies[0]["reasoning_effort"] == expected_effort
     assert result["request_metadata"]["reasoning_mode_effective"] == reasoning_mode
+
+
+@pytest.mark.parametrize(
+    ("backend", "selected", "expected"),
+    [("lmstudio", "off", "none"), ("lmstudio", "xhigh", "xhigh"), ("ollama", "on", "medium")],
+)
+def test_chat_json_sends_selected_discovered_reasoning_level(monkeypatch, backend, selected, expected) -> None:
+    """@brief Verify the request uses the selected level with provider-compatible on/off aliases."""
+    bodies = []
+
+    def _fake_urlopen(http_request, timeout):
+        """@brief Capture the request and return a valid JSON response."""
+        bodies.append(json.loads(http_request.data))
+        return _FakeResponse(json.dumps({"choices": [{"message": {"content": '{"ok": true}'}}]}))
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    llm_provider_service.chat_json(
+        {
+            "backend_kind": backend,
+            "base_url": "http://localhost:1234",
+            "model_name": "test-model",
+            "reasoning_mode": "disabled" if selected == "off" else "enabled",
+            "reasoning_effort": selected,
+            "discovered_reasoning_levels": [selected],
+        },
+        "system",
+        "user",
+    )
+    assert [body["reasoning_effort"] for body in bodies] == [expected]
 
 
 def test_chat_json_provider_default_omits_reasoning_control(monkeypatch) -> None:
@@ -1022,13 +1051,23 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
         raise AssertionError("Expected AI request cancellation while waiting for the model response.")
 
 
-@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
+@pytest.mark.parametrize(
+    ("error_status", "error_body"),
+    [
+        (400, b'{"error":{"message":"Use max_completion_tokens instead","param":"max_tokens"}}'),
+        (422, b'{"error":{"message":"max_tokens is not supported; use max_completion_tokens instead"}}'),
+    ],
+)
 def test_chat_json_retries_with_max_completion_tokens_when_required(
     monkeypatch,
+    error_status,
+    error_body,
 ) -> None:
     """
     @brief      Verify provider requests retry with max_completion_tokens after one compatibility failure.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  error_status Provider HTTP error status.
+    @param[in]  error_body Provider's explicit replacement instruction.
     @return     None.
     @exception  None
     """
@@ -1048,15 +1087,10 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
         if len(request_bodies) == 1:
             raise error.HTTPError(
                 http_request.full_url,
-                400,
+                error_status,
                 "Bad Request",
                 hdrs=None,
-                fp=io.BytesIO(
-                    b'{"error":{"message":"Unsupported parameter: '
-                    b"'max_tokens' is not supported with this model. "
-                    b"Use 'max_completion_tokens' instead.\","
-                    b'"param":"max_tokens","code":"unsupported_parameter"}}'
-                ),
+                fp=io.BytesIO(error_body),
             )
         return _FakeResponse(
             '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\",\\"label\\":\\"story\\"}]}"}}]}'
@@ -1092,7 +1126,6 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
 
 
-@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
 def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatch) -> None:
     """
     @brief      Verify learned max-token compatibility survives a transient failure.
@@ -1170,7 +1203,6 @@ def test_chat_json_retains_max_completion_tokens_across_outer_retries(monkeypatc
     assert result["payload"]["results"][0]["unit_id"] == "retained-token"
 
 
-@pytest.mark.skip(reason="Provider output-token parameter negotiation was retired.")
 def test_chat_json_retains_max_completion_tokens_for_json_repair(monkeypatch) -> None:
     """
     @brief      Verify a JSON repair request retains the learned provider token field.

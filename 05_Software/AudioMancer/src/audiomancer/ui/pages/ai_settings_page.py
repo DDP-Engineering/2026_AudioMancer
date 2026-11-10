@@ -41,7 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import chatgpt_catalog_service, ui_state_service
+from audiomancer.services import ai_budget_service, chatgpt_catalog_service, ui_state_service
 
 # CONSTANTS
 
@@ -71,6 +71,7 @@ _DEFAULT_PROFILE_TEMPLATE = {
     "discovered_model_name": "",
     "discovered_model_names": [],
     "discovered_context_window": None,
+    "server_context_window": None,
     "discovered_context_model_name": "",
     "discovery_succeeded": False,
     "discovery_message": "",
@@ -198,22 +199,14 @@ class AiSettingsPage(QWidget):
         )
 
         self._context_window_spin = QSpinBox(self)
-        self._context_window_spin.setRange(1, 1_000_000)
-
-        self._output_reserve_spin = QSpinBox(self)
-        self._output_reserve_spin.setRange(1, 1_000_000)
-
-        self._timeout_spin = QSpinBox(self)
-        self._timeout_spin.setRange(1, 65535)
+        self._context_window_spin.setRange(1, config.MAX_LLM_CONTEXT_WINDOW)
 
         self._temperature_spin = QDoubleSpinBox(self)
         self._temperature_spin.setRange(0.0, 2.0)
         self._temperature_spin.setDecimals(2)
         self._temperature_spin.setSingleStep(0.05)
 
-        self._supports_structured_checkbox = QCheckBox("Structured output")
         self._reasoning_mode_combo = QComboBox(self)
-        self._reload_reasoning_mode_combo(config.DEFAULT_LANGUAGE)
 
         self._profile_name_label = QLabel("Profile Name", self)
         self._backend_kind_label = QLabel("Backend Kind", self)
@@ -221,10 +214,8 @@ class AiSettingsPage(QWidget):
         self._api_key_label = QLabel("API Key", self)
         self._model_name_label = QLabel("Model Name", self)
         self._context_window_label = QLabel("Context Window", self)
-        self._output_reserve_label = QLabel("Max Output Tokens", self)
-        self._timeout_label = QLabel("Timeout (s)", self)
         self._temperature_label = QLabel("Temperature", self)
-        self._reasoning_mode_label = QLabel("Reasoning Mode", self)
+        self._reasoning_mode_label = QLabel("Reasoning Level", self)
 
         model_name_row = QHBoxLayout()
         model_name_row.addWidget(self._model_combo, 1)
@@ -232,7 +223,6 @@ class AiSettingsPage(QWidget):
         model_name_row.addWidget(self._chatgpt_refresh_button)
         flags_row = QHBoxLayout()
         flags_row.addWidget(self._enabled_checkbox)
-        flags_row.addWidget(self._supports_structured_checkbox)
         flags_row.addStretch(1)
 
         numeric_settings_grid = QGridLayout()
@@ -241,12 +231,8 @@ class AiSettingsPage(QWidget):
         numeric_settings_grid.setVerticalSpacing(6)
         numeric_settings_grid.addWidget(self._context_window_label, 0, 0)
         numeric_settings_grid.addWidget(self._context_window_spin, 0, 1)
-        numeric_settings_grid.addWidget(self._output_reserve_label, 1, 0)
-        numeric_settings_grid.addWidget(self._output_reserve_spin, 1, 1)
-        numeric_settings_grid.addWidget(self._timeout_label, 2, 0)
-        numeric_settings_grid.addWidget(self._timeout_spin, 2, 1)
-        numeric_settings_grid.addWidget(self._temperature_label, 3, 0)
-        numeric_settings_grid.addWidget(self._temperature_spin, 3, 1)
+        numeric_settings_grid.addWidget(self._temperature_label, 1, 0)
+        numeric_settings_grid.addWidget(self._temperature_spin, 1, 1)
         numeric_settings_grid.setColumnStretch(1, 1)
 
         top_form_layout.addRow(self._profile_name_label, profile_name_row)
@@ -353,6 +339,7 @@ class AiSettingsPage(QWidget):
         self._profile_list.installEventFilter(self)
         self._content_scroll.viewport().installEventFilter(self)
         self._model_combo.currentTextChanged.connect(self._on_model_name_edited)
+        self._base_url_edit.textChanged.connect(self._on_connection_edited)
         self._context_window_spin.valueChanged.connect(self._on_context_window_edited)
         self._backend_combo.currentTextChanged.connect(self._on_backend_changed)
 
@@ -546,7 +533,6 @@ class AiSettingsPage(QWidget):
         current_profile["discovery_message"] = str(probe_result.get("message", ""))
         if current_profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND:
             current_profile["supports_structured_output"] = bool(probe_result.get("supports_structured_output", False))
-            self._supports_structured_checkbox.setChecked(current_profile["supports_structured_output"])
         if not probe_succeeded:
             return
 
@@ -574,27 +560,57 @@ class AiSettingsPage(QWidget):
         else:
             current_profile["discovered_model_name"] = ""
 
-        discovered_context_window = probe_result.get("discovered_context_window")
-        discovered_context_model_name = str(
-            probe_result.get("discovered_context_model_name", "") or ""
-        ).strip()
-        effective_model_name = str(current_profile.get("model_name", "")).strip()
-        context_is_valid = (
-            not isinstance(discovered_context_window, bool)
-            and isinstance(discovered_context_window, int)
-            and 0 < discovered_context_window <= self._context_window_spin.maximum()
-            and discovered_context_model_name == effective_model_name
-        )
-        if context_is_valid:
-            current_profile["discovered_context_window"] = discovered_context_window
-            current_profile["discovered_context_model_name"] = discovered_context_model_name
-            if not bool(current_profile.get("user_overrode_context_window", False)):
-                current_profile["context_window"] = discovered_context_window
-        else:
-            current_profile["discovered_context_window"] = None
-            current_profile["discovered_context_model_name"] = ""
+        effective_model_name = str(current_profile.get("model_name") or "").strip()
+        owner = str(probe_result.get("discovered_context_model_name") or "").strip()
+        for field in ("discovered_context_window", "server_context_window"):
+            value = probe_result.get(field)
+            current_profile[field] = (
+                value
+                if owner and owner == effective_model_name and type(value) is int
+                and 0 < value <= config.MAX_LLM_CONTEXT_WINDOW
+                else None
+            )
+        model_limit = current_profile["discovered_context_window"]
+        server_limit = current_profile["server_context_window"]
+        current_profile["discovered_context_model_name"] = owner if model_limit or server_limit else ""
+        local_backend = current_profile["backend_kind"] in {"lmstudio", "ollama"}
+        detected_context = server_limit if local_backend else model_limit
+        if detected_context and not current_profile.get("user_overrode_context_window"):
+            current_profile["context_window"] = detected_context
+
+        if current_profile["backend_kind"] != config.CHATGPT_BACKEND_KIND:
+            current_profile["supports_structured_output"] = True
+        if local_backend:
+            self._apply_local_reasoning(current_profile, probe_result.get("reasoning"))
 
         self._load_profile_into_editor(current_profile)
+
+    @staticmethod
+    def _apply_local_reasoning(profile: dict[str, object], metadata: object) -> None:
+        """@brief Keep the model's reported levels and resolve the selected effort."""
+        metadata = metadata if isinstance(metadata, dict) else {}
+        allowed = metadata.get("allowed_options")
+        supported = {"off", "on", "none", "minimal", "low", "medium", "high", "xhigh"}
+        if profile["backend_kind"] == "ollama":
+            supported.update({"max", "ultra"})
+        levels = list(dict.fromkeys(
+            level for level in allowed if isinstance(level, str) and level in supported
+        )) if isinstance(allowed, list) else []
+        if "on" in levels and any(level not in {"off", "none", "on"} for level in levels):
+            levels.remove("on")
+        profile["discovered_reasoning_levels"] = levels
+        if not levels:
+            profile.pop("reasoning_effort", None)
+            return
+        selected = profile.get("reasoning_effort") or {
+            "disabled": "off" if "off" in levels else "none",
+            "enabled": "on" if "on" in levels else "medium",
+        }.get(profile.get("reasoning_mode"))
+        if selected not in levels:
+            default = metadata.get("default")
+            selected = default if default in levels else levels[0]
+        profile["reasoning_effort"] = selected
+        profile["reasoning_mode"] = "disabled" if selected in {"off", "none"} else "enabled"
 
     def apply_subscription_catalog(self, result: dict) -> None:
         """@brief Replace account model hints while preserving every unsaved profile/editor choice."""
@@ -779,18 +795,14 @@ class AiSettingsPage(QWidget):
         self._base_url_edit.setText(str(profile["base_url"]))
         self._api_key_edit.setText(str(profile["api_key"]))
         self._model_combo.setCurrentText(str(profile["model_name"]))
-        context = int(profile["context_window"])
-        self._context_window_spin.setMaximum(
-            max(1_000_000, context) if profile["backend_kind"] == config.CHATGPT_BACKEND_KIND else 1_000_000
-        )
-        self._context_window_spin.setValue(context)
-        self._output_reserve_spin.setValue(int(profile["output_reserve_tokens"]))
-        self._timeout_spin.setValue(int(profile["request_timeout_seconds"]))
+        self._refresh_context_limit()
+        self._context_window_spin.setValue(int(profile["context_window"]))
         self._temperature_spin.setValue(float(profile["temperature"]))
-        self._supports_structured_checkbox.setChecked(bool(profile["supports_structured_output"]))
-        selected_reasoning = (chatgpt_catalog_service.requested_effort(profile)
-                              if profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND
-                              else profile.get("reasoning_mode", config.DEFAULT_LLM_REASONING_MODE))
+        selected_reasoning = (
+            chatgpt_catalog_service.requested_effort(profile)
+            if profile["backend_kind"] == config.CHATGPT_BACKEND_KIND
+            else profile.get("reasoning_effort")
+        )
         self._reload_reasoning_mode_combo(self._current_language, selected_reasoning)
         self._loading_profile = False
         self._apply_subscription_context()
@@ -808,26 +820,35 @@ class AiSettingsPage(QWidget):
             return
         owner_profile["label"] = self._label_edit.text().strip() or "Unnamed Profile"
         owner_profile["enabled"] = self._enabled_checkbox.isChecked()
-        owner_profile["backend_kind"] = self._backend_combo.currentText()
-        owner_profile["base_url"] = self._base_url_edit.text().strip()
+        backend, base_url, model_name = self._editor_connection()
+        previous_backend, previous_url, previous_model = self._profile_connection(owner_profile)
+        if backend != config.CHATGPT_BACKEND_KIND and (backend, base_url) != (previous_backend, previous_url):
+            owner_profile.update(discovered_context_window=None, discovered_context_model_name="")
+        if (backend, base_url, model_name) != (previous_backend, previous_url, previous_model):
+            owner_profile["server_context_window"] = None
+            owner_profile.pop("discovered_reasoning_levels", None)
+            if backend != config.CHATGPT_BACKEND_KIND:
+                owner_profile.pop("reasoning_effort", None)
+                owner_profile["reasoning_mode"] = config.DEFAULT_LLM_REASONING_MODE
+        owner_profile["backend_kind"] = backend
+        owner_profile["base_url"] = base_url
         owner_profile["api_key"] = self._api_key_edit.text()
-        owner_profile["model_name"] = self._model_combo.currentText().strip()
+        owner_profile["model_name"] = model_name
         if owner_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND:
             owner_profile["base_url"] = config.CHATGPT_BASE_URL
             owner_profile["api_key"] = ""
             owner_profile["credential_ref"] = config.CHATGPT_CREDENTIAL_REF
         owner_profile["context_window"] = self._context_window_spin.value()
-        owner_profile["output_reserve_tokens"] = self._output_reserve_spin.value()
-        owner_profile["request_timeout_seconds"] = self._timeout_spin.value()
         owner_profile["temperature"] = self._temperature_spin.value()
-        owner_profile["supports_structured_output"] = self._supports_structured_checkbox.isChecked()
-        owner_profile["reasoning_mode"] = (
-            self._optional_combo_value(self._reasoning_mode_combo)
-            or config.DEFAULT_LLM_REASONING_MODE
-        )
-        if owner_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND:
-            owner_profile["reasoning_effort"] = owner_profile["reasoning_mode"]
+        effort = self._optional_combo_value(self._reasoning_mode_combo)
+        if backend == config.CHATGPT_BACKEND_KIND:
+            owner_profile["reasoning_effort"] = effort or config.DEFAULT_LLM_REASONING_MODE
             owner_profile["reasoning_mode"] = chatgpt_catalog_service.reasoning_mode(owner_profile["reasoning_effort"])
+        else:
+            levels = owner_profile.get("discovered_reasoning_levels")
+            if isinstance(levels, list) and effort is not None and effort in levels:
+                owner_profile["reasoning_effort"] = effort
+                owner_profile["reasoning_mode"] = "disabled" if effort in {"off", "none"} else "enabled"
         self._reload_profile_list()
         self._reload_default_profile_combos()
 
@@ -846,8 +867,17 @@ class AiSettingsPage(QWidget):
             if self._backend_combo.currentText() == config.CHATGPT_BACKEND_KIND:
                 self._apply_subscription_context(reset_override=True)
                 self._reload_reasoning_mode_combo(self._current_language)
-                self._supports_structured_checkbox.setChecked(False)
+                owner_profile["supports_structured_output"] = False
                 self.set_subscription_status("", visible=False)
+        self._on_connection_edited()
+
+    def _on_connection_edited(self, _value: str = "") -> None:
+        """@brief Refresh bounds and local options for the edited connection."""
+        if self._loading_profile:
+            return
+        self._refresh_context_limit()
+        if self._backend_combo.currentText() != config.CHATGPT_BACKEND_KIND:
+            self._reload_reasoning_mode_combo(self._current_language)
 
     def _on_backend_changed(self, _value: str) -> None:
         """@brief Refresh subscription-specific controls and defaults on an explicit backend change."""
@@ -865,8 +895,13 @@ class AiSettingsPage(QWidget):
             self._model_combo.addItems([model["id"] for model in self._subscription_catalog["models"]])
             self._model_combo.setCurrentText(selected)
             self._model_combo.blockSignals(False)
-            self._supports_structured_checkbox.setChecked(False)
-        selected_effort = owner_profile.get("reasoning_effort") if subscription and owner_profile else None
+            if owner_profile is not None:
+                owner_profile["supports_structured_output"] = False
+        selected_effort = (
+            owner_profile.get("reasoning_effort", "provider_default")
+            if subscription and owner_profile and owner_profile["backend_kind"] == config.CHATGPT_BACKEND_KIND
+            else "provider_default"
+        )
         self._reload_reasoning_mode_combo(self._current_language, selected_effort)
         if subscription:
             self._apply_subscription_context(reset_override=True)
@@ -893,7 +928,6 @@ class AiSettingsPage(QWidget):
         if profile.get("user_overrode_context_window", False):
             return
         self._context_window_spin.blockSignals(True)
-        self._context_window_spin.setMaximum(max(1_000_000, context))
         self._context_window_spin.setValue(context)
         self._context_window_spin.blockSignals(False)
         profile["context_window"] = context
@@ -908,10 +942,10 @@ class AiSettingsPage(QWidget):
         self._api_key_edit.setVisible(not subscription)
         self._base_url_edit.setReadOnly(subscription)
         self._temperature_spin.setEnabled(not subscription)
-        self._supports_structured_checkbox.setEnabled(not subscription)
         if subscription:
             self._base_url_edit.setText(config.CHATGPT_BASE_URL)
             self._api_key_edit.clear()
+        self._refresh_context_limit()
         self._connect_button.setText(ui_state_service.translate(
             "ai_settings.chatgpt_test" if subscription else "ai_settings.connect", self._current_language))
         self._connect_button.setEnabled(not (subscription and self._chatgpt_busy))
@@ -937,6 +971,29 @@ class AiSettingsPage(QWidget):
         owner_profile = self._editor_profile()
         if owner_profile is not None:
             owner_profile["user_overrode_context_window"] = True
+
+    def _editor_connection(self) -> tuple[str, str, str]:
+        """@brief Return the current backend, endpoint and model from the editor."""
+        return (
+            self._backend_combo.currentText(),
+            self._base_url_edit.text().strip(),
+            self._model_combo.currentText().strip(),
+        )
+
+    @staticmethod
+    def _profile_connection(profile: dict[str, object]) -> tuple[str, str, str]:
+        """@brief Identify the connection that owns the profile's discovered limits."""
+        return (str(profile["backend_kind"]), str(profile["base_url"]), str(profile["model_name"]))
+
+    def _refresh_context_limit(self) -> None:
+        """@brief Enforce the last reported limit for the current connection."""
+        profile = self._editor_profile()
+        limit = None
+        if profile is not None and self._editor_connection() == self._profile_connection(profile):
+            limit = ai_budget_service.context_window_limit(profile)
+        blocked = self._context_window_spin.blockSignals(True)
+        self._context_window_spin.setMaximum(limit or config.MAX_LLM_CONTEXT_WINDOW)
+        self._context_window_spin.blockSignals(blocked)
 
     def _editor_profile(self) -> dict[str, object] | None:
         """
@@ -1036,6 +1093,8 @@ class AiSettingsPage(QWidget):
         self._reasoning_mode_combo.blockSignals(True)
         self._reasoning_mode_combo.clear()
         if subscription:
+            self._reasoning_mode_combo.setVisible(True)
+            self._reasoning_mode_label.setVisible(True)
             current_mode = {"enabled": "medium", "disabled": "none"}.get(current_mode, current_mode)
             model = next((item for item in self._subscription_catalog["models"]
                           if item["id"] == self._model_combo.currentText()), {})
@@ -1054,28 +1113,28 @@ class AiSettingsPage(QWidget):
             if hasattr(self, "_reasoning_mode_label"):
                 self._reasoning_mode_label.setText(ui_state_service.translate("ai_settings.reasoning_effort", language))
             return
-        if current_mode not in config.LLM_REASONING_MODE_OPTIONS:
-            current_mode = chatgpt_catalog_service.reasoning_mode(current_mode)
-        for reasoning_mode in config.LLM_REASONING_MODE_OPTIONS:
-            self._reasoning_mode_combo.addItem(
-                ui_state_service.translate(
-                    f"ai_settings.reasoning_mode.{reasoning_mode}",
-                    language,
-                ),
-                reasoning_mode,
-            )
-        self._reasoning_mode_combo.blockSignals(False)
-        self._set_optional_combo(
-            self._reasoning_mode_combo,
-            current_mode or config.DEFAULT_LLM_REASONING_MODE,
+        profile = self._editor_profile()
+        levels = (
+            profile.get("discovered_reasoning_levels", [])
+            if profile is not None and self._editor_connection() == self._profile_connection(profile)
+            and profile["backend_kind"] in {"lmstudio", "ollama"}
+            else []
         )
-        if hasattr(self, "_reasoning_mode_label"):
-            self._reasoning_mode_label.setText(ui_state_service.translate("ai_settings.reasoning_mode", language))
+        levels = [level for level in levels if isinstance(level, str)] if isinstance(levels, list) else []
+        supports_reasoning = any(level not in {"off", "none"} for level in levels)
+        self._reasoning_mode_combo.setVisible(supports_reasoning)
+        self._reasoning_mode_label.setVisible(supports_reasoning)
+        for effort in levels:
+            self._reasoning_mode_combo.addItem(self._effort_label(effort, language), effort)
+        self._set_optional_combo(self._reasoning_mode_combo, current_mode)
+        self._reasoning_mode_combo.blockSignals(False)
+        self._reasoning_mode_label.setText(ui_state_service.translate("ai_settings.reasoning_effort", language))
 
     def _effort_label(self, effort: str, language: str) -> str:
         """@brief Localize known effort names and display future provider identifiers verbatim."""
-        known = {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
-        return ui_state_service.translate("ai_settings.effort_" + effort, language) if effort in known else effort
+        label = {"off": "none"}.get(effort, effort)
+        known = {"none", "on", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
+        return ui_state_service.translate("ai_settings.effort_" + label, language) if label in known else effort
 
     def _add_profile(self) -> None:
         """
@@ -1172,15 +1231,7 @@ class AiSettingsPage(QWidget):
         self._api_key_edit.setPlaceholderText(ui_state_service.translate("ai_settings.api_key_placeholder", language))
         self._model_name_label.setText(ui_state_service.translate("ai_settings.model_name", language))
         self._context_window_label.setText(ui_state_service.translate("ai_settings.context_window", language))
-        self._output_reserve_label.setText(ui_state_service.translate("ai_settings.output_reserve_tokens", language))
-        self._timeout_label.setText(ui_state_service.translate("ai_settings.timeout", language))
         self._temperature_label.setText(ui_state_service.translate("ai_settings.temperature", language))
-        self._supports_structured_checkbox.setText(
-            ui_state_service.translate("ai_settings.structured_output", language)
-        )
-        self._reasoning_mode_label.setText(
-            ui_state_service.translate("ai_settings.reasoning_mode", language)
-        )
         self._reload_reasoning_mode_combo(language)
         self._default_cleanup_label.setText(ui_state_service.translate("ai_settings.default_cleanup", language))
         self._default_chunking_label.setText(ui_state_service.translate("ai_settings.default_chunking", language))

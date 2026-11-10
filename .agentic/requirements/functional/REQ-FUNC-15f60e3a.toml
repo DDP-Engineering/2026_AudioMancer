@@ -16,7 +16,7 @@ linked_tests = [
   "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_windows_use_configured_strategy_caps",
   "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_large_context_allows_larger_scene_windows",
   "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_small_context_limits_paragraph_windows",
-  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragraph_cap",
+  "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_online_profile_reserves_context_without_paragraph_cap",
   "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps",
   "05_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_keeps_oversized_paragraphs_whole",
 ]
@@ -26,4 +26,4 @@ rationale = """
 Window sizing must respect strategy caps and profile context.
 """
 created = 2026-07-19
-updated = 2026-07-24
+updated = 2026-11-10

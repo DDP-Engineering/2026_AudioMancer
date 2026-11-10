@@ -648,7 +648,7 @@ def _build_budget_metadata(
         text_context_fraction,
         config.DEFAULT_NARRATOR_PROFILE_MIN_TEXT_BUDGET_TOKENS,
         "AI narrator profile generation cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for style input",
+        "leaves too little room for style input",
     )
     generation_prompt_budget_tokens = ai_budget_service.estimate_text_tokens(
         f"{system_prompt}\n\n{generation_prompt_shell}"

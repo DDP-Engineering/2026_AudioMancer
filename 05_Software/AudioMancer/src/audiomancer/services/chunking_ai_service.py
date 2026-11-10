@@ -60,7 +60,7 @@ def _build_budget_metadata(
         config.DEFAULT_AI_CHUNKING_TEXT_CONTEXT_FRACTION,
         config.DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted chunking cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for chunking input",
+        "leaves too little room for chunking input",
         online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
     if (

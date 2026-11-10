@@ -264,6 +264,8 @@ def analyze_book(
         prompt_shell,
     )
 
+    request_profile = {**ai_profile_payload, "output_reserve_tokens": initial_budget["output_reserve_tokens"]}
+
     document = book_analysis_document_service.load_document(root)
     if document is None:
         document = book_analysis_document_service.empty_document()
@@ -317,7 +319,7 @@ def analyze_book(
             document,
             candidate,
             chunks,
-            ai_profile_payload,
+            request_profile,
             language,
             progress_callback,
             cancel_requested,
@@ -327,7 +329,7 @@ def analyze_book(
             document,
             candidate,
             final_summary,
-            ai_profile_payload,
+            request_profile,
             language,
             progress_callback,
             cancel_requested,
@@ -337,7 +339,7 @@ def analyze_book(
             document,
             candidate,
             final_summary,
-            ai_profile_payload,
+            request_profile,
             language,
             progress_callback,
             cancel_requested,

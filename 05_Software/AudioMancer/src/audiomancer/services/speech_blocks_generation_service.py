@@ -336,7 +336,7 @@ def _build_budget_metadata(
         config.DEFAULT_SPEECH_BLOCKS_TEXT_CONTEXT_FRACTION,
         config.DEFAULT_SPEECH_BLOCKS_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted Speech Blocks generation cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for source chunk input",
+        "leaves too little room for source chunk input",
         online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
 

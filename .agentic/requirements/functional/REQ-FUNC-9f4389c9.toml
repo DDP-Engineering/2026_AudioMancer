@@ -15,7 +15,7 @@ affected_paths = [
 linked_tests = [
   "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_builds_windows_once_with_budget_metadata_parameters",
   "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_use_eight_chunks_as_cap",
-  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap",
+  "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_online_profile_reserves_context_without_chunk_cap",
   "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_shrink_for_small_text_budget",
   "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_budgeted_chunk_windows_reject_oversized_single_chunk",
   "05_Software/AudioMancer/tests/test_character_discovery_service.py::test_synthesis_candidate_payload_is_trimmed_to_budget_metadata",
@@ -26,4 +26,4 @@ rationale = """
 Windows must fit the selected profile context and be built deterministically.
 """
 created = 2026-07-19
-updated = 2026-08-09
+updated = 2026-11-10

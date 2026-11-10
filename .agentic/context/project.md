@@ -43,7 +43,9 @@ windows from the saved next start, and keeps operator evidence edits in the
 character inventory.
 
 AI Runtime owns provider profiles, backend probing, JSON-oriented LLM requests,
-context budgeting and token-usage normalization. Workflow services own their
+context budgeting and token-usage normalization. Profiles distinguish loaded
+server limits from model metadata, and Chat Completions requests send the
+output limit used in planning. Workflow services own their
 prompts, semantic response validation and project-local artifacts.
 
 Narrator Voice keeps edits in a draft, publishes the WAV with its transcript,

@@ -58,19 +58,21 @@ def test_ai_settings_page_round_trips_reasoning_and_book_analysis_default(qtbot)
     qtbot.addWidget(page)
     payload = settings_service.build_default_settings()
     payload["llm_profiles"] = [
-        _test_profile("profile-a", "Profile A", reasoning_mode="enabled")
+        _test_profile("profile-a", "Profile A", reasoning_mode="enabled",
+                      reasoning_effort="low", discovered_reasoning_levels=["off", "low", "medium"])
     ]
     payload["default_book_analysis_profile_id"] = "profile-a"
 
     page.load_settings(payload)
 
-    assert page._reasoning_mode_combo.currentData() == "enabled"
+    assert page._reasoning_mode_combo.currentData() == "low"
     assert page._default_book_analysis_combo.currentData() == "profile-a"
     page._reasoning_mode_combo.setCurrentIndex(
-        page._reasoning_mode_combo.findData("disabled")
+        page._reasoning_mode_combo.findData("off")
     )
     rebuilt = page.build_settings({"language": "en"})
     assert rebuilt["llm_profiles"][0]["reasoning_mode"] == "disabled"
+    assert rebuilt["llm_profiles"][0]["reasoning_effort"] == "off"
     assert rebuilt["default_book_analysis_profile_id"] == "profile-a"
 
 
@@ -147,22 +149,82 @@ def test_ai_settings_page_numeric_profile_options_use_single_pair_rows(qtbot) ->
     assert numeric_layout is not None
     assert numeric_layout.itemAtPosition(0, 0).widget() is page._context_window_label
     assert numeric_layout.itemAtPosition(0, 1).widget() is page._context_window_spin
-    assert numeric_layout.itemAtPosition(1, 0).widget() is page._output_reserve_label
-    assert numeric_layout.itemAtPosition(1, 1).widget() is page._output_reserve_spin
-    assert numeric_layout.itemAtPosition(2, 0).widget() is page._timeout_label
-    assert numeric_layout.itemAtPosition(2, 1).widget() is page._timeout_spin
-    assert numeric_layout.itemAtPosition(3, 0).widget() is page._temperature_label
-    assert numeric_layout.itemAtPosition(3, 1).widget() is page._temperature_spin
+    assert numeric_layout.itemAtPosition(1, 0).widget() is page._temperature_label
+    assert numeric_layout.itemAtPosition(1, 1).widget() is page._temperature_spin
+    assert numeric_layout.rowCount() == 2
 
 
-def test_ai_settings_page_presents_output_reserve_not_provider_cap(qtbot) -> None:
-    """@brief The profile editor names the local reservation independently of the provider."""
+def test_ai_settings_page_caps_context_at_loaded_server_limit(qtbot) -> None:
+    """@brief Keep distinct probe limits until the model or server changes."""
     page = AiSettingsPage()
     qtbot.addWidget(page)
-
     page.apply_language("en")
+    page.load_settings({"llm_profiles": [_test_profile(
+        "local", "Local", model_name="model-a", context_window=65536, user_overrode_context_window=True
+    )]})
+    probe = {
+        "success": True, "discovered_models": [{"id": "model-a", "label": "model-a"}],
+        "selected_model_valid": True, "discovered_context_model_name": "model-a",
+        "discovered_context_window": 262144, "server_context_window": 32768,
+    }
+    page.apply_probe_result(probe)
+    assert page._context_window_spin.value() == 32768
+    assert page._context_window_spin.maximum() == 32768
+    page._context_window_spin.setValue(48000)
+    assert page.build_current_profile_payload()["context_window"] == 32768
+    saved = settings_service.validate_settings(page.build_settings({}))
+    page.load_settings(saved)
+    assert page.build_current_profile_payload()["server_context_window"] == 32768
 
-    assert page._output_reserve_label.text() == "Output Reserve (tokens)"
+    page._base_url_edit.setText("http://127.0.0.1:9876")
+    updated = page.build_current_profile_payload()
+    assert updated["server_context_window"] is None
+    assert updated["discovered_context_window"] is None
+    assert page._context_window_spin.maximum() == config.MAX_LLM_CONTEXT_WINDOW
+
+    page.apply_probe_result(probe)
+    page._model_combo.setCurrentText("model-b")
+    assert page.build_current_profile_payload()["server_context_window"] is None
+
+
+def test_ai_settings_page_unloaded_model_maximum_does_not_autofill_context(qtbot) -> None:
+    """@brief Keep the configured budget when only a local model maximum is known."""
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    page.load_settings({"llm_profiles": [_test_profile("local", "Local", model_name="model-a")]})
+    page.apply_probe_result({
+        "success": True, "discovered_models": [{"id": "model-a", "label": "model-a"}],
+        "selected_model_valid": True, "discovered_context_model_name": "model-a",
+        "discovered_context_window": 262144, "server_context_window": None,
+    })
+    assert page._context_window_spin.value() == 8192
+    assert page._context_window_spin.maximum() == 262144
+
+
+def test_ai_settings_page_reasoning_levels_are_scoped_to_selected_model(qtbot) -> None:
+    """@brief Offer reported levels and clear the controls when another model is selected."""
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+    page.apply_language("en")
+    page.load_settings({"llm_profiles": [_test_profile("local", "Local", model_name="model-a")]})
+    assert page._reasoning_mode_combo.isHidden()
+    page.apply_probe_result({
+        "success": True, "discovered_models": [{"id": "model-a", "label": "model-a"}],
+        "selected_model_valid": True,
+        "reasoning": {"allowed_options": ["off", "low", "xhigh", "on"], "default": "xhigh"},
+    })
+    assert not page._reasoning_mode_combo.isHidden()
+    assert [page._reasoning_mode_combo.itemData(index)
+            for index in range(page._reasoning_mode_combo.count())] == ["off", "low", "xhigh"]
+    assert page._reasoning_mode_combo.itemText(0) == "Disabled"
+    assert page._reasoning_mode_combo.currentData() == "xhigh"
+    page._reasoning_mode_combo.setCurrentIndex(1)
+    saved = settings_service.validate_settings(page.build_settings({}))
+    page.load_settings(saved)
+    assert page._reasoning_mode_combo.currentData() == "low"
+    page._model_combo.setCurrentText("model-b")
+    assert page._reasoning_mode_combo.isHidden()
+    assert "reasoning_effort" not in page.build_current_profile_payload()
 
 
 def test_ai_settings_page_profile_flags_are_below_model_name(qtbot) -> None:
@@ -190,8 +252,7 @@ def test_ai_settings_page_profile_flags_are_below_model_name(qtbot) -> None:
     assert model_row_layout.itemAt(0).widget() is page._model_combo
     flags_row = form_layout.itemAt(row + 1, QFormLayout.ItemRole.SpanningRole).layout()
     assert flags_row.itemAt(0).widget() is page._enabled_checkbox
-    assert flags_row.itemAt(1).widget() is page._supports_structured_checkbox
-    assert page._supports_structured_checkbox.text() == "Structured output"
+    assert flags_row.itemAt(1).widget() is None
 
 
 def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> None:
@@ -257,9 +318,9 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["default_speech_blocks_profile_id"] == "profile_a"
 
 
-def test_ai_settings_page_timeout_accepts_65535_seconds(qtbot) -> None:
+def test_ai_settings_page_preserves_saved_timeout(qtbot) -> None:
     """
-    @brief      Verify S-0001 and REQ-UX-035 preserve the overnight AI timeout cap.
+    @brief      Verify hidden timeout settings survive an editor round trip.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -288,9 +349,6 @@ def test_ai_settings_page_timeout_accepts_65535_seconds(qtbot) -> None:
             ],
         }
     )
-
-    assert page._timeout_spin.maximum() == 65535
-    assert page._timeout_spin.value() == 65535
 
     rebuilt = page.build_settings({"language": "en"})
 
@@ -375,10 +433,10 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
         "api_key": "edited-secret",
         "model_name": "edited-model",
         "context_window": 65536,
-        "output_reserve_tokens": 4096,
-        "request_timeout_seconds": 321,
+        "output_reserve_tokens": profile_a["output_reserve_tokens"],
+        "request_timeout_seconds": profile_a["request_timeout_seconds"],
         "temperature": 0.75,
-        "supports_structured_output": True,
+        "supports_structured_output": profile_a["supports_structured_output"],
     }
     page._label_edit.setText(str(expected_a["label"]))
     page._enabled_checkbox.setChecked(bool(expected_a["enabled"]))
@@ -387,10 +445,7 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
     page._api_key_edit.setText(str(expected_a["api_key"]))
     page._model_combo.setCurrentText(str(expected_a["model_name"]))
     page._context_window_spin.setValue(int(expected_a["context_window"]))
-    page._output_reserve_spin.setValue(int(expected_a["output_reserve_tokens"]))
-    page._timeout_spin.setValue(int(expected_a["request_timeout_seconds"]))
     page._temperature_spin.setValue(float(expected_a["temperature"]))
-    page._supports_structured_checkbox.setChecked(bool(expected_a["supports_structured_output"]))
 
     page._profile_list.setCurrentRow(1)
     connect_payload = page.build_current_profile_payload()
@@ -406,10 +461,7 @@ def test_switching_profiles_preserves_outgoing_editor_values(qtbot) -> None:
     assert page._api_key_edit.text() == expected_a["api_key"]
     assert page._model_combo.currentText() == expected_a["model_name"]
     assert page._context_window_spin.value() == expected_a["context_window"]
-    assert page._output_reserve_spin.value() == expected_a["output_reserve_tokens"]
-    assert page._timeout_spin.value() == expected_a["request_timeout_seconds"]
     assert page._temperature_spin.value() == expected_a["temperature"]
-    assert page._supports_structured_checkbox.isChecked() is expected_a["supports_structured_output"]
 
     page._profile_list.setCurrentRow(1)
     page._profile_list.setCurrentRow(0)
@@ -632,6 +684,7 @@ def test_context_discovery_autofills_then_preserves_manual_override(qtbot) -> No
         "discovered_models": [{"id": "model-a", "label": "model-a"}],
         "selected_model_valid": True,
         "discovered_context_window": 65536,
+        "server_context_window": 65536,
         "discovered_context_model_name": "model-a",
     }
 

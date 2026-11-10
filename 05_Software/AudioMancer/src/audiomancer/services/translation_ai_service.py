@@ -219,7 +219,7 @@ def _build_budget_metadata(
         config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION,
         config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS,
         "AI translation cannot run because the selected AI profile context window "
-        "and max output tokens leave too little room for translation input",
+        "leaves too little room for translation input",
     )
     return {
         **budget_metadata,
@@ -248,10 +248,10 @@ def _reply_bounded_text_budget(text_budget_tokens: int, output_reserve_tokens: i
         return text_budget_tokens
     if reply_budget_tokens < config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS:
         raise ValueError(
-            "AI translation cannot run because the selected AI profile maximum output tokens "
-            f"cannot return one request's translation ({reply_budget_tokens} estimated tokens "
-            f"available, {config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS} required); "
-            "raise the profile maximum output tokens."
+            "AI translation needs more room for its reply. "
+            f"The current context allows about {reply_budget_tokens} tokens for source text "
+            f"and at least {config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS} are needed. "
+            "Use a larger context window."
         )
     return reply_budget_tokens
 

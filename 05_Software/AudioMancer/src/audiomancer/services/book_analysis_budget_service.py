@@ -34,7 +34,7 @@ def build_request_budget(
     @exception  ValueError Raised when the profile context or remaining source
                 capacity is below the Book Analysis minimum.
     """
-    context_window = int(profile_payload.get("context_window", 0) or 0)
+    context_window = ai_budget_service.effective_context_window(profile_payload, default=0)
     if context_window < config.BOOK_ANALYSIS_MIN_CONTEXT_TOKENS:
         raise ValueError(
             "Book Analysis requires an AI profile context window of at least "
@@ -44,16 +44,7 @@ def build_request_budget(
     reasoning_mode = str(
         profile_payload.get("reasoning_mode", "provider_default")
     ).strip()
-    configured_output_tokens = max(
-        1,
-        int(
-            profile_payload.get(
-                "output_reserve_tokens",
-                config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS,
-            )
-            or config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS
-        ),
-    )
+    configured_output_tokens = ai_budget_service.output_token_limit(profile_payload)
     output_reserve_tokens = min(
         configured_output_tokens,
         max(
@@ -76,16 +67,12 @@ def build_request_budget(
         if ai_budget_service.uses_online_text_budget(profile_payload)
         else config.BOOK_ANALYSIS_LOCAL_SOURCE_CONTEXT_FRACTION
     )
-    post_reserve_capacity = (
-        context_window
-        - output_reserve_tokens
-        - reasoning_reserve_tokens
-        - prompt_reserve_tokens
-        - safety_reserve_tokens
-    )
-    source_budget_tokens = min(
-        int(context_window * source_context_fraction),
-        post_reserve_capacity,
+    source_budget_tokens = ai_budget_service.available_text_budget(
+        context_window,
+        output_reserve_tokens,
+        prompt_reserve_tokens,
+        reasoning_reserve_tokens + safety_reserve_tokens,
+        source_context_fraction,
     )
     if source_budget_tokens < config.BOOK_ANALYSIS_MIN_SOURCE_TOKENS:
         raise ValueError(

@@ -2142,9 +2142,9 @@ def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
     assert [len(window) for window in windows] == [8, 3]
 
 
-def test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap(monkeypatch) -> None:
+def test_character_discovery_online_profile_reserves_context_without_chunk_cap(monkeypatch) -> None:
     """
-    @brief      Validate online character discovery ignores local chunk caps and output-token budget subtraction.
+    @brief      Verify discovery and synthesis reserve context while keeping the online window policy.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -2157,7 +2157,7 @@ def test_character_discovery_online_profile_uses_direct_context_fraction_without
     profile_payload = {
         "backend_kind": config.ONLINE_AI_BACKEND_KIND,
         "context_window": 10000,
-        "output_reserve_tokens": 9900,
+        "output_reserve_tokens": 6800,
     }
 
     budget_metadata = character_discovery_service._build_budget_metadata(profile_payload, "system")
@@ -2165,8 +2165,13 @@ def test_character_discovery_online_profile_uses_direct_context_fraction_without
         {"chunk_id": f"chunk-{index:04d}", "text": "Short character-discovery chunk."} for index in range(1, 12)
     ]
 
-    assert budget_metadata["text_budget_tokens"] == 3000
-    assert budget_metadata["synthesis_payload_budget_tokens"] == 3000
+    assert budget_metadata["text_budget_tokens"] == (
+        10000 - 6800 - budget_metadata["prompt_budget_tokens"] - budget_metadata["safety_margin_tokens"]
+    )
+    assert budget_metadata["text_budget_tokens"] < 3000
+    assert budget_metadata["synthesis_payload_budget_tokens"] == (
+        10000 - 6800 - budget_metadata["synthesis_prompt_budget_tokens"] - budget_metadata["safety_margin_tokens"]
+    )
     assert budget_metadata["max_window_chunks"] == 0
     assert character_discovery_service._build_chunk_windows(
         source_chunks,

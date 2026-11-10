@@ -73,6 +73,36 @@ def test_analyze_dispatches_standard_threaded_operation(monkeypatch, tmp_path) -
     assert result["language"] == "ro"
 
 
+def test_analyze_rejects_loaded_context_below_minimum(monkeypatch, tmp_path) -> None:
+    """@brief Use the same context prerequisite in the UI and worker."""
+    window = _window(tmp_path)
+    profile = {
+        "id": "profile-a", "model_name": "book-model", "context_window": 32768,
+        "discovered_context_model_name": "book-model", "server_context_window": 8192,
+    }
+    warnings = []
+    started = []
+    monkeypatch.setattr(
+        book_analysis_ui_controller.chunking_document_service,
+        "load_chunking_document", lambda _root: {"status": "completed"},
+    )
+    monkeypatch.setattr(
+        book_analysis_ui_controller.workflow_controller_service,
+        "resolve_enabled_ai_profile", lambda *_args: profile,
+    )
+    monkeypatch.setattr(book_analysis_ui_controller, "_show_warning", lambda _window, key: warnings.append(key))
+    monkeypatch.setattr(book_analysis_ui_controller, "_sync_running_summary", lambda _window: None)
+    monkeypatch.setattr(
+        book_analysis_ui_controller.workflow_controller_service,
+        "start_operation", lambda *_args, **_kwargs: started.append(True),
+    )
+
+    book_analysis_ui_controller.handle_analyze_requested(window, "profile-a")
+
+    assert warnings == ["book_analysis.error_incompatible_profile"]
+    assert not started
+
+
 def test_running_reset_requests_cancellation_before_deleting(monkeypatch, tmp_path) -> None:
     window = _window(tmp_path)
     window._active_operation_kind = "book_analysis"

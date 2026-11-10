@@ -21,8 +21,8 @@ from collections.abc import Callable
 import json
 from pathlib import Path
 
-from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     llm_provider_service,
     prompt_template_service,
     token_usage_service,
@@ -63,7 +63,7 @@ def plan_question_batches(
         return []
     assert profile_payload is not None
     batch_size = _batch_size_for_context(
-        int(profile_payload["context_window"])
+        ai_budget_service.effective_context_window(profile_payload, default=0)
     )
     return _homogeneous_batches(normalized_questions, batch_size)
 
@@ -525,13 +525,8 @@ def _ask(
         ensure_ascii=False,
         separators=(",", ":"),
     )
-    _resolve_output_reservation(
-        profile,
-        batch_id,
-        questions,
-        system_prompt,
-        user_prompt,
-        schema,
+    output_limit = _resolve_output_reservation(
+        profile, batch_id, questions, system_prompt, user_prompt, schema
     )
     if callable(submission_callback):
         submission_callback(
@@ -540,7 +535,7 @@ def _ask(
             questions,
         )
     response = llm_provider_service.chat_json(
-        profile,
+        {**profile, "output_reserve_tokens": output_limit},
         system_prompt,
         user_prompt,
         log_path=log_path,
@@ -690,7 +685,7 @@ def _compatibility_warning(
             "AI profile does not support strict structured output; "
             "deterministic priors were used."
         )
-    if int(profile.get("context_window", 0) or 0) < MINIMUM_CONTEXT_WINDOW:
+    if ai_budget_service.effective_context_window(profile, default=0) < MINIMUM_CONTEXT_WINDOW:
         return (
             "AI profile context window is below 16K; "
             "deterministic priors were used."
@@ -727,9 +722,9 @@ def _resolve_output_reservation(
         + len(user_prompt.encode("utf-8"))
         + len(json.dumps(schema, ensure_ascii=False).encode("utf-8"))
     ) // 2
-    ceiling = int(int(profile["context_window"]) * _SAFE_CONTEXT_FRACTION)
+    ceiling = int(ai_budget_service.effective_context_window(profile, default=0) * _SAFE_CONTEXT_FRACTION)
     reservation = min(
-        int(profile.get("output_reserve_tokens", config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS)),
+        ai_budget_service.output_token_limit(profile),
         ceiling - estimated_input,
     )
     if reservation < _answer_token_floor(batch_id, questions):

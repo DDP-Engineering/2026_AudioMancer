@@ -95,3 +95,8 @@ includes httpx/CA data and native keyring backends.
 
 Focused Export checks use the export and snapshot service suites with synthetic PCM WAVs,
 plus the export/snapshot selectors in the Home controller and main-window tests with Qt offscreen.
+
+Focused AI context/limit checks use the backend, shared budget, provider wire and
+AI Settings tests plus Book Analysis, Cleanup and budget-specific consumer tests.
+A live local smoke check uses synthetic prompts with the operator's LM Studio
+endpoint, loading and unloading only its own model instances.

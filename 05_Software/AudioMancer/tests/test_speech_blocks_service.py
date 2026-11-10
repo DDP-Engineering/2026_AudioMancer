@@ -1295,9 +1295,9 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
         speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
 
 
-def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) -> None:
+def test_speech_blocks_online_profile_reserves_context(monkeypatch) -> None:
     """
-    @brief      Verify online Speech Blocks budgets ignore output-token budget subtraction.
+    @brief      Verify online Speech Blocks budgets leave room for the planned response.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
@@ -1311,7 +1311,7 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
         **_profile_payload(),
         "backend_kind": config.ONLINE_AI_BACKEND_KIND,
         "context_window": 10000,
-        "output_reserve_tokens": 9900,
+        "output_reserve_tokens": 6800,
     }
 
     budget_metadata = generation_service._build_budget_metadata(
@@ -1324,7 +1324,10 @@ def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) 
         normalization_service.resolve_narrator_only_budget(None),
     )
 
-    assert budget_metadata["text_budget_tokens"] == 3000
+    assert budget_metadata["text_budget_tokens"] == (
+        10000 - 6800 - budget_metadata["prompt_budget_tokens"] - budget_metadata["safety_margin_tokens"]
+    )
+    assert budget_metadata["text_budget_tokens"] < 3000
 
 
 def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_path) -> None:

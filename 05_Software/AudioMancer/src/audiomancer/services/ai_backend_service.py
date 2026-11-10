@@ -31,7 +31,7 @@ from .url_service import join_endpoint_url, remove_trailing_endpoint
 _AI_BACKEND_LOGGER = get_component_logger("ai_backend")
 
 # @brief Largest context value representable by the AI Settings editor.
-_MAX_DISCOVERED_CONTEXT_WINDOW = 1_000_000
+_MAX_DISCOVERED_CONTEXT_WINDOW = config.MAX_LLM_CONTEXT_WINDOW
 
 # @brief Normalized discovered-model payload type used by backend probes.
 ModelDescriptorPayload = dict[str, object]
@@ -141,8 +141,10 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
         discovered_models,
         effective_model_name,
     )
+    server_context_window = None
+    reasoning = {}
     if backend_kind == "lmstudio" and effective_model_name:
-        native_context_window = _optional_lm_studio_context_window(
+        native_context_window, server_context_window, reasoning = _optional_lm_studio_model_metadata(
             profile_payload,
             timeout_seconds,
             effective_model_name,
@@ -150,13 +152,16 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
         if native_context_window is not None:
             discovered_context_window = native_context_window
     elif backend_kind == "ollama" and effective_model_name:
-        ollama_context_window = _optional_ollama_context_window(
+        ollama_context_window, reasoning = _optional_ollama_model_metadata(
             profile_payload,
             timeout_seconds,
             effective_model_name,
         )
         if ollama_context_window is not None:
             discovered_context_window = ollama_context_window
+        server_context_window = _optional_ollama_server_context(
+            profile_payload, timeout_seconds, effective_model_name
+        )
 
     message = f"Connection successful. Discovered {len(discovered_models)} models."
     return _build_probe_result(
@@ -165,9 +170,11 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
         discovered_models=discovered_models,
         discovered_context_window=discovered_context_window,
         discovered_context_model_name=(
-            effective_model_name if discovered_context_window is not None else None
+            effective_model_name if discovered_context_window is not None or server_context_window is not None else None
         ),
         selected_model_valid=selected_model_valid,
+        server_context_window=server_context_window,
+        reasoning=reasoning,
     )
 
 
@@ -250,17 +257,17 @@ def _descriptor_context_window(
     return None
 
 
-def _optional_lm_studio_context_window(
+def _optional_lm_studio_model_metadata(
     profile_payload: dict[str, object],
     timeout_seconds: int,
     model_name: str,
-) -> int | None:
+) -> tuple[int | None, int | None, dict[str, object]]:
     """
-    @brief      Read optional LM Studio native context metadata without failing discovery.
+    @brief      Read optional LM Studio context and reasoning metadata without failing discovery.
     @param[in]  profile_payload Normalized profile payload.
     @param[in]  timeout_seconds HTTP request timeout.
     @param[in]  model_name Exact effective model identifier.
-    @return     Matching runtime or supported context window, otherwise `None`.
+    @return     Optional model and server limits plus public reasoning settings.
     @exception  None
     """
     try:
@@ -269,17 +276,19 @@ def _optional_lm_studio_context_window(
             _build_request_headers(profile_payload),
             timeout_seconds,
         )
-        return _lm_studio_context_window(payload, model_name)
+        return _lm_studio_model_metadata(payload, model_name)
     except (error.HTTPError, OSError, client.HTTPException, UnicodeError, ValueError):
-        return None
+        return None, None, {}
 
 
-def _lm_studio_context_window(payload: dict[str, Any], model_name: str) -> int | None:
+def _lm_studio_model_metadata(
+    payload: dict[str, Any], model_name: str
+) -> tuple[int | None, int | None, dict[str, object]]:
     """
-    @brief      Extract context metadata for one exact LM Studio model or instance.
+    @brief      Extract context and reasoning metadata for one exact LM Studio model or instance.
     @param[in]  payload LM Studio native model-list payload.
     @param[in]  model_name Exact effective model identifier.
-    @return     Matching loaded context or supported model limit, otherwise `None`.
+    @return     Optional model and server limits plus public reasoning settings.
     @exception  ValueError When the native models container is invalid.
     """
     model_entries = payload.get("models")
@@ -291,36 +300,45 @@ def _lm_studio_context_window(payload: dict[str, Any], model_name: str) -> int |
         loaded_instances = model_entry.get("loaded_instances", [])
         if not isinstance(loaded_instances, list):
             loaded_instances = []
-        matching_instances = [
-            instance
-            for instance in loaded_instances
-            if isinstance(instance, dict) and str(instance.get("id", "")).strip() == model_name
-        ]
-        model_key_matches = str(model_entry.get("key", "")).strip() == model_name
-        if not model_key_matches and not matching_instances:
+        instances = [item for item in loaded_instances if isinstance(item, dict)]
+        exact = next((instance for instance in instances if instance.get("id") == model_name), None)
+        variants = model_entry.get("variants")
+        model_matches = model_name == model_entry.get("key") or (
+            isinstance(variants, list) and model_name in variants
+        )
+        if not model_matches and exact is None:
             continue
-        for instance in matching_instances:
-            instance_config = instance.get("config")
-            if not isinstance(instance_config, dict):
-                continue
-            context_window = _normalize_context_window(instance_config.get("context_length"))
-            if context_window is not None:
-                return context_window
-        return _normalize_context_window(model_entry.get("max_context_length"))
-    return None
+        if exact is None and len(instances) == 1 and model_name in (
+            model_entry.get("key"), model_entry.get("selected_variant")
+        ):
+            exact = instances[0]
+        loaded_config = exact.get("config") if exact is not None else None
+        server_context = (
+            _normalize_context_window(loaded_config.get("context_length"))
+            if isinstance(loaded_config, dict)
+            else None
+        )
+        capabilities = model_entry.get("capabilities")
+        reasoning = capabilities.get("reasoning") if isinstance(capabilities, dict) else None
+        return (
+            _normalize_context_window(model_entry.get("max_context_length")),
+            server_context,
+            reasoning if isinstance(reasoning, dict) else {},
+        )
+    return None, None, {}
 
 
-def _optional_ollama_context_window(
+def _optional_ollama_model_metadata(
     profile_payload: dict[str, object],
     timeout_seconds: int,
     model_name: str,
-) -> int | None:
+) -> tuple[int | None, dict[str, object]]:
     """
-    @brief      Read optional Ollama context metadata without failing model discovery.
+    @brief      Read optional Ollama model limits and thinking controls without failing model discovery.
     @param[in]  profile_payload Normalized profile payload.
     @param[in]  timeout_seconds HTTP request timeout.
     @param[in]  model_name Exact confirmed model identifier.
-    @return     Positive bounded model context window or `None`.
+    @return     Optional model context and normalized reasoning settings.
     @exception  None
     """
     try:
@@ -332,15 +350,52 @@ def _optional_ollama_context_window(
             json_body={"model": model_name},
         )
     except (error.HTTPError, OSError, client.HTTPException, UnicodeError, ValueError):
-        return None
+        return None, {}
     model_info = payload.get("model_info")
-    if not isinstance(model_info, dict):
+    context_window = next((
+        context for key, value in model_info.items()
+        if str(key).split(".")[-1] == "context_length"
+        and (context := _normalize_context_window(value)) is not None
+    ), None) if isinstance(model_info, dict) else None
+    thinking = payload.get("thinking")
+    if not isinstance(thinking, dict) or not isinstance(thinking.get("values"), list):
+        return context_window, {}
+    return context_window, {
+        "allowed_options": [_ollama_reasoning_level(value) for value in thinking["values"]],
+        "default": _ollama_reasoning_level(thinking.get("default")),
+    }
+
+
+def _ollama_reasoning_level(value: object) -> object:
+    """@brief Convert Ollama's boolean thinking controls to stable editor options."""
+    if type(value) is bool:
+        return "on" if value else "off"
+    return value
+
+
+def _optional_ollama_server_context(
+    profile_payload: dict[str, object], timeout_seconds: int, model_name: str
+) -> int | None:
+    """
+    @brief      Read the loaded context of the exact Ollama model from /api/ps.
+    @param[in]  profile_payload Normalized backend profile.
+    @param[in]  timeout_seconds Metadata request timeout.
+    @param[in]  model_name Effective selected model identifier.
+    @return     Loaded context in tokens, or None if unknown.
+    """
+    base_url = remove_trailing_endpoint(str(profile_payload.get("base_url", "")), "/v1")
+    try:
+        payload = _read_json(
+            join_endpoint_url(base_url, "/api/ps"), _build_request_headers(profile_payload), timeout_seconds
+        )
+    except (error.HTTPError, OSError, client.HTTPException, UnicodeError, ValueError):
         return None
-    for metadata_key, metadata_value in model_info.items():
-        if str(metadata_key).split(".")[-1] == "context_length":
-            context_window = _normalize_context_window(metadata_value)
-            if context_window is not None:
-                return context_window
+    models = payload.get("models")
+    if not isinstance(models, list):
+        return None
+    for model in models:
+        if isinstance(model, dict) and model_name in (model.get("model"), model.get("name")):
+            return _normalize_context_window(model.get("context_length"))
     return None
 
 
@@ -431,6 +486,8 @@ def _build_probe_result(
     discovered_context_window: int | None,
     discovered_context_model_name: str | None,
     selected_model_valid: bool,
+    server_context_window: int | None = None,
+    reasoning: dict[str, object] | None = None,
 ) -> ProviderProbeResultPayload:
     """
     @brief      Build one normalized provider probe result payload.
@@ -440,6 +497,8 @@ def _build_probe_result(
     @param[in]  discovered_context_window Optional discovered context window.
     @param[in]  discovered_context_model_name Exact model owning the context value.
     @param[in]  selected_model_valid True when the chosen model is valid.
+    @param[in]  server_context_window Context reported for the loaded instance, if available.
+    @param[in]  reasoning Public reasoning settings for the effective model.
     @return     Normalized probe result dictionary.
     @exception  None
     """
@@ -449,6 +508,8 @@ def _build_probe_result(
         "discovered_models": list(discovered_models),
         "discovered_model_count": len(discovered_models),
         "discovered_context_window": discovered_context_window,
+        "server_context_window": server_context_window,
+        "reasoning": reasoning or {},
         "discovered_context_model_name": discovered_context_model_name,
         "selected_model_valid": selected_model_valid,
     }

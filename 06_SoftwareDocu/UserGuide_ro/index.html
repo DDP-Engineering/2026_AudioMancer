@@ -237,7 +237,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Apasă <strong>Autentificare ChatGPT</strong> și finalizează pagina OpenAI din browser. Dacă portul de întoarcere este ocupat, alege <strong>Cod de dispozitiv</strong>, deschide pagina OpenAI afișată și introdu codul temporar.</li>
                     <li>Alege un model candidat sau scrie identificatorul, apoi apasă <strong>Testează modelul</strong>. Testul trimite solicitări sintetice foarte mici și verifică separat accesul la text și schema strictă necesară Curățării. Numele candidate sunt sugestii, nu o listă a drepturilor contului.</li>
                     <li>Lista modelelor principale se actualizează după autentificare și la deschiderea setărilor AI dacă datele memorate sunt mai vechi de o oră. <strong>Actualizează modele</strong> reîncarcă lista fără a trimite un prompt. Indiciul butonului Actualizează modele arată dacă datele sunt actualizate, memorate, expirate sau incluse în aplicație. Modelul ales și modificările nesalvate sunt păstrate.</li>
-                    <li>Alegeți <strong>Efort de raționament</strong> pentru fiecare profil: Implicit furnizor lasă serverul să decidă; nivelurile explicite sunt cele acceptate de model. Efortul mai mare poate afecta timpul de răspuns și consumul abonamentului. Un nivel salvat devenit indisponibil rămâne vizibil și trebuie schimbat înaintea rulării; AudioMancer nu îl înlocuiește automat. Setarea veche Gândire activată devine Mediu, iar Gândire dezactivată devine Fără, care poate fi indisponibil.</li>
+                    <li>Alegeți <strong>Nivel de raționare</strong> dintre opțiunile acceptate de model. <strong>Implicit furnizor</strong> folosește alegerea serverului. <strong>Dezactivat</strong> oprește raționarea atunci când modelul permite. Un nivel mai mare poate crește timpul de răspuns și consumul abonamentului.</li>
                     <li>Selectarea unui model de abonament completează <strong>Fereastra Context</strong> cu valoarea implicită raportată, nu cu maximul posibil. O poți modifica ulterior; actualizarea listei și redeschiderea setărilor păstrează modificarea până la alegerea altui model. Valorile necunoscute păstrează contextul existent. Alegerea modelelor locale sau a endpointurilor personalizate păstrează contextul manual. Alege profilurile implicite, apoi apasă <strong>Aplică</strong> sau <strong>OK</strong>. Temperatura este controlată de furnizor; catalogul nu înlocuiește testarea modelului sau a schemei. Schimbarea efortului începe o nouă analiză a cărții, păstrând raportul complet anterior.</li>
                 </ol>
                 <p>Conexiunea experimentală folosește limitele abonamentului ChatGPT, separat de facturarea API. Accesul și limitele se pot schimba. Audio și TTS nu sunt incluse. Un model verificat doar pentru text poate folosi celelalte operații JSON; Curățarea AI necesită verificarea reușită a schemei stricte.</p>
@@ -247,7 +247,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>Aceste recomandări inițiale echilibrează calitatea cărții audio și consumul abonamentului. Compară rezultatele pe un capitol reprezentativ înainte de a procesa întreaga carte; recomandările nu reprezintă măsurători comparative ale calității. Disponibilitatea și nivelurile de raționament acceptate depind de cont și de catalogul curent de modele.</p>
                 <table>
                     <thead>
-                        <tr><th>Etapa AudioMancer</th><th>Model recomandat</th><th>Efort de raționament</th><th>Recomandare</th></tr>
+                        <tr><th>Etapa AudioMancer</th><th>Model recomandat</th><th>Nivel de raționare</th><th>Recomandare</th></tr>
                     </thead>
                     <tbody>
                         <tr><td>Curățare Text &mdash; asistență AI opțională</td><td>GPT-5.6 Luna</td><td>Scăzut (Low)</td><td>Clasificarea delimitărilor ambigue ale textului. Încearcă Terra dacă deciziile sunt nesigure. Testează modelul trebuie să confirme suportul pentru schema strictă.</td></tr>
@@ -274,7 +274,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Introdu <strong>Cheie API</strong> pentru furnizorii online. Campul este mascat si poate ramane gol pentru un furnizor local.</li>
                     <li>Apasa <strong>Conecteaza</strong>. La reusita, AudioMancer raporteaza cate modele a gasit si completeaza lista <strong>Nume Model</strong> cu ele; la esec arata motivul si pastreaza ultimele valori functionale.</li>
                     <li>Alege modelul in <strong>Nume Model</strong>. Campul este editabil, deci poti scrie si un nume pe care furnizorul nu l-a listat.</li>
-                    <li>Seteaza <strong>Fereastra Context</strong>, <strong>Rezerva iesire (tokeni)</strong>, <strong>Timeout (s)</strong> si <strong>Temperatura</strong>. Rezerva pastreaza capacitate de context pentru raspuns cand AudioMancer planifica textul sursa; nu este trimisa ca limita de iesire la furnizor, deci furnizorul alege lungimea raspunsului. <strong>Modul de raționare</strong> poate păstra valoarea furnizorului, poate activa raționarea sau o poate dezactiva; AudioMancer nu ghicește după numele modelului.</li>
+                    <li>Setează <strong>Fereastra Context</strong> și <strong>Temperatura</strong>. Dacă apare <strong>Nivel de raționare</strong>, alege una dintre opțiunile disponibile pentru model.</li>
                     <li>Alege profilul implicit pentru fiecare operatie, in partea de jos a ferestrei.</li>
                     <li><strong>Anuleaza</strong> renunta la sesiune. <strong>Aplica</strong> salveaza fara sa inchida. <strong>OK</strong> salveaza si inchide.</li>
                 </ol>
@@ -285,10 +285,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     revine la <strong>(niciunul)</strong>.
                 </p>
                 <p>
-                    O conectare reusita poate completa singura <strong>Fereastra Context</strong> atunci cand modelul
-                    selectat o raporteaza &mdash; LM Studio din instanta incarcata, Ollama din detaliile modelului. De indata
-                    ce scrii tu insuti in <strong>Nume Model</strong> sau in <strong>Fereastra Context</strong>,
-                    conectarile ulterioare iti lasa valoarea neatinsa.
+                    <strong>Conectează</strong> verifică cât context poate folosi modelul. AudioMancer limitează
+                    <strong>Fereastra Context</strong> la valoarea încărcată pe server, când este raportată, sau
+                    la maximul modelului. Apasă din nou <strong>Conectează</strong> după ce schimbi modelul sau
+                    contextul din LM Studio și salvează profilul. AudioMancer rezervă automat loc pentru răspuns.
                 </p>
                 <h3>Campuri numerice</h3>
                 <table>
@@ -296,20 +296,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><th>Camp</th><th>Interval</th><th>Implicit</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>Fereastra Context</td><td>1 - 1000000</td><td>16384</td></tr>
-                        <tr><td>Rezerva iesire (tokeni)</td><td>1 - 1000000</td><td>8192</td></tr>
-                        <tr><td>Timeout (s)</td><td>1 - 65535</td><td>300</td></tr>
+                        <tr><td>Fereastra Context</td><td>Până la limita detectată</td><td>16384</td></tr>
                         <tr><td>Temperatura</td><td>0.00 - 2.00, pas 0.05</td><td>0.20</td></tr>
                     </tbody>
                 </table>
-                <div class="warning">
-                    <strong>Rezerva de iesire conteaza cel mai mult la planificarea traducerii.</strong> O traducere este cam
-                    la fel de lunga ca sursa ei, deci AudioMancer dimensioneaza fiecare cerere de traducere dupa rezerva
-                    locala, nu dupa fereastra de context. Un profil cu fereastra de context larga dar
-                    cu rezerva mica este pur si simplu impartit in mai multe cereri, mai mici. Daca rezerva
-                    este prea mica pentru a returna macar traducerea unei singure cereri, Traducerea AI refuza
-                    sa porneasca si numeste acea setare.
-                </div>
+                <p>Traducerea AI împarte textul în cereri mai mici când e nevoie de mai mult loc pentru răspuns.</p>
                 <h3>Valori implicite pe operatie</h3>
                 <p>
                     Partea de jos a ferestrei stabileste cu ce profil porneste fiecare operatie: <strong>Profil
@@ -332,23 +323,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <table>
                     <thead><tr><th>Operație</th><th>Context (tokeni)</th><th>Temperatură</th><th>Raționament în AudioMancer</th></tr></thead>
                     <tbody>
-                        <tr><td>Curățare AI</td><td>32768</td><td>0.1</td><td>Implicit furnizor</td></tr>
-                        <tr><td>Segmentare AI</td><td>32768</td><td>0.1</td><td>Implicit furnizor</td></tr>
-                        <tr><td>Analiza Cărții</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.2</td><td>Gândire activată, dacă este acceptată</td></tr>
-                        <tr><td>Traducere AI</td><td>32768</td><td>0.2</td><td>Implicit furnizor</td></tr>
-                        <tr><td>Descoperire Personaje</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.1</td><td>Gândire activată, dacă este acceptată</td></tr>
-                        <tr><td>Descriere Narator</td><td>16384</td><td>0.3</td><td>Implicit furnizor</td></tr>
-                        <tr><td>Blocuri de Vorbire — narator și personaje</td><td>32768</td><td>0.1</td><td>Gândire activată, dacă este acceptată</td></tr>
+                        <tr><td>Curățare AI</td><td>32768</td><td>0.1</td><td>Implicit model</td></tr>
+                        <tr><td>Segmentare AI</td><td>32768</td><td>0.1</td><td>Implicit model</td></tr>
+                        <tr><td>Analiza Cărții</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.2</td><td>Mediu sau Activat, dacă sunt disponibile</td></tr>
+                        <tr><td>Traducere AI</td><td>32768</td><td>0.2</td><td>Implicit model</td></tr>
+                        <tr><td>Descoperire Personaje</td><td>32768; încearcă 65536 dacă este necesar</td><td>0.1</td><td>Mediu sau Activat, dacă sunt disponibile</td></tr>
+                        <tr><td>Descriere Narator</td><td>16384</td><td>0.3</td><td>Implicit model</td></tr>
+                        <tr><td>Blocuri de Vorbire — narator și personaje</td><td>32768</td><td>0.1</td><td>Mediu sau Activat, dacă sunt disponibile</td></tr>
                     </tbody>
                 </table>
-                <p><strong>Context:</strong> încarcă modelul în LM Studio cu contextul dorit, apoi setează Fereastra Context din AudioMancer cel mult la capacitatea încărcată și la limita acceptată de model. Începe cu 32768 pentru majoritatea operațiilor; încearcă 65536 numai dacă modelul și memoria disponibilă permit acest lucru și ferestrele mai largi sunt utile. Mărirea valorii doar în AudioMancer nu reîncarcă modelul din server. Un context mai mare poate necesita mai multă memorie și timp.</p>
-                <p><strong>Raționament:</strong> Implicit furnizor lasă controlul la LM Studio. Gândire activată solicită nivelul Mediu când endpointul acceptă cererea. Dacă modelul sau motorul nu acceptă setarea, folosește Implicit furnizor și configurează controlul acceptat în LM Studio. Pentru curățare, segmentare și descrieri de narator simple, încearcă Scăzut în presetul LM Studio dacă este disponibil; pentru gpt-oss-20b, Scăzut este un punct de pornire util, iar Mediu merită comparat pentru analiză și atribuirea vorbitorilor. Posibilitatea dezactivării gândirii diferă între modele. Profilurile locale nu folosesc selectorul de efort specific modelelor de abonament.</p>
+                <p>Încarcă modelul în LM Studio cu fereastra de context dorită și reconectează profilul în AudioMancer. Încearcă o fereastră mai mare dacă modelul și memoria disponibilă o permit.</p>
+                <p><strong>Nivel de raționare</strong> apare când serverul comunică opțiunile modelului. Alege <strong>Dezactivat</strong> când modelul permite oprirea raționării. În cazul unui model care acceptă doar pornirea și oprirea, selectorul afișează <strong>Activat</strong> și <strong>Dezactivat</strong>.</p>
                 <p>Curățarea AI necesită ieșire structurată strictă funcțională; confirmă compatibilitatea înainte de a atribui modelul. Blocurile de Vorbire cu același narator, sinteza audio și asamblarea nu folosesc aceste setări LLM.</p>
                 <p>Referință pentru configurare: <a href="https://lmstudio.ai/docs/python/llm-prediction/parameters">configurarea modelelor în LM Studio</a>; referință pentru raționament: <a href="https://huggingface.co/openai/gpt-oss-20b">fișa modelului gpt-oss-20b</a>.</p>
-                <figure>
-                    <img src="assets/screenshots/ai-settings-dialog.png" alt="Fereastra Setari AI">
-                    <figcaption>Setari AI pastreaza profilurile de model de text, limitele lor si profilul implicit al fiecarei operatii asistate de AI.</figcaption>
-                </figure>
             </section>
 
             <section id="tts-settings">
@@ -1216,7 +1203,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>Nu se genereaza audio</h3>
                 <p>Porneste VoiceWeaver, verifica URLul de baza in Setari TTS, apasa <strong>Testeaza Conexiunea</strong> si confirma ca modelele necesare apar in Modele Descoperite.</p>
                 <h3>O traducere se opreste in mijlocul segmentului</h3>
-                <p>Creste <strong>Rezerva iesire (tokeni)</strong> pe profilul de traducere. O traducere este la fel de lunga ca sursa ei, deci rezerva, nu fereastra de context, margineste planificarea locala a cererii.</p>
+                <p>Alege o <strong>Fereastră Context</strong> mai mare pentru profilul de traducere, dacă modelul permite. În LM Studio, încarcă modelul cu mai mult context, apoi reconectează profilul în AudioMancer.</p>
                 <h3>Operatiile AI de text esueaza sau returneaza JSON invalid</h3>
                 <p>Coboara temperatura, creste timeoutul, foloseste o fereastra de context mai mare sau alege un model care respecta JSON mai fidel. Modelele locale sunt de obicei mai lente decat cele gazduite.</p>
                 <h3>Aplicatia spune ca datele sunt invechite</h3>

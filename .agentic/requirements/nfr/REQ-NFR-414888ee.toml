@@ -14,7 +14,7 @@ schema = 1
 # and must match the category folder this file sits in.
 id = "REQ-NFR-414888ee"
 
-title = "Reserve context output capacity locally"
+title = "Reserve the output capacity used for a request"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
@@ -38,9 +38,7 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When AudioMancer plans an AI request, it shall reserve the profile's configured
-output capacity locally without serializing that reservation into the provider
-request.
+When AudioMancer plans an AI request, it shall reserve the planned output capacity in the context budget.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -51,10 +49,11 @@ request.
 # "Inspection:" and name the method, and `check` records the requirement
 # as verified by hand instead of counting it among the tests still owed.
 # The prefix alone is not enough — it has to say what someone does.
-verification = "Automated settings-migration and budget tests show that a legacy output limit becomes an output reserve, that the reserve still reduces available source capacity, and that the provider payload remains unbounded."
+verification = "Verify shared and operation-specific budgets reserve the same positive cap used for supported provider requests, including per-request reductions."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/services/book_analysis_service.py",
     "05_Software/AudioMancer/settings.example.json",
     "05_Software/AudioMancer/src/audiomancer/config.py",
     "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
@@ -83,10 +82,12 @@ affected_paths = [
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_analyze_book_sends_its_planned_output_limit",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
     "05_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_migrates_legacy_output_limit_to_local_reserve",
     "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget",
     "05_Software/AudioMancer/tests/test_book_analysis_budget_service.py::test_prompt_and_reasoning_reserves_reduce_fraction_capacity",
-    "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_adjudication_request_keeps_output_reservation_local",
+    "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_adjudication_request_uses_configured_cap_when_context_fits",
 ]
 
 # --- optional below this line ---
@@ -95,7 +96,7 @@ linked_tests = [
 spec = ""
 
 priority = "normal"   # low | normal | high
-rationale = "Context planning remains deterministic even though each provider owns the maximum completion length."
+rationale = "Reserving the requested output makes source planning and provider generation agree."
 
 created = 2026-08-30
-updated = 2026-08-30
+updated = 2026-11-10

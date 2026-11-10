@@ -486,10 +486,18 @@ def test_cleanup_prompts_state_the_required_response_shape() -> None:
 def test_ai_adjudication_reports_each_primary_and_verifier_request(
     monkeypatch,
 ) -> None:
-    """Cover S-0006/S-0010 and request-level progress reporting."""
+    """@brief Verify progress and the effective output cap for primary and verifier calls."""
     progress: list[tuple[int, int, str]] = []
 
-    def _chat_json(_profile, _system, user_prompt, **_kwargs):
+    profile = make_profile(context_window=65_536, output_reserve_tokens=65_535)
+    profile.update(discovered_context_model_name=profile["model_name"], server_context_window=32_768)
+
+    def _chat_json(request_profile, system_prompt, user_prompt, **kwargs):
+        """@brief Capture the reserved output before returning a verifier answer."""
+        schema = kwargs["response_schema"]
+        prompt_bytes = len(system_prompt.encode()) + len(user_prompt.encode())
+        prompt_bytes += len(json.dumps(schema, ensure_ascii=False).encode())
+        assert request_profile["output_reserve_tokens"] == int(32_768 * 0.70) - prompt_bytes // 2
         payload = json.loads(user_prompt)
         return {
             "payload": {
@@ -513,7 +521,7 @@ def test_ai_adjudication_reports_each_primary_and_verifier_request(
 
     cleanup_ai_adjudication_service.adjudicate_questions(
         [_question(0, prior_choice="join_with_space")],
-        make_profile(),
+        profile,
         progress_callback=lambda current, total, message: progress.append(
             (current, total, message)
         ),
@@ -523,6 +531,7 @@ def test_ai_adjudication_reports_each_primary_and_verifier_request(
         (1, 2),
         (2, 2),
     ]
+    assert profile["output_reserve_tokens"] == 65_535
     assert "Primary" in progress[0][2]
     assert "Verifier" in progress[1][2]
 
@@ -605,12 +614,13 @@ def test_configured_output_limit_below_the_answer_document_splits_the_batch(monk
     assert batch_sizes == [8, 8]
 
 
-def test_adjudication_request_keeps_output_reservation_local(monkeypatch) -> None:
-    """Cleanup plans its reservation without sending an output-limit override."""
-    observed_kwargs: list[dict[str, object]] = []
+def test_adjudication_request_uses_configured_cap_when_context_fits(monkeypatch) -> None:
+    """@brief Use the full configured cap when the request has sufficient context."""
+    output_limits: list[int] = []
 
-    def _chat_json(_profile, _system, user_prompt, **kwargs):
-        observed_kwargs.append(dict(kwargs))
+    def _chat_json(profile, _system, user_prompt, **_kwargs):
+        """@brief Capture the output cap given to the provider facade."""
+        output_limits.append(profile["output_reserve_tokens"])
         payload = json.loads(user_prompt)
         return {
             "payload": {
@@ -632,7 +642,7 @@ def test_adjudication_request_keeps_output_reservation_local(monkeypatch) -> Non
         make_profile(context_window=131_072, output_reserve_tokens=4_096),
     )
 
-    assert all("output_reserve_tokens_override" not in kwargs for kwargs in observed_kwargs)
+    assert output_limits == [4_096]
 
 
 def _question(

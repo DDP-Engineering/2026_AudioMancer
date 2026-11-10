@@ -1,0 +1,11 @@
+schema = 1
+id = "REQ-FUNC-b71d046c"
+title = "Discover loaded LLM context separately"
+status = "active"
+requirement = "When an LM Studio or Ollama backend reports the selected model's loaded context, AudioMancer shall return it separately from the model's advertised maximum."
+verification = "Mock a loaded 32K model with a 256K maximum, an unloaded model, and an unrelated or ambiguous instance."
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/config.py","05_Software/AudioMancer/src/audiomancer/services/ai_backend_service.py"]
+linked_tests = ["05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_discovers_lm_studio_loaded_instance_context", "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_uses_lm_studio_model_context_limit_without_loaded_match", "05_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_posts_exact_ollama_model_for_context"]
+created = 2026-11-10
+updated = 2026-11-10

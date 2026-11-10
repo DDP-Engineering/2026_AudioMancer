@@ -29,6 +29,7 @@ from audiomancer.cleanup import editing as cleanup_editing
 from audiomancer.cleanup import render as cleanup_renderer_service
 from audiomancer.cleanup import text as cleanup_text_analysis_service
 from audiomancer.services import (
+    ai_budget_service,
     cleanup_ai_adjudication_service,
     cleanup_metadata_service,
     cleanup_publication_service,
@@ -1139,7 +1140,7 @@ def _profile_fingerprint(
         "id": str(profile.get("id") or ""),
         "backend_kind": str(profile.get("backend_kind") or ""),
         "model_name": str(profile.get("model_name") or ""),
-        "context_window": int(profile.get("context_window", 0) or 0),
+        "context_window": ai_budget_service.effective_context_window(profile, default=0),
         "supports_structured_output": bool(
             profile.get("supports_structured_output", False)
         ),

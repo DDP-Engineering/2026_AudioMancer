@@ -66,6 +66,49 @@ def uses_online_text_budget(ai_profile_payload: dict[str, object]) -> bool:
     return str(ai_profile_payload.get("backend_kind", "")).strip() in config.ONLINE_AI_BACKEND_KINDS
 
 
+def effective_context_window(
+    ai_profile_payload: dict[str, object], *, default: int = config.DEFAULT_LLM_CONTEXT_WINDOW
+) -> int:
+    """
+    @brief      Bound the configured budget by context limits for the selected model.
+    @param[in]  ai_profile_payload Normalized profile and exact-model discovery metadata.
+    @param[in]  default Fallback when no configured context exists.
+    @return     Effective context in tokens.
+    """
+    configured = max(0, int(ai_profile_payload.get("context_window", default) or default))
+    limit = context_window_limit(ai_profile_payload)
+    return min(configured, limit) if limit is not None else configured
+
+
+def context_window_limit(profile: dict[str, object]) -> int | None:
+    """
+    @brief      Prefer the loaded context, falling back to the selected model's maximum.
+    @param[in]  profile Normalized profile with model-specific discovery metadata.
+    @return     Upper bound in tokens, or None when the provider did not report one.
+    """
+    model_name = str(profile.get("model_name") or "").strip()
+    if (
+        profile.get("backend_kind") == config.CHATGPT_BACKEND_KIND
+        or not model_name
+        or profile.get("discovered_context_model_name") != model_name
+    ):
+        return None
+    for field in ("server_context_window", "discovered_context_window"):
+        limit = profile.get(field)
+        if type(limit) is int and 0 < limit <= config.MAX_LLM_CONTEXT_WINDOW:
+            return limit
+    return None
+
+
+def output_token_limit(ai_profile_payload: dict[str, object]) -> int:
+    """
+    @brief      Resolve the positive output cap used by budgets and provider calls.
+    @param[in]  ai_profile_payload Selected or request-local AI profile.
+    @return     Output limit in tokens.
+    """
+    return max(1, int(ai_profile_payload.get("output_reserve_tokens", config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS)))
+
+
 def context_budget_metadata(
     ai_profile_payload: dict[str, object],
     prompt_text: str,
@@ -85,30 +128,26 @@ def context_budget_metadata(
     @param[in]  text_context_fraction Maximum context fraction available to input text.
     @param[in]  min_text_budget_tokens Minimum usable text budget required by the workflow.
     @param[in]  error_prefix Workflow-specific error message prefix.
-    @param[in]  online_text_context_fraction Optional direct context fraction for online AI providers.
+    @param[in]  online_text_context_fraction Optional context fraction ceiling for online AI providers.
     @return     Common context-budget metadata fields.
     @exception  ValueError Raised when the selected profile leaves too little input room.
     """
-    context_window = max(1, int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)))
-    output_reserve_tokens = max(
-        1,
-        int(ai_profile_payload.get("output_reserve_tokens", config.DEFAULT_LLM_OUTPUT_RESERVE_TOKENS)),
-    )
+    context_window = max(1, effective_context_window(ai_profile_payload))
+    output_reserve_tokens = output_token_limit(ai_profile_payload)
     prompt_budget_tokens = estimate_text_tokens(prompt_text)
     safety_margin_tokens = max(
         int(min_safety_margin_tokens),
         int(context_window * float(safety_margin_context_fraction)),
     )
     if online_text_context_fraction is not None and uses_online_text_budget(ai_profile_payload):
-        text_budget_tokens = int(context_window * float(online_text_context_fraction))
-    else:
-        text_budget_tokens = available_text_budget(
-            context_window,
-            output_reserve_tokens,
-            prompt_budget_tokens,
-            safety_margin_tokens,
-            text_context_fraction,
-        )
+        text_context_fraction = online_text_context_fraction
+    text_budget_tokens = available_text_budget(
+        context_window,
+        output_reserve_tokens,
+        prompt_budget_tokens,
+        safety_margin_tokens,
+        text_context_fraction,
+    )
     min_text_budget = int(min_text_budget_tokens)
     if text_budget_tokens < min_text_budget:
         raise ValueError(

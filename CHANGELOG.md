@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- AI Settings keeps Context Window, Temperature and the model’s available
+  Reasoning Levels as the model controls. The context field is capped at the
+  server’s loaded context when reported, or at the model’s maximum.
+- Local and online AI workflows reserve room for replies before sizing source
+  text. Chat Completions requests send the planned output-token limit.
+
 - Audio Assembly export includes only usable generated WAVs. Partial ZIPs
   show the exported count and list the actual files, durations, and sizes.
 - Stage ZIP exports run in the background and can be cancelled. Failed or

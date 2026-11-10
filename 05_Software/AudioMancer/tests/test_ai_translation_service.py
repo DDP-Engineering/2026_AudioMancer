@@ -692,7 +692,7 @@ def test_translation_refuses_a_profile_whose_reply_capacity_is_too_low() -> None
     @brief      Verify REQ-FUNC-cfa5468c names the output limit when it cannot fund a request.
     @return     None.
     """
-    with pytest.raises(ValueError, match="maximum output tokens"):
+    with pytest.raises(ValueError, match="needs more room for its reply"):
         ai_translation_service._build_budget_metadata(
             {**_profile_payload(), "context_window": 16_384, "output_reserve_tokens": 512},
             "ro",

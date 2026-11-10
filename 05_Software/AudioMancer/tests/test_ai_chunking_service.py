@@ -146,9 +146,9 @@ def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch
         )
 
 
-def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragraph_cap(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_online_profile_reserves_context_without_paragraph_cap(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify online AI chunking ignores local paragraph caps and output-token budget subtraction.
+    @brief      Verify online AI Chunking reserves context while keeping its paragraph-count policy.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -165,14 +165,17 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
         {
             "backend_kind": config.ONLINE_AI_BACKEND_KIND,
             "context_window": 10000,
-            "output_reserve_tokens": 9900,
+            "output_reserve_tokens": 6800,
         },
         "scene",
         "scene",
         "",
     )
 
-    assert budget_metadata["text_budget_tokens"] == 3000
+    assert budget_metadata["text_budget_tokens"] == (
+        10000 - 6800 - budget_metadata["prompt_budget_tokens"] - budget_metadata["safety_margin_tokens"]
+    )
+    assert budget_metadata["text_budget_tokens"] < 3000
     assert budget_metadata["strategy_paragraph_cap"] == 0
     assert ai_chunking_service._build_windows(paragraph_records, budget_metadata) == [
         {"start_index": 0, "end_index": 4}

@@ -239,6 +239,9 @@ Minimum validation includes focused pytest runs, Python compilation, and Ruff.
 
 ### Operational limits
 
+Discovery and synthesis both reserve prompt, reply and safety tokens within the
+effective context. The online text fraction adds a ceiling to that calculation.
+
 Character quality still depends on source clarity, provider behavior, and human
 review. Synthesis deliberately uses one AI call per character; adaptive batch
 synthesis is not implemented.

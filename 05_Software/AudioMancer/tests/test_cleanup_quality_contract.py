@@ -1007,9 +1007,11 @@ def test_cleanup_without_usable_ai_completes_from_deterministic_priors(tmp_path)
     )
 
 
+@pytest.mark.parametrize("configured_context", [16_384, 65_536])
 def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
     tmp_path,
     monkeypatch,
+    configured_context,
 ) -> None:
     """@brief Checkpoint batches remain identical to runtime requests across resume."""
     canonical_text, ledger = build_ledger(
@@ -1068,7 +1070,11 @@ def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
         "llm_provider_service.chat_json",
         _chat_json,
     )
-    profile = make_profile(context_window=16_384)
+    profile = make_profile(context_window=configured_context)
+    profile.update(
+        discovered_context_model_name=profile["model_name"],
+        server_context_window=16_384,
+    )
     initial_progress: list[tuple[int, int, int]] = []
     with pytest.raises(operation_runtime_service.OperationCancelledError):
         text_cleanup_service.clean_text(
@@ -1082,6 +1088,7 @@ def test_mixed_type_multi_batch_plan_survives_cancel_and_resume(
         )
 
     paused = read_cleanup_document(project_root)
+    assert paused["profile_fingerprint"]["context_window"] == 16_384
     planned_batches = (
         cleanup_ai_adjudication_service.plan_question_batches(
             captured_questions,

@@ -212,4 +212,18 @@ def test_sync_manifest_operation_from_disk_refreshes_window_when_loader_returns_
     show_project_state.assert_called_once_with(project_root, final_manifest)
 
 
+
+
+def test_resolve_enabled_ai_profile_fits_hidden_output_limit_to_context() -> None:
+    """@brief Keep the saved output setting and fit the request to the active context."""
+    profile = {
+        "id": "local", "model_name": "model-a", "context_window": 32768,
+        "discovered_context_model_name": "model-a", "server_context_window": 8192,
+        "output_reserve_tokens": 16384,
+    }
+    resolved = workflow_controller_service.resolve_enabled_ai_profile({"llm_profiles": [profile]}, "local")
+    assert resolved["output_reserve_tokens"] == 4096
+    assert profile["output_reserve_tokens"] == 16384
+
+
 # END OF FILE

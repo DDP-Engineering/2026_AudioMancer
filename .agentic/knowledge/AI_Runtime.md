@@ -72,16 +72,18 @@ project export readiness, because AI Settings changes none of those
 
 A profile carries enabled state, backend kind, base URL, model identifier,
 context/output/time-out/temperature values, structured-output support, and
-optional API key. Probe results use `success`, `message`, discovered-model
-details/count, optional context window, its exact owning model identifier, and
-selected-model validity. The context and owner are populated together only for
-positive values within the editor-supported range. Successful probes may
-replace profile-local discovery, including with an empty model list; failed
-probes preserve the last successful model list, discovered model/context,
-typed model, and configured context while updating failure status/message.
-Automatically discovered context fills the configured value only when its
-owner matches the effective model and the operator has not overridden context
-(`REQ-FUNC-6f8e52c8`). Token
+optional API key. Probe results keep model context and loaded server context
+as separate optional positive values owned by the exact selected model.
+A failed probe retains discovery metadata for the same connection. Changing
+the model clears the loaded-context observation, and changing endpoint or
+backend clears both local limits. The context field and request budget use the
+loaded context when reported or fall back to the model maximum. Local profiles
+auto-fill from a loaded instance until the operator sets a value. AI Settings
+exposes context and temperature, plus the model’s reasoning options when
+available. The output reserve and timeout are internal profile values. Workflow
+resolution caps the reserve at half of effective context. Subscription catalogs
+contribute model defaults and retain explicit overrides.
+Token
 usage maps the provider's `prompt_tokens`, `completion_tokens`, and
 `total_tokens` to input/output/total values plus `usage_available`. Finite
 non-negative integral floats normalize to integers, and an absent/null total is
@@ -92,10 +94,13 @@ usage; a noncanonical top-level operation-state field is ignored
 Prompt rendering requires exact named placeholders. Chat responses must parse
 to JSON objects. Null scalar or multipart text is empty; a refusal explanation
 becomes a clear safe ValueError, while reasoning-only output remains empty and
-never triggers model repair. A provider that explicitly rejects `response_format` is
-retried once without it; AudioMancer omits provider output-token limit fields
-from every initial, fallback, retry, and repair payload. Transient outer retries wait 0.5,
-1.0, 2.0, then at most 4.0 seconds, polling cancellation every 0.05 seconds.
+never triggers model repair. Explicit provider rejection of response_format
+or max_tokens can trigger one applicable request-shape adaptation. Every
+Chat Completions payload carries the planned output limit, using max_tokens
+or the accepted max_completion_tokens field. Retries and JSON repair retain
+that limit. The subscription Responses adapter uses the configured output
+reserve for local budgeting. Transient outer retries wait 0.5, 1.0, 2.0, then
+at most 4.0 seconds, polling cancellation every 0.05 seconds.
 Logging redacts sensitive field names before persistence.
 
 OpenAI-compatible generation and Test Connection append
@@ -116,9 +121,8 @@ For the first OpenAI-compatible chat-completion choice, an explicit
 `RuntimeError` that identifies provider-side output truncation before it
 reads message content, parses JSON, performs local repair, or issues a
 model-repair request. Providers that omit the field remain compatible, and
-other finish reasons keep their existing behavior. The diagnostic deliberately
-does not name a numeric application limit because the provider owns the
-completion length.
+other finish reasons keep their existing behavior. The diagnostic identifies provider-side truncation regardless of the
+exact backend token accounting.
 
 `REQ-NFR-8d83d955` makes a failure record keep the response it failed on. When
 the provider answered and the exchange failed afterwards, the transaction log
@@ -166,9 +170,9 @@ repairable JSON.
 
 `ai_backend_service.probe_profile` validates a profile URL/backend kind then
 normalizes `/v1/models` or Ollama tags results. Generic OpenAI-compatible entries
-may carry inline context metadata; LM Studio adds optional native model and
-loaded-instance metadata; Ollama queries `/api/show` only for the confirmed
-effective model. Operating-system and HTTP protocol failures during response
+may carry inline context metadata. LM Studio reads native model and
+loaded-instance metadata. Ollama uses /api/show for the model maximum and
+/api/ps for the confirmed loaded model. Operating-system and HTTP protocol failures during response
 reading remain inside the normal failed-result boundary.
 `llm_provider_service.chat_json`
 dispatches subscription profiles to a native Responses adapter. For API-key/local profiles it
@@ -179,7 +183,9 @@ backoff, rejects explicit output-length termination before content parsing or
 repair, treats null/refused assistant content as non-repairable, parses/repairs
 bounded non-truncated JSON responses, and redacts sensitive transaction logs.
 
-`ai_budget_service` calculates prompt, output, safety, and usable-text budgets.
+`ai_budget_service` calculates the effective context and reserves prompt,
+output and safety capacity for all workflows. Per-workflow input fractions
+are ceilings on the remaining source budget.
 `prompt_template_service` resolves template files and rejects missing or extra
 placeholders. `token_usage_service` normalizes provider usage into a common
 payload, while `ai_state_note_service` builds the shared enabled-profile
@@ -217,29 +223,9 @@ structured-output compatibility boundary and validates domain payloads before
 checkpointing. Automated Book Analysis tests replace provider calls in process
 and install a failing network transport guard.
 
-## Architecture
-
-```mermaid
-flowchart LR
-    workflow([Workflow services]) --> facade[llm_provider_service.chat_json]
-    facade --> legacy[Chat Completions transport]
-    facade --> subscription[chatgpt_provider_service.complete]
-    subscription --> http[chatgpt_http_service]
-    subscription --> account[CredentialManager]
-    page([AiSettingsPage]) --> controller[ChatGPTAuthUiController]
-    controller --> auth[chatgpt_auth_service]
-    controller --> models[chatgpt_model_service]
-    controller --> catalog[chatgpt_catalog_service]
-    catalog --> http
-    catalog --> account
-    subscription --> catalog
-    models --> subscription
-    auth --> http
-    auth --> account
-    account --> store[(ProtectedStore / MemoryStore)]
-```
-
-The boundary nodes identify callers, external services or persistent state. Account workers use their own cancellation lifecycle while project workflows retain their existing contracts.
+Subscription account workers have their own cancellation lifecycle and
+credential manager. The Responses adapter and API-key Chat Completions
+transport share the JSON/usage facade used by project workflows.
 
 ## Files
 

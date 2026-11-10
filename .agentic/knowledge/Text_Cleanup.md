@@ -64,8 +64,10 @@ format-specific parsers. OCR and free-form AI text rewriting are outside Cleanup
   split recursively. A failed request retries once before that batch falls back.
   Only primary disagreements receive a blind verifier using the same profile;
   an override needs agreement. No unconstrained fallback or model repair is used.
-- The output reservation is local planning data within the 70% context ceiling;
-  provider output-limit fields are omitted. No prompts, excerpts or credentials
+- Cleanup plans inside 70% of the effective context and requests its resulting
+  per-batch cap on Chat Completions. The checkpoint fingerprint stores that
+  effective context so a reload can reconstruct the same batch plan. The
+  subscription transport uses the reserve locally. No prompts, excerpts or credentials
   enter durable Cleanup metadata; hosted fragment submissions and normalized
   token usage are recorded separately from completed resumable responses.
 - `cleanup.json` is the authoritative completed metadata with `clean_text.txt`.
@@ -129,7 +131,7 @@ format-specific parsers. OCR and free-form AI text rewriting are outside Cleanup
 - REQ-FUNC-151a9e10 and REQ-UX-bb78f412: one authoritative batch plan and request-based resume progress.
 - REQ-FUNC-c30ccde3: retain only unambiguous whitespace-edit paragraph provenance.
 - REQ-FUNC-0cbc8cba and REQ-FUNC-85b20482: hosted subscription fragment disclosure and strict domain schemas.
-- REQ-FUNC-644ff463: output reservation belongs to local context planning.
+- REQ-FUNC-644ff463: compute the per-request output reserve within the effective context ceiling.
 
 ## Files
 

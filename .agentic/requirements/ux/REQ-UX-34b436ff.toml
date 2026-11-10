@@ -14,7 +14,7 @@ schema = 1
 # and must match the category folder this file sits in.
 id = "REQ-UX-34b436ff"
 
-title = "Clarify AI output reserve settings"
+title = "Manage the output budget within AI Settings profiles"
 
 # draft while being written, active once it is built and tested,
 # retired when the behavior is deliberately removed.
@@ -38,8 +38,7 @@ status = "active"
 # Do not contort prose to fit a pattern - a constraint that reads better
 # plainly is better plainly.
 requirement = """
-When an operator edits an AI profile, AudioMancer shall present its local
-output reserve as distinct from the provider-managed output limit.
+When an operator edits an AI profile, AudioMancer shall manage the output budget internally. AI Settings offers Context Window and Temperature, plus Reasoning Level where supported.
 """
 
 # The observation that settles whether the behavior holds — not a
@@ -50,7 +49,7 @@ output reserve as distinct from the provider-managed output limit.
 # "Inspection:" and name the method, and `check` records the requirement
 # as verified by hand instead of counting it among the tests still owed.
 # The prefix alone is not enough — it has to say what someone does.
-verification = "Automated AI Settings and localization tests show that the profile round-trips output_reserve_tokens and that English and Romanian captions explain the reserve without naming it as a provider cap."
+verification = "Verify the numeric profile fields are Context Window and Temperature and the local reasoning selector offers the levels reported for the selected model."
 
 # Repo-relative, forward slashes. The source files this behavior lives in.
 affected_paths = [
@@ -67,7 +66,8 @@ affected_paths = [
 # "tests/path/test_file.py::test_name" entries. Kept current during build;
 # these select the impacted regression set.
 linked_tests = [
-    "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_presents_output_reserve_not_provider_cap",
+    "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_numeric_profile_options_use_single_pair_rows",
+    "05_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_reasoning_levels_are_scoped_to_selected_model",
 ]
 
 # --- optional below this line ---
@@ -76,7 +76,7 @@ linked_tests = [
 spec = ""
 
 priority = "normal"   # low | normal | high
-rationale = "The prior Max Output Tokens caption implied a provider constraint that AudioMancer will no longer send."
+rationale = "The profile editor exposes model controls and handles the reply reservation internally."
 
 created = 2026-08-30
-updated = 2026-08-30
+updated = 2026-11-10

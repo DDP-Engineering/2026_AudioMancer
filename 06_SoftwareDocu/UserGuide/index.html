@@ -233,7 +233,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Press <strong>Sign in with ChatGPT</strong> and complete the OpenAI browser page. If the callback port is busy, choose <strong>Use device code</strong>, open the displayed OpenAI page, and enter the temporary code.</li>
                     <li>Choose a candidate model or type its identifier, then press <strong>Test model</strong>. The test sends tiny synthetic prompts and separately checks text access and the exact strict schema needed by Cleanup. Candidate names are suggestions, not a list of your account entitlements.</li>
                     <li>The primary model list refreshes after sign-in and when AI Settings opens with a cache older than one hour. <strong>Refresh models</strong> updates it immediately without sending a prompt. The Refresh models tooltip identifies live, cached, stale or built-in model data. Refreshing preserves your model and unsaved edits.</li>
-                    <li>Choose <strong>Reasoning effort</strong> per profile: Provider default lets the server decide; explicit levels are the selected model's supported options. Higher effort can affect response time and subscription consumption. A saved unavailable level remains visible and must be changed before running; AudioMancer never silently substitutes another effort. Older Thinking enabled settings become Medium; Thinking disabled becomes None, which may be unavailable.</li>
+                    <li>Choose a <strong>Reasoning Level</strong> supported by the model. <strong>Provider default</strong> uses the server’s choice. <strong>Disabled</strong> turns reasoning off when the model supports it. Higher levels can increase response time and subscription usage.</li>
                     <li>Selecting a subscription model fills <strong>Context Window</strong> from its reported default, not its maximum capacity. You can edit it afterwards; refresh and reopening settings preserve that edit until another model is selected. Unknown defaults leave the current value unchanged. Local/custom model selection keeps context manual. Choose workflow defaults, then <strong>Apply</strong> or <strong>OK</strong>. Temperature is provider-controlled; catalog metadata does not replace model/schema testing. Changing reasoning effort starts a new Book Analysis candidate rather than resuming checkpoints made with another effort.</li>
                 </ol>
                 <p>This experimental connection uses your ChatGPT subscription allowance, separately from API billing. Access and limits can change. No audio or TTS service is included. A text-only verified model can run the other JSON text workflows; Cleanup AI remains unavailable until strict schema verification succeeds.</p>
@@ -243,7 +243,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>These starting recommendations balance audiobook quality and subscription consumption. Compare results on a representative chapter before processing a whole book; they are not measured quality benchmarks. Availability and supported reasoning levels depend on the account and current model catalog.</p>
                 <table>
                     <thead>
-                        <tr><th>AudioMancer step</th><th>Recommended model</th><th>Reasoning effort</th><th>Guidance</th></tr>
+                        <tr><th>AudioMancer step</th><th>Recommended model</th><th>Reasoning Level</th><th>Guidance</th></tr>
                     </thead>
                     <tbody>
                         <tr><td>Text Cleanup &mdash; optional AI assistance</td><td>GPT-5.6 Luna</td><td>Low</td><td>Bounded classification of ambiguous text boundaries. Try Terra if decisions are unreliable. Test model must verify strict schema support.</td></tr>
@@ -270,7 +270,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Enter the <strong>API Key</strong> for online providers. The field is masked and may be left empty for a local provider.</li>
                     <li>Press <strong>Connect</strong>. On success AudioMancer reports how many models it found and fills the <strong>Model Name</strong> list with them; on failure it shows the reason and keeps your last working values.</li>
                     <li>Pick the model in <strong>Model Name</strong>. The field is editable, so you can also type a name the provider did not list.</li>
-                    <li>Set <strong>Context Window</strong>, <strong>Output Reserve (tokens)</strong>, <strong>Timeout (s)</strong> and <strong>Temperature</strong>. The reserve keeps context capacity for a reply while AudioMancer plans source text; it is not sent as a provider output limit, so the provider chooses the response length. <strong>Reasoning Mode</strong> can keep the provider default, enable reasoning, or disable it; AudioMancer does not guess from the model name.</li>
+                    <li>Set <strong>Context Window</strong> and <strong>Temperature</strong>. If <strong>Reasoning Level</strong> appears, choose one of the model’s available options.</li>
                     <li>Choose the default profile for each operation at the bottom of the dialog.</li>
                     <li><strong>Cancel</strong> discards the session. <strong>Apply</strong> saves without closing. <strong>OK</strong> saves and closes.</li>
                 </ol>
@@ -281,10 +281,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     to <strong>(none)</strong>.
                 </p>
                 <p>
-                    A successful <strong>Connect</strong> can fill <strong>Context Window</strong> for you when the
-                    selected model reports one &mdash; LM Studio from the loaded instance, Ollama from the model details.
-                    Once you type in <strong>Model Name</strong> or <strong>Context Window</strong> yourself, later
-                    connections leave your value alone.
+                    <strong>Connect</strong> checks how much context the model can use. AudioMancer limits
+                    <strong>Context Window</strong> to the loaded server value when reported, or to the model’s
+                    maximum. Connect again after changing the model or its loaded context in LM Studio, then save
+                    the profile. AudioMancer automatically reserves room for replies.
                 </p>
                 <h3>Numeric Fields</h3>
                 <table>
@@ -292,19 +292,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><th>Field</th><th>Range</th><th>Default</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>Context Window</td><td>1 - 1000000</td><td>16384</td></tr>
-                        <tr><td>Output Reserve (tokens)</td><td>1 - 1000000</td><td>8192</td></tr>
-                        <tr><td>Timeout (s)</td><td>1 - 65535</td><td>300</td></tr>
+                        <tr><td>Context Window</td><td>Up to the detected limit</td><td>16384</td></tr>
                         <tr><td>Temperature</td><td>0.00 - 2.00, step 0.05</td><td>0.20</td></tr>
                     </tbody>
                 </table>
-                <div class="warning">
-                    <strong>Output Reserve matters most for translation planning.</strong> A translation is about as long as
-                    its source, so AudioMancer sizes each translation request using its local reply reserve, not by the
-                    context window alone. A profile with a wide context window but a small reserve is simply
-                    split into more, smaller requests. If the reserve is too small to return even one request's
-                    translation, AI Translation refuses to start and names that setting.
-                </div>
+                <p>AI Translation splits the text into smaller requests when the reply needs more room.</p>
                 <h3>Operation Defaults</h3>
                 <p>
                     The lower part of the dialog sets which profile each operation starts with:
@@ -326,23 +318,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <table>
                     <thead><tr><th>Operation</th><th>Context (tokens)</th><th>Temperature</th><th>Reasoning in AudioMancer</th></tr></thead>
                     <tbody>
-                        <tr><td>AI Cleanup</td><td>32768</td><td>0.1</td><td>Provider default</td></tr>
-                        <tr><td>AI Chunking</td><td>32768</td><td>0.1</td><td>Provider default</td></tr>
-                        <tr><td>Book Analysis</td><td>32768; try 65536 if needed</td><td>0.2</td><td>Thinking enabled, if supported</td></tr>
-                        <tr><td>AI Translation</td><td>32768</td><td>0.2</td><td>Provider default</td></tr>
-                        <tr><td>Character Discovery</td><td>32768; try 65536 if needed</td><td>0.1</td><td>Thinking enabled, if supported</td></tr>
-                        <tr><td>Narrator description</td><td>16384</td><td>0.3</td><td>Provider default</td></tr>
-                        <tr><td>Speech Blocks — narrator and characters</td><td>32768</td><td>0.1</td><td>Thinking enabled, if supported</td></tr>
+                        <tr><td>AI Cleanup</td><td>32768</td><td>0.1</td><td>Model default</td></tr>
+                        <tr><td>AI Chunking</td><td>32768</td><td>0.1</td><td>Model default</td></tr>
+                        <tr><td>Book Analysis</td><td>32768; try 65536 if needed</td><td>0.2</td><td>Medium or Enabled, if available</td></tr>
+                        <tr><td>AI Translation</td><td>32768</td><td>0.2</td><td>Model default</td></tr>
+                        <tr><td>Character Discovery</td><td>32768; try 65536 if needed</td><td>0.1</td><td>Medium or Enabled, if available</td></tr>
+                        <tr><td>Narrator description</td><td>16384</td><td>0.3</td><td>Model default</td></tr>
+                        <tr><td>Speech Blocks — narrator and characters</td><td>32768</td><td>0.1</td><td>Medium or Enabled, if available</td></tr>
                     </tbody>
                 </table>
-                <p><strong>Context:</strong> load the model in LM Studio with the intended context, then set AudioMancer's Context Window to no more than that loaded capacity and the model's supported limit. Start at 32768 for most tasks; try 65536 only when the model and available memory support it and wider source windows help. Increasing AudioMancer's value alone does not reload the server model. Larger context can require more memory and time.</p>
-                <p><strong>Reasoning:</strong> Provider default leaves reasoning to LM Studio. Thinking enabled requests Medium when the endpoint supports the request. If the model or runtime does not accept this setting, use Provider default and configure its supported reasoning control in LM Studio. For simple cleanup, chunking and narrator descriptions, try Low in the LM Studio preset when available; for gpt-oss-20b, Low is a useful starting point and Medium is worth comparing for analysis and speaker attribution. Support for disabling thinking varies by model. Local profiles do not use the subscription's per-model effort selector.</p>
+                <p>Load the model in LM Studio with the context window you want and reconnect the profile in AudioMancer. Try a larger window if the model and available memory support it.</p>
+                <p><strong>Reasoning Level</strong> appears when the server reports the model’s options. Choose <strong>Disabled</strong> when the model supports turning reasoning off. For models with only an on/off setting, the choices are <strong>Enabled</strong> and <strong>Disabled</strong>.</p>
                 <p>AI Cleanup requires working strict structured output; confirm compatibility before assigning a model. Speech Blocks in same-narrator mode, audio synthesis and assembly do not use these LLM settings.</p>
                 <p>Configuration reference: <a href="https://lmstudio.ai/docs/python/llm-prediction/parameters">LM Studio model configuration</a>; reasoning reference: <a href="https://huggingface.co/openai/gpt-oss-20b">gpt-oss-20b model card</a>.</p>
-                <figure>
-                    <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
-                    <figcaption>AI Settings stores text-model profiles, their limits, and the default profile for each AI-assisted operation.</figcaption>
-                </figure>
             </section>
 
             <section id="tts-settings">
@@ -1183,7 +1171,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>No audio is generated</h3>
                 <p>Start VoiceWeaver, check the base URL in TTS Settings, press <strong>Test Connection</strong>, and confirm the required models appear under Discovered Models.</p>
                 <h3>A translation stops in the middle of a chunk</h3>
-                <p>Raise <strong>Output Reserve (tokens)</strong> on the translation profile. A translation is as long as its source, so the reserve, not the context window, is what bounds AudioMancer's local request planning.</p>
+                <p>Choose a larger <strong>Context Window</strong> for the translation profile if the model allows it. In LM Studio, load the model with more context and reconnect the profile in AudioMancer.</p>
                 <h3>AI text operations fail or return bad JSON</h3>
                 <p>Lower the temperature, raise the timeout, use a larger context window, or choose a model that follows JSON more reliably. Local models are usually slower than hosted ones.</p>
                 <h3>The app says data is stale</h3>

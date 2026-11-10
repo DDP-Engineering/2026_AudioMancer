@@ -349,17 +349,16 @@ def _validate_llm_profile(
             )
             normalized_profile[field_name] = default_profile[field_name]
 
-    discovered_context_window = normalized_profile.get("discovered_context_window")
-    if discovered_context_window is not None and (
-        type(discovered_context_window) is not int or discovered_context_window <= 0
-    ):
-        _log_settings_repair(
-            f"Repaired llm_profiles[{profile_index}].discovered_context_window using the default value.",
-            f"llm_profiles[{profile_index}].discovered_context_window",
-            func_name="_validate_llm_profile",
-            repair_tracker=repair_tracker,
-        )
-        normalized_profile["discovered_context_window"] = default_profile["discovered_context_window"]
+    for field_name in ("discovered_context_window", "server_context_window"):
+        value = normalized_profile.get(field_name)
+        if value is not None and (type(value) is not int or not 0 < value <= config.MAX_LLM_CONTEXT_WINDOW):
+            _log_settings_repair(
+                f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
+            )
+            normalized_profile[field_name] = None
 
     for field_name, field_value in default_profile.items():
         if field_name not in normalized_profile:

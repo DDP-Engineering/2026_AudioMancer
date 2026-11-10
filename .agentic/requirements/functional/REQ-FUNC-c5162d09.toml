@@ -1,0 +1,26 @@
+schema = 1
+id = "REQ-FUNC-c5162d09"
+title = "Use the bounded effective LLM context"
+status = "active"
+requirement = "When planning requests with a selected LLM profile, AudioMancer shall bound the configured context by the loaded server context when reported, or by the model maximum when only that limit is known."
+verification = "Plan a 64K profile against a 32K server, a smaller manual override, and unknown or mismatched runtime metadata."
+affected_paths = [
+  "05_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+  "05_Software/AudioMancer/src/audiomancer/services/book_analysis_state_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/ai_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/book_analysis_budget_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/cleanup_ai_adjudication_service.py",
+  "05_Software/AudioMancer/src/audiomancer/services/text_cleanup_service.py",
+  "05_Software/AudioMancer/src/audiomancer/ui/controllers/book_analysis_ui_controller.py",
+]
+linked_tests = [
+  "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_effective_context_bounds_configuration_by_matching_server_limit",
+  "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_context_window_limit_prefers_loaded_server_and_falls_back_to_model",
+  "05_Software/AudioMancer/tests/test_ai_budget_service.py::test_subscription_model_default_does_not_cap_manual_context",
+  "05_Software/AudioMancer/tests/test_book_analysis_service.py::test_analyze_book_sends_its_planned_output_limit",
+  "05_Software/AudioMancer/tests/test_cleanup_adjudication_contract.py::test_ai_adjudication_reports_each_primary_and_verifier_request",
+  "05_Software/AudioMancer/tests/test_cleanup_quality_contract.py::test_mixed_type_multi_batch_plan_survives_cancel_and_resume",
+  "05_Software/AudioMancer/tests/test_book_analysis_ui_controller.py::test_analyze_rejects_loaded_context_below_minimum",
+]
+created = 2026-11-10
+updated = 2026-11-10

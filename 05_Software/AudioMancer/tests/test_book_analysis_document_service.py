@@ -240,8 +240,8 @@ def test_profile_fingerprint_excludes_api_key_but_tracks_request_configuration()
     assert original != service.safe_profile_fingerprint({**profile, "reasoning_mode": "disabled"})
 
 
-def test_subscription_effort_changes_resume_fingerprint_without_changing_local_semantics() -> None:
-    """@brief A resumed analysis cannot combine summaries generated at different subscription efforts."""
+def test_profile_fingerprint_tracks_supported_reasoning_effort() -> None:
+    """@brief A resumed analysis cannot combine summaries generated at different reasoning levels."""
     service = _service()
     profile = {"backend_kind": "chatgpt_subscription", "model_name": "gpt-5.6-luna", "reasoning_mode": "enabled"}
     assert service.safe_profile_fingerprint({**profile, "reasoning_effort": "low"}) != service.safe_profile_fingerprint(
@@ -249,6 +249,10 @@ def test_subscription_effort_changes_resume_fingerprint_without_changing_local_s
     )
     local = {**profile, "backend_kind": "lmstudio"}
     assert service.safe_profile_fingerprint(local) == service.safe_profile_fingerprint(
+        {**local, "reasoning_effort": "high"}
+    )
+    local["discovered_reasoning_levels"] = ["off", "low", "high"]
+    assert service.safe_profile_fingerprint({**local, "reasoning_effort": "low"}) != service.safe_profile_fingerprint(
         {**local, "reasoning_effort": "high"}
     )
 

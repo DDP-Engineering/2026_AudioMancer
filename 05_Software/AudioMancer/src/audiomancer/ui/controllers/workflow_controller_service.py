@@ -20,7 +20,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, ui_state_service
+from audiomancer.services import ai_budget_service, project_workspace_service, ui_state_service
 from audiomancer.ui.controllers import operation_runner_controller
 
 if TYPE_CHECKING:
@@ -108,7 +108,7 @@ def resolve_enabled_ai_profile(
     @brief      Resolve one enabled AI profile payload from settings by id.
     @param[in]  settings_payload Persisted application settings payload.
     @param[in]  profile_id Requested profile identifier.
-    @return     Resolved enabled profile payload or `None`.
+    @return     Enabled profile with output capacity fitted to its context, or None.
     @exception  None
     """
     if not isinstance(settings_payload, dict) or profile_id in (None, ""):
@@ -120,6 +120,10 @@ def resolve_enabled_ai_profile(
         if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
             continue
         if str(profile.get("id", "")).strip() == str(profile_id).strip():
+            context = ai_budget_service.effective_context_window(profile)
+            output_limit = max(1, context // 2)
+            if ai_budget_service.output_token_limit(profile) > output_limit:
+                return {**profile, "output_reserve_tokens": output_limit}
             return dict(profile)
     return None
 

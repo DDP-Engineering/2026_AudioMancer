@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     book_analysis_document_service,
     book_analysis_service,
     chunking_document_service,
@@ -50,7 +51,7 @@ def handle_analyze_requested(window: "MainWindow", profile_id: str) -> None:
     if profile is None:
         _show_warning(window, "book_analysis.error_missing_profile")
         return
-    if int(profile.get("context_window", 0)) < config.BOOK_ANALYSIS_MIN_CONTEXT_TOKENS:
+    if ai_budget_service.effective_context_window(profile, default=0) < config.BOOK_ANALYSIS_MIN_CONTEXT_TOKENS:
         _show_warning(window, "book_analysis.error_incompatible_profile")
         return
     target_language = str(window._current_manifest.get("target_language", "")).strip()
